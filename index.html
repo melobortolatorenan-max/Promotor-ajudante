@@ -1,158 +1,124 @@
-<!doctype html>
-<html lang="pt-br" class="h-full overflow-hidden">
- <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Promotor Ajudante</title>.
-  <link rel="icon" type="image/png" href="logo.png">
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#f59e0b">
-  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
-  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet">
-  <script>
-    tailwind.config = {
-      theme: { extend: { fontFamily: { dm: ['DM Sans', 'sans-serif'] } } }
-    }
-  </script>
-  <style>
-    :root { --safe-top: 0px; }
-    @supports (padding-top: env(safe-area-inset-top)) { :root { --safe-top: env(safe-area-inset-top); } }
-    body { -webkit-tap-highlight-color: transparent; padding-top: var(--safe-top); }
-    input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); }
-    .fade-in { animation: fadeIn 0.3s ease; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-  </style>
- </head>
- <body class="h-full bg-gray-950 font-dm text-white">
-  <div id="app-wrapper" class="w-full h-full flex flex-col pt-3">
-   <nav class="w-full bg-gray-900 border-b border-gray-800">
-    <div class="max-w-xl mx-auto px-4 py-2.5 flex items-center justify-between gap-1.5">
-     <div class="flex items-center gap-2 cursor-pointer" onclick="mostrarTela('home')">
-      <div class="flex flex-col leading-none">
-        <span class="text-[8px] font-bold text-gray-400 uppercase tracking-tighter">Promotor</span>
-        <span class="text-xs font-extrabold text-amber-500 uppercase tracking-tighter">Ajudante</span>
-      </div>
-     </div>
-     <div class="flex gap-1">
-      <button onclick="mostrarTela('home')" class="nav-btn px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all uppercase flex items-center gap-1" data-tela="home"> <i data-lucide="home" class="w-3.5 h-3.5"></i>Início </button> 
-      <button onclick="mostrarTela('lojas')" class="nav-btn px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all uppercase flex items-center gap-1" data-tela="lojas"> <i data-lucide="store" class="w-3.5 h-3.5"></i>Lojas </button> 
-      <button onclick="mostrarTela('listaGeral')" class="nav-btn px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all uppercase flex items-center gap-1" data-tela="listaGeral"> <i data-lucide="package" class="w-3.5 h-3.5"></i>Relatório </button>
-     </div>
-    </div>
-   </nav>
-   <main class="flex-1 w-full max-w-xl mx-auto px-4 py-6 overflow-auto pb-20">
-    <div id="home" class="tela fade-in">
-     <div class="mb-10 text-center">
-      <div class="bg-amber-500/10 w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6">
-        <i data-lucide="layout-dashboard" class="text-amber-500 w-10 h-10"></i>
-      </div>
-      <h2 class="text-3xl font-extrabold mb-1">Painel</h2>
-      <p class="text-gray-400 text-sm">Resumo geral das lojas e produtos</p>
-     </div>
-     <div class="grid grid-cols-2 gap-4 mb-8">
-      <div onclick="mostrarTela('lojas')" class="bg-gray-900 border border-gray-800 rounded-3xl p-6 text-center shadow-lg cursor-pointer active:scale-95 transition-transform">
-       <div id="stat-lojas" class="text-5xl font-extrabold text-amber-400">0</div>
-       <div class="text-gray-500 text-[10px] uppercase tracking-widest mt-2 font-bold">Lojas</div>
-      </div>
-      <div onclick="mostrarTela('listaGeral')" class="bg-gray-900 border border-gray-800 rounded-3xl p-6 text-center shadow-lg cursor-pointer active:scale-95 transition-transform">
-       <div id="stat-produtos" class="text-5xl font-extrabold text-amber-400">0</div>
-       <div class="text-gray-500 text-[10px] uppercase tracking-widest mt-2 font-bold">Produtos</div>
-      </div>
-     </div>
-     <div id="alertas-proximos" class="space-y-3"></div>
-    </div>
-    <div id="lojas" class="tela hidden fade-in">
-     <h2 class="text-2xl font-bold mb-4 text-white">Gerenciar Lojas</h2>
-     <div id="welcome-msg" class="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-5 mb-6 hidden">
-        <p class="text-sm text-gray-200 leading-relaxed">Bem-vindo ao app <span class="text-amber-400 font-bold">Promotor Ajudante</span>! 🚀<br>Crie sua primeira loja abaixo para começar.</p>
-     </div>
-     <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5 mb-6 shadow-sm">
-      <div class="flex flex-col gap-3">
-        <input id="nomeLoja" placeholder="Ex: Mercado Atacadão Loja 05" class="bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-500 transition"> 
-        <button onclick="criarLoja()" class="bg-amber-500 text-gray-950 font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 active:scale-95 uppercase text-xs"> <i data-lucide="plus" class="w-4 h-4"></i> Criar Loja </button>
-      </div>
-     </div>
-     <div id="listaLojas" class="space-y-2.5"></div>
-    </div>
-    <div id="detalhesLoja" class="tela hidden fade-in">
-        <button onclick="mostrarTela('lojas')" class="text-amber-500 flex items-center gap-1 font-bold text-xs mb-4">
-            <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i> Voltar
-        </button>
-        <h2 id="tituloDetalheLoja" class="text-2xl font-black uppercase mb-4 text-white">Nome da Loja</h2>
-        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5 mb-6 shadow-sm">
-            <div class="space-y-3">
-                <input id="nomeProduto" placeholder="Nome do item (Ex: Iogurte)" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white">
-                <div class="grid grid-cols-2 gap-3">
-                    <input type="date" id="validadeProduto" class="bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-xs">
-                    <input type="number" id="quantidadeProduto" placeholder="Qtd" class="bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white">
-                </div>
-                <button onclick="adicionarProduto()" class="w-full bg-amber-500 text-gray-950 font-black py-3 rounded-xl uppercase text-xs">Cadastrar Item</button>
-            </div>
-        </div>
-        <div id="listaProdutosLoja" class="space-y-3"></div>
-    </div>
-    <div id="listaGeral" class="tela hidden fade-in">
-      <h2 class="text-2xl font-bold mb-4 text-amber-400">Relatório Geral</h2>
-      <div id="containerListaGeral" class="space-y-6"></div>
-    </div>
-   </main>
-  </div>
-  <script>
-let allRecords = JSON.parse(localStorage.getItem('promotor_data')) || [];
-let currentTela = 'home';
-let lojaAtivaId = null;
-function save() { localStorage.setItem('promotor_data', JSON.stringify(allRecords)); }
-function mostrarTela(tela) {
-  currentTela = tela;
-  document.querySelectorAll('.tela').forEach(t => t.classList.add('hidden'));
-  document.getElementById(tela).classList.remove('hidden');
-  document.querySelectorAll('.nav-btn').forEach(b => {
-    const active = b.dataset.tela === tela;
-    b.classList.toggle('bg-amber-500', active);
-    b.classList.toggle('text-gray-950', active);
-  });
-  if (tela === 'home') renderHome();
-  if (tela === 'lojas') renderLojas();
-  if (tela === 'listaGeral') renderListaGeral();
-  lucide.createIcons();
-}
-function renderHome() {
-  const lojas = allRecords.filter(r => r.type === 'loja');
-  const produtos = allRecords.filter(r => r.type === 'produto');
-  document.getElementById('stat-lojas').textContent = lojas.length;
-  document.getElementById('stat-produtos').textContent = produtos.length;
-  lucide.createIcons();
-}
-async function criarLoja() {
-  const nome = document.getElementById('nomeLoja').value.trim();
-  if(!nome) return;
-  allRecords.push({ __backendId: Date.now().toString(), type: 'loja', nome, ordem: allRecords.length });
-  save(); document.getElementById('nomeLoja').value = ''; renderLojas();
-}
-function renderLojas() {
-  const lojas = allRecords.filter(r => r.type === 'loja');
-  document.getElementById('listaLojas').innerHTML = lojas.map(l => `
-    <div class="bg-gray-900 border border-gray-800 rounded-2xl flex items-center justify-between p-4 shadow-sm">
-        <div onclick="verDetalhesLoja('${l.__backendId}')" class="font-bold text-xs uppercase text-gray-300 cursor-pointer flex-1">${l.nome}</div>
-        <button onclick="deletarLoja('${l.__backendId}')" class="text-gray-700"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-    </div>`).join('');
-  lucide.createIcons();
-}
-function verDetalhesLoja(id) {
-    lojaAtivaId = id; const loja = allRecords.find(r => r.__backendId === id);
-    document.getElementById('tituloDetalheLoja').textContent = loja.nome;
-    mostrarTela('detalhesLoja');
-}
-function adicionarProduto() {
-  const n = document.getElementById('nomeProduto').value, v = document.getElementById('validadeProduto').value, q = document.getElementById('quantidadeProduto').value;
-  if(!n || !v) return;
-  allRecords.push({ __backendId: Date.now().toString(), type: 'produto', loja_id: lojaAtivaId, produto_nome: n, validade: v, quantidade: q });
-  save(); mostrarTela('detalhesLoja');
-}
-function deletarLoja(id) { allRecords = allRecords.filter(r => r.__backendId !== id); save(); renderLojas(); }
-mostrarTela('home');
-  </script>
- </body>
-        </html>
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Promotor Ajudante - Validades</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#f59e0b">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <link rel="apple-touch-icon" href="logo.png">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
         
+        body { font-family: 'Inter', sans-serif; }
+        
+        .tela { display: none; }
+        .tela.active { display: block; }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="h-full bg-gray-950 text-white selection:bg-amber-500/30">
+
+    <div id="app-wrapper" class="w-full h-full flex flex-col min-h-screen">
+        
+        <nav class="w-full bg-gray-900 border-b border-gray-800 sticky top-0 z-50">
+            <div class="max-w-xl mx-auto px-4 py-2.5 flex justify-between items-center">
+                <div class="flex items-center gap-2 cursor-pointer" onclick="mostrarTela('home')">
+                    <div class="bg-amber-500 p-1.5 rounded-lg">
+                        <i data-lucide="layout-dashboard" class="w-5 h-5 text-gray-950"></i>
+                    </div>
+                    <div class="flex flex-col leading-none">
+                        <span class="text-[10px] font-bold text-amber-500 uppercase tracking-wider">App</span>
+                        <span class="text-sm font-extrabold text-white">PROMOTOR AJUDANTE</span>
+                    </div>
+                </div>
+                
+                <div class="flex gap-2">
+                    <button onclick="mostrarTela('lojas')" class="p-2 hover:bg-gray-800 rounded-full transition-colors">
+                        <i data-lucide="store" class="w-5 h-5 text-gray-400"></i>
+                    </button>
+                    <button onclick="mostrarTela('listaGeral')" class="p-2 hover:bg-gray-800 rounded-full transition-colors">
+                        <i data-lucide="clipboard-list" class="w-5 h-5 text-gray-400"></i>
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <main class="flex-1 w-full max-w-xl mx-auto p-4 pb-24">
+            
+            <div id="home" class="tela active fade-in">
+                <div class="mb-10 text-center">
+                    <div class="bg-amber-500/10 w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-4 border border-amber-500/20">
+                        <i data-lucide="shield-check" class="w-10 h-10 text-amber-500"></i>
+                    </div>
+                    <h2 class="text-3xl font-extrabold mb-1">Olá, Promotor!</h2>
+                    <p class="text-gray-400 text-sm">Controle de validades no Promotor Ajudante.</p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-8">
+                    <div class="bg-gray-900 p-4 rounded-2xl border border-gray-800">
+                        <span class="text-gray-500 text-xs font-bold uppercase tracking-widest">Lojas</span>
+                        <div id="stat-lojas" class="text-3xl font-black mt-1">0</div>
+                    </div>
+                    <div class="bg-gray-900 p-4 rounded-2xl border border-gray-800">
+                        <span class="text-gray-500 text-xs font-bold uppercase tracking-widest">Vencendo</span>
+                        <div id="stat-vencidos" class="text-3xl font-black mt-1 text-red-500">0</div>
+                    </div>
+                </div>
+
+                <button onclick="mostrarTela('lojas')" class="w-full bg-amber-500 hover:bg-amber-600 text-gray-950 font-extrabold py-4 rounded-2xl transition-all shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2">
+                    <i data-lucide="plus-circle" class="w-5 h-5"></i>
+                    COMEÇAR VERIFICAÇÃO
+                </button>
+            </div>
+
+            <div id="lojas" class="tela fade-in">
+                <h3 class="text-xl font-bold mb-4">Minhas Lojas</h3>
+                <div id="lista-lojas" class="space-y-3">
+                    </div>
+            </div>
+
+            <div id="listaGeral" class="tela fade-in">
+                <h3 class="text-xl font-bold mb-4">Relatório Geral</h3>
+                <div id="relatorio-itens" class="space-y-3">
+                    </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        function mostrarTela(id) {
+            document.querySelectorAll('.tela').forEach(t => t.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            window.scrollTo(0, 0);
+        }
+
+        // Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('Promotor Ajudante: SW ativo!'))
+                    .catch(err => console.error('Erro no registro do SW', err));
+            });
+        }
+    </script>
+</body>
+</html>
