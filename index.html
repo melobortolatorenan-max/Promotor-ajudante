@@ -33,7 +33,316 @@
             display: flex; align-items: center; justify-content: center; gap: 8px;
         }
 
-        /* Estilo para o placeholder da data */
+        /* Estilo para simular o placeholder "selecionar data" */
+        input[type="date"]::before {
+            content: "selecionar data";
+            width: 100%;
+            color: #9ca3af;
+        }
+        input[type="date"]:focus::before,
+        input[type="date"]:valid::before { display: none; }
+        
+        .card-resumo { background-color: #111827; border-radius: 1.5rem; padding: 1.5rem; flex: 1; text-align: center; }
+    </style>
+</head>
+<body>
+
+    <section id="tela-login" class="secao-master active items-center justify-center p-6">
+        <div class="w-full max-w-sm text-center">
+            <h1 class="text-3xl font-black mb-10 uppercase italic leading-tight">Promotor <br><span class="text-amber-500 text-4xl">Ajudante</span></h1>
+            <input type="email" id="login-email" placeholder="E-mail" class="input-field">
+            <input type="password" id="login-senha" placeholder="Senha" class="input-field">
+            <button onclick="tentarLogin()" class="btn-amarelo">Entrar</button>
+            <button onclick="irPara('tela-cadastro')" class="mt-6 text-amber-500 text-xs font-bold uppercase">Criar Nova Conta</button>
+        </div>
+    </section>
+
+    <section id="tela-cadastro" class="secao-master items-center justify-center p-6">
+        <div class="w-full max-w-sm">
+            <h2 class="text-2xl font-black mb-6 uppercase italic text-center text-amber-500">Cadastro</h2>
+            <input type="text" id="cad-nome" placeholder="Nome Completo" class="input-field">
+            <input type="email" id="cad-email" placeholder="E-mail" class="input-field">
+            <input type="text" id="cad-empresa" placeholder="Empresa" class="input-field">
+            <input type="password" id="cad-senha" placeholder="Senha (6 dígitos)" maxlength="6" class="input-field">
+            <button onclick="validarCadastro()" class="btn-amarelo">Finalizar Cadastro</button>
+            <button onclick="irPara('tela-login')" class="w-full mt-4 text-gray-500 text-xs font-bold uppercase text-center">Voltar ao Login</button>
+        </div>
+    </section>
+
+    <section id="app-principal" class="secao-master">
+        <header class="nav-container">
+            <div class="flex flex-col">
+                <span class="text-[8px] text-gray-500 font-bold uppercase italic">Ajuda</span>
+                <span id="header-empresa" class="text-xs font-black text-amber-500 uppercase italic">PROMOTOR</span>
+            </div>
+            <nav class="flex gap-1">
+                <button onclick="navegar('home')" id="nav-h" class="nav-item active-nav"><i data-lucide="home" class="w-4 h-4"></i>Início</button>
+                <button onclick="navegar('lojas')" id="nav-l" class="nav-item"><i data-lucide="store" class="w-4 h-4"></i>Lojas</button>
+                <button onclick="navegar('produtos')" id="nav-p" class="nav-item"><i data-lucide="package-plus" class="w-4 h-4"></i>Produtos</button>
+                <button onclick="navegar('relatorio')" id="nav-r" class="nav-item"><i data-lucide="file-text" class="w-4 h-4"></i>Relat.</button>
+            </nav>
+        </header>
+
+        <main id="conteudo-dinamico" class="flex-1 p-5 overflow-y-auto pb-24"></main>
+    </section>
+
+    <div id="modal-excluir" class="fixed inset-0 bg-black/90 z-50 hidden flex items-center justify-center p-6">
+        <div class="bg-gray-900 border border-gray-800 p-8 rounded-3xl w-full max-w-xs text-center">
+            <i data-lucide="alert-triangle" class="text-red-500 w-12 h-12 mx-auto mb-4"></i>
+            <h2 class="text-white text-xl font-bold mb-2 uppercase leading-tight">Você está excluindo uma loja</h2>
+            <p class="text-white text-sm mb-8">Ao excluir a loja todos os produtos cadastrados nela serão excluídos também.</p>
+            <div class="flex flex-col gap-3">
+                <button id="btn-confirmar-exclusao" class="bg-red-600 text-white font-black py-4 rounded-2xl uppercase">Excluir Loja</button>
+                <button onclick="fecharModal()" class="text-gray-400 font-bold uppercase text-xs">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-editar" class="fixed inset-0 bg-black/90 z-50 hidden flex items-center justify-center p-6">
+        <div class="bg-gray-900 border border-gray-800 p-6 rounded-3xl w-full max-w-sm">
+            <h2 class="text-amber-500 font-black uppercase mb-4 italic">Editar Validade</h2>
+            <input type="number" id="edit-qtd" placeholder="Nova Quantidade" class="input-field">
+            <input type="date" id="edit-data" class="input-field" required>
+            <button id="btn-salvar-edicao" class="btn-amarelo">Salvar Alterações</button>
+            <button onclick="fecharModalEditar()" class="w-full mt-4 text-gray-400 text-xs font-bold uppercase">Cancelar</button>
+        </div>
+    </div>
+
+    <script>
+        let lojas = JSON.parse(localStorage.getItem('lojas')) || [];
+        let abaAtual = 'home';
+        let lojaParaExcluir = null;
+
+        function irPara(id) {
+            document.querySelectorAll('.secao-master').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            lucide.createIcons();
+        }
+
+        function navegar(aba, preLoja = "") {
+            abaAtual = aba;
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active-nav'));
+            const btn = { 'home': 'nav-h', 'lojas': 'nav-l', 'produtos': 'nav-p', 'relatorio': 'nav-r' }[aba];
+            document.getElementById(btn).classList.add('active-nav');
+            renderizar(preLoja);
+        }
+
+        // --- AUTH ---
+        function validarCadastro() {
+            const email = document.getElementById('cad-email').value;
+            const senha = document.getElementById('cad-senha').value;
+            const empresa = document.getElementById('cad-empresa').value;
+            if(!email || !senha) return alert("Preencha os campos!");
+            localStorage.setItem('userAccount', JSON.stringify({ email, senha, empresa }));
+            alert("Conta criada!"); irPara('tela-login');
+        }
+
+        function tentarLogin() {
+            const email = document.getElementById('login-email').value;
+            const senha = document.getElementById('login-senha').value;
+            const salvo = JSON.parse(localStorage.getItem('userAccount'));
+            if(salvo && salvo.email === email && salvo.senha === senha) {
+                document.getElementById('header-empresa').innerText = salvo.empresa;
+                irPara('app-principal'); navegar('home');
+            } else { alert("Dados incorretos!"); }
+        }
+
+        // --- RENDERIZAÇÃO ---
+        function renderizar(preLoja = "") {
+            const root = document.getElementById('conteudo-dinamico');
+            root.innerHTML = "";
+
+            if (abaAtual === 'home') {
+                // Cálculo de totais
+                let totalVencendo = 0;
+                let alertasHtml = "";
+
+                lojas.forEach(loja => {
+                    loja.produtos.forEach(p => {
+                        const dataVenc = new Date(p.data);
+                        const hoje = new Date();
+                        const diff = Math.ceil((dataVenc - hoje) / (1000*60*60*24));
+                        
+                        if(diff <= 3) {
+                            totalVencendo++;
+                            alertasHtml += `
+                            <div class="bg-gray-900 border-l-4 border-red-500 p-4 rounded-r-2xl mb-3">
+                                <div class="text-[10px] text-gray-500 font-black uppercase mb-1">${loja.nome}</div>
+                                <div class="flex justify-between items-start">
+                                    <span class="text-amber-500 font-black uppercase text-sm">${p.nome}</span>
+                                    <div class="text-right">
+                                        <div class="text-red-500 font-black text-sm">${p.data.split('-').reverse().join('/')}</div>
+                                        <div class="text-[9px] text-gray-600 font-bold uppercase">${diff} DIAS</div>
+                                    </div>
+                                </div>
+                                <div class="text-[10px] text-gray-400 uppercase mt-1">${p.qtd} unidades</div>
+                            </div>`;
+                        }
+                    });
+                });
+
+                root.innerHTML = `
+                <h1 class="text-3xl font-black uppercase italic text-center mb-8">Painel</h1>
+                <div class="flex gap-4 mb-10">
+                    <div class="card-resumo">
+                        <div class="text-amber-500 text-4xl font-black mb-1">${lojas.length}</div>
+                        <div class="text-[10px] text-gray-500 font-black uppercase">Lojas</div>
+                    </div>
+                    <div class="card-resumo">
+                        <div class="text-red-500 text-4xl font-black mb-1">${totalVencendo}</div>
+                        <div class="text-[10px] text-gray-500 font-black uppercase">Vencendo</div>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 mb-4">
+                    <i data-lucide="alert-circle" class="text-red-500 w-4 h-4"></i>
+                    <h2 class="text-xs font-black uppercase text-red-500 italic">Atenção: Validade Próxima</h2>
+                </div>
+                
+                ${alertasHtml || '<div class="text-center text-gray-600 text-xs py-10 uppercase font-bold">Tudo em dia por aqui!</div>'}
+                
+                <button onclick="navegar('produtos')" class="btn-amarelo mt-6 fixed bottom-6 left-6 right-6 shadow-2xl">
+                    <i data-lucide="plus-circle"></i> Adicionar Novo Produto
+                </button>`;
+            }
+
+            if (abaAtual === 'lojas') {
+                root.innerHTML = `
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-black uppercase italic">Minhas Lojas</h2>
+                    <button onclick="novaLoja()" class="bg-gray-900 p-2 rounded-full border border-gray-700 text-amber-500"><i data-lucide="plus"></i></button>
+                </div>`;
+                lojas.forEach((loja, i) => {
+                    root.innerHTML += `
+                    <div class="bg-gray-900 p-4 rounded-2xl mb-2 flex justify-between items-center border border-gray-800">
+                        <span onclick="verDetalhesLoja('${loja.nome}')" class="font-bold uppercase flex-1">${loja.nome}</span>
+                        <div class="flex gap-4 text-gray-400">
+                            <i onclick="mover(${i}, -1)" data-lucide="chevron-up" class="w-5 h-5"></i>
+                            <i onclick="mover(${i}, 1)" data-lucide="chevron-down" class="w-5 h-5"></i>
+                            <i onclick="abrirModalExcluir('${loja.nome}')" data-lucide="trash-2" class="w-5 h-5 text-red-500"></i>
+                        </div>
+                    </div>`;
+                });
+            }
+
+            if (abaAtual === 'produtos') {
+                root.innerHTML = `
+                <h2 class="text-xl font-black uppercase mb-6 italic text-amber-500 text-center">Cadastrar Produto</h2>
+                <input type="text" id="p-nome" placeholder="Nome do Produto" class="input-field">
+                <input type="number" id="p-qtd" placeholder="Quantidade" class="input-field">
+                <input type="date" id="p-data" class="input-field" required>
+                <select id="p-loja" class="input-field">
+                    <option value="">Selecione a Loja</option>
+                    ${lojas.map(l => `<option value="${l.nome}" ${l.nome === preLoja ? 'selected' : ''}>${l.nome}</option>`).join('')}
+                </select>
+                <button onclick="salvarProduto()" class="btn-amarelo mt-4 shadow-lg">Salvar Produto</button>`;
+            }
+
+            if (abaAtual === 'relatorio') {
+                root.innerHTML = `<h2 class="text-xl font-black uppercase mb-4 italic text-center">Relatório Geral</h2>`;
+                lojas.forEach(loja => {
+                    if(loja.produtos.length === 0) return;
+                    root.innerHTML += `<div class="text-amber-500 font-black uppercase text-[10px] mt-6 border-b border-gray-800 pb-1">${loja.nome}</div>`;
+                    loja.produtos.sort((a,b)=>new Date(a.data)-new Date(b.data)).forEach(p => {
+                        const diff = Math.ceil((new Date(p.data) - new Date()) / (1000*60*60*24));
+                        const cor = diff <= 3 ? 'text-red-500' : 'text-white';
+                        root.innerHTML += `<div class="flex justify-between py-2 border-b border-gray-900 text-xs uppercase"><span class="font-bold">${p.nome}</span><span class="${cor} font-black">${p.data.split('-').reverse().join('/')} - ${p.qtd}un</span></div>`;
+                    });
+                });
+            }
+            lucide.createIcons();
+        }
+
+        // --- LOGICA ---
+        function novaLoja() { const n = prompt("Nome da Loja:"); if(n){ lojas.push({nome:n, produtos:[]}); salvar(); navegar('lojas'); } }
+        
+        function abrirModalExcluir(nome) {
+            lojaParaExcluir = nome;
+            document.getElementById('modal-excluir').classList.remove('hidden');
+            document.getElementById('btn-confirmar-exclusao').onclick = function() {
+                lojas = lojas.filter(l => l.nome !== lojaParaExcluir);
+                salvar(); fecharModal(); navegar('lojas');
+            };
+        }
+        function fecharModal() { document.getElementById('modal-excluir').classList.add('hidden'); }
+
+        function mover(i, dir) {
+            let n = i + dir;
+            if(n >= 0 && n < lojas.length) { [lojas[i], lojas[n]] = [lojas[n], lojas[i]]; salvar(); navegar('lojas'); }
+        }
+
+        function salvarProduto() {
+            const p = { nome: document.getElementById('p-nome').value, qtd: document.getElementById('p-qtd').value, data: document.getElementById('p-data').value, loja: document.getElementById('p-loja').value };
+            if(!p.nome || !p.data || !p.loja) return alert("Preencha todos os campos!");
+            lojas.find(l => l.nome === p.loja).produtos.push(p);
+            salvar(); alert("Produto Salvo!"); navegar('home');
+        }
+
+        function verDetalhesLoja(nome) {
+            const root = document.getElementById('conteudo-dinamico');
+            const loja = lojas.find(l => l.nome === nome);
+            root.innerHTML = `
+                <div class="flex items-center gap-3 mb-6">
+                    <i onclick="navegar('lojas')" data-lucide="arrow-left" class="text-amber-500 w-6 h-6"></i>
+                    <h2 class="text-2xl font-black uppercase italic">${nome}</h2>
+                </div>`;
+            
+            // Agrupar por nome de produto
+            const agrupado = {};
+            loja.produtos.forEach((p, idx) => {
+                if(!agrupado[p.nome]) agrupado[p.nome] = [];
+                agrupado[p.nome].push({...p, originalIndex: idx});
+            });
+
+            Object.keys(agrupado).sort().forEach(n => {
+                root.innerHTML += `
+                <div class="bg-gray-900 p-4 rounded-2xl mb-3 border border-gray-800">
+                    <div class="text-amber-500 font-black uppercase text-sm mb-3 italic">${n}</div>
+                    ${agrupado[n].map(p => {
+                        const diff = Math.ceil((new Date(p.data) - new Date()) / (1000*60*60*24));
+                        const cor = diff <= 3 ? 'text-red-500' : 'text-white';
+                        return `
+                        <div class="flex justify-between items-center mb-2 pb-2 border-b border-gray-800/50 last:border-0">
+                            <span class="${cor} font-black text-xs uppercase italic">${p.data.split('-').reverse().join('/')} — ${p.qtd} un</span>
+                            <div class="flex gap-4 text-gray-500">
+                                <i onclick="abrirEdicao('${nome}', ${p.originalIndex})" data-lucide="pencil" class="w-4 h-4 hover:text-amber-500"></i>
+                                <i onclick="removerProduto('${nome}', ${p.originalIndex})" data-lucide="trash-2" class="w-4 h-4 hover:text-red-500"></i>
+                            </div>
+                        </div>`;
+                    }).join('')}
+                </div>`;
+            });
+            lucide.createIcons();
+        }
+
+        function abrirEdicao(nomeLoja, index) {
+            const loja = lojas.find(l => l.nome === nomeLoja);
+            const p = loja.produtos[index];
+            document.getElementById('edit-qtd').value = p.qtd;
+            document.getElementById('edit-data').value = p.data;
+            document.getElementById('modal-editar').classList.remove('hidden');
+            document.getElementById('btn-salvar-edicao').onclick = function() {
+                p.qtd = document.getElementById('edit-qtd').value;
+                p.data = document.getElementById('edit-data').value;
+                salvar(); fecharModalEditar(); verDetalhesLoja(nomeLoja);
+            };
+        }
+        function fecharModalEditar() { document.getElementById('modal-editar').classList.add('hidden'); }
+
+        function removerProduto(nomeLoja, index) {
+            if(confirm("Deseja remover este item?")) {
+                const loja = lojas.find(l => l.nome === nomeLoja);
+                loja.produtos.splice(index, 1);
+                salvar(); verDetalhesLoja(nomeLoja);
+            }
+        }
+
+        function salvar() { localStorage.setItem('lojas', JSON.stringify(lojas)); }
+
+        lucide.createIcons();
+    </script>
+</body>
+</html>
         input[type="date"]::before {
             content: attr(placeholder);
             width: 100%;
