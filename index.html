@@ -2,38 +2,130 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Promotor Ajudante</title>
     
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#f59e0b">
+    <meta name="theme-color" content="#030712">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #030712; margin: 0; overflow-x: hidden; }
+        body { font-family: 'Inter', sans-serif; background-color: #030712; margin: 0; padding: 0; }
         
-        /* Sistema de Troca de Telas */
-        .tela-secao { display: none; }
-        .tela-secao.active { display: flex; flex-direction: column; min-height: 100vh; }
-        
-        .nav-item.active { background-color: #f59e0b; color: #030712; shadow: 0 4px 15px rgba(245, 158, 11, 0.3); }
-        
-        .hidden { display: none !important; }
+        /* CONTROLE DE TELAS INFALÍVEL */
+        #tela-acesso, #app-principal {
+            display: none !important; /* Esconde tudo por padrão */
+        }
+
+        #tela-acesso.active {
+            display: flex !important; /* Só mostra se tiver .active */
+        }
+
+        #app-principal.active {
+            display: flex !important; /* Só mostra se tiver .active */
+            flex-direction: column;
+        }
+
+        .nav-item.active { background-color: #f59e0b; color: #030712; }
+        .secao-conteudo { display: none; }
+        .secao-conteudo.active { display: block; }
     </style>
 </head>
-<body class="text-white">
+<body class="text-white bg-gray-950">
 
-    <div id="tela-acesso" class="tela-secao active items-center justify-center p-6">
-        <div class="w-full max-w-md text-center">
-            <div class="bg-amber-500 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-amber-500/20">
-                <i data-lucide="shield-check" class="w-12 h-12 text-gray-950"></i>
-            </div>
-            <h1 class="text-4xl font-black mb-2">PROMOTOR <span class="text-amber-500">AJUDANTE</span></h1>
-            <p id="acesso-subtitulo" class="text-gray-400 mb-10">Crie sua conta para começar</p>
+    <div id="tela-acesso" class="active min-h-screen w-full flex flex-col items-center justify-center p-6 text-center">
+        <div class="bg-amber-500 w-20 h-20 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-amber-500/20">
+            <i data-lucide="shield-check" class="w-12 h-12 text-gray-950"></i>
+        </div>
+        <h1 class="text-4xl font-black mb-2">PROMOTOR <span class="text-amber-500">AJUDANTE</span></h1>
+        <p class="text-gray-400 mb-10">Crie sua conta para começar</p>
+        
+        <div class="w-full max-w-sm space-y-4">
+            <input type="text" placeholder="Seu nome completo" class="w-full bg-gray-900 border border-gray-800 p-4 rounded-xl focus:outline-none focus:border-amber-500">
+            <input type="email" placeholder="Seu e-mail" class="w-full bg-gray-900 border border-gray-800 p-4 rounded-xl focus:outline-none focus:border-amber-500">
+            <input type="password" placeholder="Crie uma senha" class="w-full bg-gray-900 border border-gray-800 p-4 rounded-xl focus:outline-none focus:border-amber-500">
             
-            <div class="space-y-4">
+            <button onclick="entrarNoApp()" class="w-full bg-amber-500 text-gray-950 font-black py-4 rounded-xl hover:bg-amber-600 shadow-lg shadow-amber-500/20 transition-all">
+                CRIAR MINHA CONTA
+            </button>
+        </div>
+        <p class="mt-6 text-gray-500 text-sm">Já tem conta? <a href="#" class="text-amber-500 font-bold">Entrar agora</a></p>
+    </div>
+
+    <div id="app-principal" class="min-h-screen w-full">
+        
+        <header class="p-4 flex items-center justify-between border-b border-gray-800 bg-gray-950 sticky top-0 z-50">
+            <div class="flex items-center gap-2">
+                <div class="bg-amber-500 p-1 rounded-md">
+                    <i data-lucide="clock" class="w-4 h-4 text-gray-950"></i>
+                </div>
+                <div class="flex flex-col leading-none">
+                    <span class="text-[8px] font-bold text-amber-500 uppercase">Promotor</span>
+                    <span class="text-sm font-black text-white uppercase">Ajudante</span>
+                </div>
+            </div>
+            <div class="flex gap-1 bg-gray-900 p-1 rounded-xl">
+                <button onclick="navegar('home')" id="btn-h" class="nav-item active px-4 py-2 rounded-lg text-xs font-bold transition-all">Início</button>
+                <button onclick="navegar('lojas')" id="btn-l" class="nav-item px-4 py-2 rounded-lg text-xs font-bold transition-all">Lojas</button>
+            </div>
+        </header>
+
+        <main class="flex-1 p-6">
+            
+            <div id="home" class="secao-conteudo active text-center py-10">
+                <div class="bg-gray-900/40 p-8 rounded-[40px] border border-gray-800 max-w-sm mx-auto">
+                    <div class="bg-gray-800/50 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                        <i data-lucide="store" class="w-8 h-8 text-amber-500"></i>
+                    </div>
+                    <h2 class="text-2xl font-black mb-2">Nenhuma loja ainda</h2>
+                    <p class="text-gray-500 text-sm mb-8">Cadastre sua primeira loja para começar o controle.</p>
+                    <button onclick="navegar('lojas')" class="w-full bg-amber-500 text-gray-950 font-black py-4 rounded-2xl transition-transform active:scale-95">
+                        CRIAR PRIMEIRA LOJA
+                    </button>
+                </div>
+            </div>
+
+            <div id="lojas" class="secao-conteudo">
+                <h2 class="text-2xl font-black mb-6">Nova Loja</h2>
+                <div class="space-y-4">
+                    <input type="text" placeholder="Nome da Unidade" class="w-full bg-gray-900 border border-gray-800 p-4 rounded-xl focus:outline-none border-l-4 border-l-amber-500">
+                    <button class="w-full bg-amber-500 text-gray-950 font-black py-4 rounded-xl">SALVAR NOVO CADASTRO</button>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        function entrarNoApp() {
+            // Remove active da tela de acesso e coloca no app
+            document.getElementById('tela-acesso').classList.remove('active');
+            document.getElementById('app-principal').classList.add('active');
+            window.scrollTo(0, 0);
+            lucide.createIcons(); // Recarrega os ícones
+        }
+
+        function navegar(destino) {
+            // Esconde todas as seções internas
+            document.querySelectorAll('.secao-conteudo').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+            
+            // Mostra a selecionada
+            document.getElementById(destino).classList.add('active');
+            
+            // Ativa o botão
+            if(destino === 'home') document.getElementById('btn-h').classList.add('active');
+            if(destino === 'lojas') document.getElementById('btn-l').classList.add('active');
+            
+            lucide.createIcons();
+        }
+    </script>
+</body>
+</html>
                 <input type="text" id="reg-nome" placeholder="Seu nome completo" class="w-full bg-gray-900 border border-gray-800 p-4 rounded-xl focus:outline-none focus:border-amber-500 transition-all">
                 <input type="email" id="reg-email" placeholder="Seu e-mail" class="w-full bg-gray-900 border border-gray-800 p-4 rounded-xl focus:outline-none focus:border-amber-500 transition-all">
                 <input type="password" id="reg-senha" placeholder="Crie uma senha" class="w-full bg-gray-900 border border-gray-800 p-4 rounded-xl focus:outline-none focus:border-amber-500 transition-all">
