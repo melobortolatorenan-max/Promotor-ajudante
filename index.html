@@ -12,28 +12,136 @@
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #030712; }
-        .tela { display: none; }
-        .tela.active { display: block; }
-        .nav-item.active { background-color: #f59e0b; color: #030712; }
+        body { font-family: 'Inter', sans-serif; background-color: #030712; margin: 0; overflow-x: hidden; }
+        
+        /* Sistema de Troca de Telas */
+        .tela-secao { display: none; }
+        .tela-secao.active { display: flex; flex-direction: column; min-height: 100vh; }
+        
+        .nav-item.active { background-color: #f59e0b; color: #030712; shadow: 0 4px 15px rgba(245, 158, 11, 0.3); }
+        
+        .hidden { display: none !important; }
     </style>
 </head>
 <body class="text-white">
 
-    <div id="login" class="tela active min-h-screen flex items-center justify-center p-6">
+    <div id="tela-acesso" class="tela-secao active items-center justify-center p-6">
         <div class="w-full max-w-md text-center">
             <div class="bg-amber-500 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-amber-500/20">
                 <i data-lucide="shield-check" class="w-12 h-12 text-gray-950"></i>
             </div>
             <h1 class="text-4xl font-black mb-2">PROMOTOR <span class="text-amber-500">AJUDANTE</span></h1>
-            <p class="text-gray-400 mb-10">Faça login para gerenciar suas validades</p>
+            <p id="acesso-subtitulo" class="text-gray-400 mb-10">Crie sua conta para começar</p>
             
             <div class="space-y-4">
-                <input type="email" placeholder="Seu e-mail" class="w-full bg-gray-900 border border-gray-800 p-4 rounded-xl focus:outline-none focus:border-amber-500 transition-all">
-                <input type="password" placeholder="Sua senha" class="w-full bg-gray-900 border border-gray-800 p-4 rounded-xl focus:outline-none focus:border-amber-500 transition-all">
-                <button onclick="fazerLogin()" class="w-full bg-amber-500 text-gray-950 font-black py-4 rounded-xl hover:bg-amber-600 transition-all">ENTRAR</button>
+                <input type="text" id="reg-nome" placeholder="Seu nome completo" class="w-full bg-gray-900 border border-gray-800 p-4 rounded-xl focus:outline-none focus:border-amber-500 transition-all">
+                <input type="email" id="reg-email" placeholder="Seu e-mail" class="w-full bg-gray-900 border border-gray-800 p-4 rounded-xl focus:outline-none focus:border-amber-500 transition-all">
+                <input type="password" id="reg-senha" placeholder="Crie uma senha" class="w-full bg-gray-900 border border-gray-800 p-4 rounded-xl focus:outline-none focus:border-amber-500 transition-all">
+                
+                <button onclick="finalizarCadastro()" class="w-full bg-amber-500 text-gray-950 font-black py-4 rounded-xl hover:bg-amber-600 transition-all shadow-lg shadow-amber-500/20">
+                    CRIAR MINHA CONTA
+                </button>
             </div>
-            <p class="mt-6 text-gray-500 text-sm">Não tem conta? <a href="#" class="text-amber-500 font-bold">Cadastre-se aqui</a></p>
+            <p class="mt-6 text-gray-500 text-sm">Já tem conta? <a href="#" class="text-amber-500 font-bold">Entrar agora</a></p>
+        </div>
+    </div>
+
+    <div id="app-principal" class="tela-secao">
+        
+        <header class="p-4 flex items-center justify-between border-b border-gray-800 bg-gray-950 sticky top-0 z-50">
+            <div class="flex items-center gap-2">
+                <div class="bg-amber-500 p-1 rounded-md">
+                    <i data-lucide="clock" class="w-4 h-4 text-gray-950"></i>
+                </div>
+                <div class="flex flex-col leading-none">
+                    <span class="text-[8px] font-bold text-amber-500 uppercase">Promotor</span>
+                    <span class="text-sm font-black text-white uppercase">Ajudante</span>
+                </div>
+            </div>
+            <div class="flex gap-1 bg-gray-900 p-1 rounded-xl">
+                <button onclick="navegarApp('home')" id="btn-home" class="nav-item active px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all">
+                    <i data-lucide="home" class="w-3.5 h-3.5"></i> Início
+                </button>
+                <button onclick="navegarApp('lojas')" id="btn-lojas" class="nav-item px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all">
+                    <i data-lucide="store" class="w-3.5 h-3.5"></i> Lojas
+                </button>
+            </div>
+        </header>
+
+        <main class="flex-1 p-6 flex flex-col items-center justify-center text-center">
+            
+            <div id="conteudo-home" class="w-full max-w-sm">
+                <div class="bg-gray-900/40 p-8 rounded-[40px] border border-gray-800 mb-8">
+                    <div class="bg-gray-800/50 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                        <i data-lucide="store" class="w-8 h-8 text-amber-500"></i>
+                    </div>
+                    <h2 class="text-2xl font-black mb-2 text-white">Nenhuma loja ainda</h2>
+                    <p class="text-gray-500 text-sm mb-8 leading-relaxed">Para começar a controlar as validades, você precisa cadastrar sua primeira loja.</p>
+                    
+                    <button onclick="navegarApp('lojas')" class="w-full bg-amber-500 text-gray-950 font-black py-4 rounded-2xl hover:scale-105 transition-all">
+                        CRIAR PRIMEIRA LOJA
+                    </button>
+                </div>
+                
+                <div class="flex items-center justify-center gap-2 text-gray-600 opacity-50">
+                    <i data-lucide="shield-check" class="w-4 h-4"></i>
+                    <span class="text-[10px] font-bold tracking-widest uppercase">Sistema Seguro</span>
+                </div>
+            </div>
+
+            <div id="conteudo-lojas" class="hidden w-full text-left">
+                <h2 class="text-2xl font-black mb-6 text-amber-500">Cadastrar Nova Loja</h2>
+                <div class="space-y-4">
+                    <input type="text" placeholder="Nome da Loja (Ex: Supermercado X)" class="w-full bg-gray-900 border border-gray-800 p-4 rounded-xl focus:outline-none">
+                    <button class="w-full bg-amber-500 text-gray-950 font-black py-4 rounded-xl">SALVAR LOJA</button>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        // Função para finalizar o cadastro e trocar a tela
+        function finalizarCadastro() {
+            // Esconde tela de acesso e mostra o app
+            document.getElementById('tela-acesso').classList.remove('active');
+            document.getElementById('app-principal').classList.add('active');
+            
+            // Força a atualização dos ícones na nova tela
+            lucide.createIcons();
+        }
+
+        // Navegação interna do App
+        function navegarApp(destino) {
+            const home = document.getElementById('conteudo-home');
+            const lojas = document.getElementById('conteudo-lojas');
+            const btnHome = document.getElementById('btn-home');
+            const btnLojas = document.getElementById('btn-lojas');
+
+            if(destino === 'home') {
+                home.classList.remove('hidden');
+                lojas.classList.add('hidden');
+                btnHome.classList.add('active');
+                btnLojas.classList.remove('active');
+            } else {
+                home.classList.add('hidden');
+                lojas.classList.remove('hidden');
+                btnLojas.classList.add('active');
+                btnHome.classList.remove('active');
+            }
+        }
+
+        // Service Worker para PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js');
+            });
+        }
+    </script>
+</body>
+</html>
         </div>
     </div>
 
