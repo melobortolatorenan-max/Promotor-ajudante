@@ -3,37 +3,128 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Promotor Ajudante - Validades</title>
+    <title>Promotor Ajudante</title>
     
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#f59e0b">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black">
-    <link rel="apple-touch-icon" href="logo.png">
-
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
-        
-        body { font-family: 'Inter', sans-serif; }
-        
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #030712; }
         .tela { display: none; }
         .tela.active { display: block; }
-        
-        .fade-in {
-            animation: fadeIn 0.3s ease-in;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        .nav-item.active { background-color: #f59e0b; color: #030712; }
     </style>
 </head>
-<body class="h-full bg-gray-950 text-white selection:bg-amber-500/30">
+<body class="text-white">
 
+    <div id="login" class="tela active min-h-screen flex items-center justify-center p-6">
+        <div class="w-full max-w-md text-center">
+            <div class="bg-amber-500 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-amber-500/20">
+                <i data-lucide="shield-check" class="w-12 h-12 text-gray-950"></i>
+            </div>
+            <h1 class="text-4xl font-black mb-2">PROMOTOR <span class="text-amber-500">AJUDANTE</span></h1>
+            <p class="text-gray-400 mb-10">Faça login para gerenciar suas validades</p>
+            
+            <div class="space-y-4">
+                <input type="email" placeholder="Seu e-mail" class="w-full bg-gray-900 border border-gray-800 p-4 rounded-xl focus:outline-none focus:border-amber-500 transition-all">
+                <input type="password" placeholder="Sua senha" class="w-full bg-gray-900 border border-gray-800 p-4 rounded-xl focus:outline-none focus:border-amber-500 transition-all">
+                <button onclick="fazerLogin()" class="w-full bg-amber-500 text-gray-950 font-black py-4 rounded-xl hover:bg-amber-600 transition-all">ENTRAR</button>
+            </div>
+            <p class="mt-6 text-gray-500 text-sm">Não tem conta? <a href="#" class="text-amber-500 font-bold">Cadastre-se aqui</a></p>
+        </div>
+    </div>
+
+    <div id="app-content" class="hidden flex flex-col min-h-screen">
+        
+        <header class="p-4 flex items-center justify-between border-b border-gray-800 bg-gray-950 sticky top-0 z-50">
+            <div class="flex items-center gap-2">
+                <div class="bg-amber-500 p-1 rounded-md">
+                    <i data-lucide="clock" class="w-4 h-4 text-gray-950"></i>
+                </div>
+                <div class="flex flex-col leading-none">
+                    <span class="text-[8px] font-bold text-amber-500 uppercase">Promotor</span>
+                    <span class="text-sm font-black text-white">AJUDANTE</span>
+                </div>
+            </div>
+            <div class="flex gap-1 bg-gray-900 p-1 rounded-xl">
+                <button onclick="mostrarTela('home')" class="nav-item active px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all">
+                    <i data-lucide="home" class="w-3.5 h-3.5"></i> Início
+                </button>
+                <button onclick="mostrarTela('lojas')" class="nav-item px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all">
+                    <i data-lucide="store" class="w-3.5 h-3.5"></i> Lojas
+                </button>
+                <button onclick="mostrarTela('relatorio')" class="nav-item px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all">
+                    <i data-lucide="box" class="w-3.5 h-3.5"></i> Relatório
+                </button>
+            </div>
+        </header>
+
+        <main class="flex-1 p-6">
+            <div id="home" class="tela active text-center">
+                <h2 class="text-3xl font-black mb-1">Painel</h2>
+                <p class="text-gray-500 mb-8">Resumo das suas lojas e produtos</p>
+                
+                <div class="grid grid-cols-2 gap-4 mb-12">
+                    <div class="bg-gray-900/50 border border-gray-800 p-6 rounded-3xl">
+                        <div class="text-amber-500 text-3xl font-black mb-1">1</div>
+                        <div class="text-gray-500 text-[10px] font-bold uppercase tracking-widest">Lojas</div>
+                    </div>
+                    <div class="bg-gray-900/50 border border-gray-800 p-6 rounded-3xl">
+                        <div class="text-amber-500 text-3xl font-black mb-1">1</div>
+                        <div class="text-gray-500 text-[10px] font-bold uppercase tracking-widest">Produtos</div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col items-center justify-center opacity-30 mt-10">
+                    <i data-lucide="check-circle-2" class="w-16 h-16 mb-4"></i>
+                    <p class="font-bold tracking-widest text-sm uppercase">Tudo em dia!</p>
+                </div>
+            </div>
+
+            <div id="lojas" class="tela">
+                <h2 class="text-2xl font-black mb-4">Suas Lojas</h2>
+                </div>
+            
+            <div id="relatorio" class="tela">
+                <h2 class="text-2xl font-black mb-4">Relatório Geral</h2>
+                </div>
+        </main>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        function fazerLogin() {
+            document.getElementById('login').classList.remove('active');
+            document.getElementById('app-content').classList.remove('hidden');
+            mostrarTela('home');
+        }
+
+        function mostrarTela(id) {
+            // Esconde todas as telas
+            document.querySelectorAll('.tela').forEach(t => t.classList.remove('active'));
+            // Remove active de todos os botões
+            document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
+            
+            // Mostra a tela correta
+            document.getElementById(id).classList.add('active');
+            
+            // Ativa o botão correto na nav
+            const botoes = { 'home': 0, 'lojas': 1, 'relatorio': 2 };
+            document.querySelectorAll('.nav-item')[botoes[id]].classList.add('active');
+        }
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js');
+            });
+        }
+    </script>
+</body>
+</html>
     <div id="app-wrapper" class="w-full h-full flex flex-col min-h-screen">
         
         <nav class="w-full bg-gray-900 border-b border-gray-800 sticky top-0 z-50">
