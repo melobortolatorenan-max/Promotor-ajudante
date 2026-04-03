@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Promotor Ajudante</title>
-    
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#030712">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -12,178 +11,270 @@
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #030712; margin: 0; overflow: hidden; color: white; }
-
-        .secao-master {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            display: none !important; z-index: 10; background-color: #030712;
-        }
-        .secao-master.active { display: flex !important; flex-direction: column; }
+        body { font-family: 'Inter', sans-serif; background-color: #030712; color: white; margin: 0; overflow-x: hidden; }
         
-        .conteudo-app { display: none !important; }
-        .conteudo-app.active { display: block !important; }
+        .secao-master { display: none; min-height: 100vh; flex-direction: column; }
+        .secao-master.active { display: flex; }
 
-        /* Estilo do Menu Superior */
+        /* Estilo do Menu antigo conforme fotos */
+        .nav-container { background-color: #111827; border-bottom: 1px solid #1f2937; padding: 10px; display: flex; justify-content: space-between; align-items: center; }
         .nav-item { 
-            display: flex; align-items: center; gap: 4px; padding: 6px 12px; 
-            border-radius: 8px; color: #9ca3af; transition: all 0.2s;
-            font-size: 10px; font-weight: 700; text-transform: uppercase;
+            display: flex; flex-direction: column; align-items: center; gap: 2px; 
+            padding: 8px 12px; border-radius: 12px; color: #9ca3af; font-size: 10px; font-weight: 700; text-transform: uppercase;
         }
         .nav-item.active-nav { background-color: #f59e0b; color: #030712; }
-        
+
         .input-field {
             width: 100%; background-color: #111827; border: 1px solid #1f2937;
-            padding: 0.8rem 1rem; border-radius: 0.75rem; color: white; margin-bottom: 0.6rem;
-            font-size: 14px;
+            padding: 1rem; border-radius: 1rem; color: white; margin-bottom: 0.8rem;
         }
-        .input-field:focus { border-color: #f59e0b; outline: none; }
-        
-        main { overflow-y: auto; padding-bottom: 80px; }
-        .card-estatistica { background: #111827; border: 1px solid #1f2937; border-radius: 1.2rem; padding: 1.2rem; text-align: center; }
-        
-        .label-mini {
-            display: block; text-align: left; font-size: 10px; font-weight: 700;
-            color: #6b7280; text-transform: uppercase; margin-left: 0.25rem; margin-bottom: 0.2rem;
+
+        .card-notificacao {
+            background: #111827; border-left: 4px solid #ef4444; border-radius: 1rem;
+            padding: 1rem; margin-bottom: 10px;
         }
+
+        .btn-amarelo {
+            background-color: #f59e0b; color: #030712; font-weight: 900;
+            padding: 1rem; border-radius: 1rem; text-transform: uppercase; width: 100%;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+
+        .data-critica { color: #ef4444; font-weight: 900; }
+        .data-ok { color: #ffffff; font-weight: 900; }
+
+        main { flex: 1; padding: 20px; padding-bottom: 40px; }
     </style>
 </head>
 <body>
 
-    <section id="tela-login" class="secao-master active items-center justify-center p-6 text-center">
-        <div class="w-full max-w-sm">
-            <div class="bg-amber-500/10 w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6">
-                <i data-lucide="shield-check" class="w-12 h-12 text-amber-500"></i>
-            </div>
-            <h1 class="text-4xl font-black mb-10 uppercase tracking-tighter italic">Promotor <span class="text-amber-500 text-3xl">Ajudante</span></h1>
-            <div class="space-y-4">
-                <input type="email" id="login-email" placeholder="Seu e-mail" class="input-field">
-                <input type="password" id="login-senha" placeholder="Sua senha" class="input-field">
-                <button onclick="tentarLogin()" class="w-full bg-amber-500 text-gray-950 font-black py-4 rounded-xl uppercase tracking-widest shadow-lg shadow-amber-500/20 active:scale-95 transition-transform">Entrar</button>
-                <button onclick="irParaCadastro()" class="w-full text-amber-500 font-bold py-2 text-xs uppercase">Criar nova conta</button>
-            </div>
+    <section id="tela-login" class="secao-master active items-center justify-center p-6">
+        <div class="w-full max-w-sm text-center">
+            <h1 class="text-3xl font-black mb-10 uppercase italic">Promotor <span class="text-amber-500">Ajudante</span></h1>
+            <input type="email" id="login-email" placeholder="E-mail" class="input-field">
+            <input type="password" id="login-senha" placeholder="Senha" class="input-field">
+            <button onclick="tentarLogin()" class="btn-amarelo">Entrar</button>
+            <button onclick="irPara('tela-cadastro')" class="mt-4 text-amber-500 text-xs font-bold uppercase">Criar conta</button>
         </div>
     </section>
 
-    <section id="tela-cadastro" class="secao-master p-4">
-        <main class="w-full max-w-sm mx-auto flex flex-col items-center justify-center min-h-screen">
-            <h2 class="text-3xl font-black mb-6 uppercase">Cadastro</h2>
-            <div class="w-full space-y-1">
-                <label class="label-mini">Nome Completo</label>
-                <input type="text" id="cad-nome" placeholder="Seu nome" class="input-field">
-                
-                <label class="label-mini">E-mail</label>
-                <input type="email" id="cad-email" placeholder="exemplo@email.com" class="input-field">
-                
-                <label class="label-mini">Cidade</label>
-                <input type="text" id="cad-cidade" placeholder="Onde você trabalha" class="input-field">
-                
-                <label class="label-mini">Empresa</label>
-                <input type="text" id="cad-empresa" placeholder="Sua empresa" class="input-field">
-                
-                <label class="label-mini">Senha (6 dígitos)</label>
-                <input type="password" id="cad-senha" maxlength="6" placeholder="******" class="input-field">
-                
-                <label class="label-mini">Confirmar Senha</label>
-                <input type="password" id="cad-confirmar" maxlength="6" placeholder="******" class="input-field">
-                
-                <button onclick="validarCadastro()" class="w-full bg-amber-500 text-gray-950 font-black py-4 rounded-xl uppercase mt-4 active:scale-95 transition-transform">Finalizar Cadastro</button>
-                <button onclick="irParaLogin()" class="w-full text-gray-500 font-bold py-2 text-xs uppercase">Voltar ao login</button>
-            </div>
-        </main>
-    </section>
-
     <section id="app-principal" class="secao-master">
-        <header class="p-3 flex items-center justify-between border-b border-gray-800 bg-gray-950">
-            <div class="flex items-center gap-2">
-                <div class="flex flex-col leading-none">
-                    <span class="text-[7px] font-bold text-gray-500 uppercase">Promotor</span>
-                    <span id="header-empresa" class="text-xs font-black text-amber-500 uppercase">Ajudante</span>
-                </div>
+        <header class="nav-container">
+            <div class="flex flex-col">
+                <span class="text-[8px] text-gray-500 font-bold uppercase">Ajuda</span>
+                <span class="text-xs font-black text-amber-500 uppercase">Promotor</span>
             </div>
-            
-            <nav class="flex items-center gap-1">
-                <button onclick="navegar('home')" id="nav-h" class="nav-item active-nav">
-                    <i data-lucide="home" class="w-3.5 h-3.5"></i> Início
-                </button>
-                <button onclick="navegar('lojas')" id="nav-l" class="nav-item">
-                    <i data-lucide="store" class="w-3.5 h-3.5"></i> Lojas
-                </button>
-                <button onclick="deslogar()" class="p-2 text-red-500 active:scale-90 transition-transform">
-                    <i data-lucide="log-out" class="w-4 h-4"></i>
-                </button>
+            <nav class="flex gap-1">
+                <button onclick="navegar('home')" id="nav-h" class="nav-item active-nav"><i data-lucide="home" class="w-4 h-4"></i>Início</button>
+                <button onclick="navegar('lojas')" id="nav-l" class="nav-item"><i data-lucide="store" class="w-4 h-4"></i>Lojas</button>
+                <button onclick="navegar('produtos')" id="nav-p" class="nav-item"><i data-lucide="package-plus" class="w-4 h-4"></i>Produtos</button>
+                <button onclick="navegar('relatorio')" id="nav-r" class="nav-item"><i data-lucide="file-text" class="w-4 h-4"></i>Relatório</button>
             </nav>
         </header>
 
-        <main class="flex-1 p-6">
-            <div id="cont-home" class="conteudo-app active">
-                <div class="text-center mb-8">
-                    <div class="bg-amber-500/10 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                        <i data-lucide="layout-dashboard" class="w-8 h-8 text-amber-500"></i>
-                    </div>
-                    <h2 class="text-3xl font-black uppercase">Painel</h2>
-                    <p class="text-gray-500 text-xs">Olá, <span id="user-display-name">Promotor</span></p>
-                </div>
-
-                <div class="grid grid-cols-2 gap-4 mb-8">
-                    <div class="card-estatistica">
-                        <span id="stat-lojas" class="block text-5xl font-black text-amber-500">0</span>
-                        <span class="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Lojas</span>
-                    </div>
-                    <div class="card-estatistica">
-                        <span id="stat-produtos" class="block text-5xl font-black text-red-500">0</span>
-                        <span class="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Itens</span>
-                    </div>
-                </div>
-
-                <h3 class="text-[10px] font-bold text-gray-500 uppercase mb-3 ml-1">Suas Unidades</h3>
-                <div id="lista-lojas-cards" class="space-y-3">
-                    </div>
-            </div>
-
-            <div id="cont-lojas" class="conteudo-app">
-                <h2 class="text-2xl font-black mb-6 uppercase text-amber-500">Cadastrar Unidade</h2>
-                <div class="bg-gray-900 p-6 rounded-3xl border border-gray-800">
-                    <label class="label-mini">Nome da Unidade</label>
-                    <input type="text" id="input-nome-loja" placeholder="Ex: Angeloni Centro" class="input-field">
-                    <button onclick="salvarLoja()" class="w-full bg-amber-500 text-gray-950 font-black py-4 rounded-xl uppercase mt-2">Salvar Loja</button>
-                </div>
-            </div>
-
-            <div id="cont-produtos" class="conteudo-app">
-                <div class="flex items-center gap-3 mb-6">
-                    <button onclick="navegar('home')" class="p-2 bg-gray-900 rounded-lg text-amber-500"><i data-lucide="chevron-left"></i></button>
-                    <h2 id="nome-loja-titulo" class="text-xl font-black uppercase">Produtos</h2>
-                </div>
-
-                <div class="bg-gray-900 p-5 rounded-3xl border border-gray-800 mb-6">
-                    <h3 class="text-[10px] font-bold text-gray-500 uppercase mb-3">Novo Produto</h3>
-                    <input type="text" id="p-nome" placeholder="Nome do Produto" class="input-field">
-                    <input type="date" id="p-data" class="input-field">
-                    <button onclick="adicionarProduto()" class="w-full bg-amber-500 text-gray-950 font-black py-3 rounded-xl uppercase text-xs">Adicionar Item</button>
-                </div>
-
-                <div id="lista-produtos" class="space-y-2">
-                    </div>
-            </div>
-        </main>
+        <main id="conteudo-dinamico">
+            </main>
     </section>
 
     <script>
-        let lojaAtualIndex = null;
+        let lojas = JSON.parse(localStorage.getItem('lojas')) || [];
+        let telaAtual = 'home';
 
-        // Inicializar ícones
-        lucide.createIcons();
+        function salvarDados() {
+            localStorage.setItem('lojas', JSON.stringify(lojas));
+            renderizar();
+        }
 
-        function trocarTelaMestra(id) {
-            document.querySelectorAll('.secao-master').forEach(s => s.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
+        function navegar(alvo) {
+            telaAtual = alvo;
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active-nav'));
+            const map = { 'home': 'nav-h', 'lojas': 'nav-l', 'produtos': 'nav-p', 'relatorio': 'nav-r' };
+            if(map[alvo]) document.getElementById(map[alvo]).classList.add('active-nav');
+            renderizar();
+        }
+
+        function calcularDiferencaDias(dataVenc) {
+            const hoje = new Date();
+            const venc = new Date(dataVenc);
+            const diffTime = venc - hoje;
+            return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        }
+
+        function renderizar() {
+            const container = document.getElementById('conteudo-dinamico');
+            container.innerHTML = "";
+
+            if (telaAtual === 'home') {
+                container.innerHTML = `<h2 class="text-xl font-black uppercase mb-4 text-center italic">Painel de Alertas</h2>`;
+                let alertas = 0;
+                lojas.forEach(loja => {
+                    loja.produtos.forEach(p => {
+                        const dias = calcularDiferencaDias(p.data);
+                        if (dias <= 3) {
+                            alertas++;
+                            container.innerHTML += `
+                            <div class="card-notificacao">
+                                <div class="text-[10px] text-amber-500 font-bold uppercase">${loja.nome}</div>
+                                <div class="flex justify-between items-end">
+                                    <div>
+                                        <div class="text-lg font-black uppercase leading-tight">${p.nome}</div>
+                                        <div class="text-xs text-gray-400">Qtd: ${p.qtd} unidades</div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-[10px] text-gray-500 uppercase font-bold">Vence em:</div>
+                                        <div class="text-sm font-black text-red-500">${p.data.split('-').reverse().join('/')}</div>
+                                    </div>
+                                </div>
+                            </div>`;
+                        }
+                    });
+                });
+                if(alertas === 0) container.innerHTML += `<div class="text-center text-gray-600 mt-10 uppercase font-bold text-xs italic">Tudo em dia!</div>`;
+            }
+
+            if (telaAtual === 'lojas') {
+                container.innerHTML = `
+                <div class="flex justify-center mb-6">
+                    <button onclick="novaLoja()" class="bg-gray-900 p-2 rounded-full border border-gray-700 text-amber-500"><i data-lucide="plus"></i></button>
+                </div>
+                <h2 class="text-lg font-black uppercase mb-4 italic">Minhas Lojas</h2>`;
+                
+                const lojasOrdenadas = [...lojas].sort((a, b) => a.nome.localeCompare(b.nome));
+                
+                lojasOrdenadas.forEach((loja, index) => {
+                    container.innerHTML += `
+                    <div class="bg-gray-900/50 p-4 rounded-2xl border border-gray-800 mb-2 flex justify-between items-center">
+                        <div onclick="verDetalhesLoha('${loja.nome}')" class="font-bold uppercase flex-1 cursor-pointer">${loja.nome}</div>
+                        <div class="flex gap-3 text-gray-400">
+                            <i onclick="moverLoja(${index}, -1)" data-lucide="chevron-up" class="w-5 h-5"></i>
+                            <i onclick="moverLoja(${index}, 1)" data-lucide="chevron-down" class="w-5 h-5"></i>
+                            <i onclick="navegar('produtos', '${loja.nome}')" data-lucide="plus-circle" class="w-5 h-5 text-amber-500"></i>
+                            <i onclick="removerLoja('${loja.nome}')" data-lucide="trash-2" class="w-5 h-5 text-red-500"></i>
+                        </div>
+                    </div>`;
+                });
+            }
+
+            if (telaAtual === 'produtos') {
+                container.innerHTML = `
+                <h2 class="text-2xl font-black uppercase mb-6 italic text-amber-500">Cadastrar Item</h2>
+                <div class="space-y-4">
+                    <input type="text" id="p-nome" placeholder="Nome do Produto" class="input-field">
+                    <input type="number" id="p-qtd" placeholder="Quantidade" class="input-field">
+                    <input type="date" id="p-data" class="input-field">
+                    <select id="p-loja" class="input-field">
+                        <option value="">Selecione a Loja</option>
+                        ${lojas.map(l => `<option value="${l.nome}">${l.nome}</option>`).join('')}
+                    </select>
+                    <button onclick="salvarProduto()" class="btn-amarelo">Finalizar Cadastro</button>
+                </div>`;
+            }
+
+            if (telaAtual === 'relatorio') {
+                container.innerHTML = `<h2 class="text-2xl font-black uppercase mb-6 italic">Relatório Geral</h2>`;
+                lojas.forEach(loja => {
+                    if(loja.produtos.length === 0) return;
+                    container.innerHTML += `<div class="text-amber-500 font-black uppercase text-sm mb-2 mt-6 border-b border-gray-800 pb-1">${loja.nome}</div>`;
+                    
+                    const prodOrdenados = [...loja.produtos].sort((a, b) => new Date(a.data) - new Date(b.data));
+                    
+                    prodOrdenados.forEach(p => {
+                        const dias = calcularDiferencaDias(p.data);
+                        const corData = dias <= 3 ? 'text-red-500' : 'text-white';
+                        container.innerHTML += `
+                        <div class="flex justify-between py-1 text-xs border-b border-gray-900">
+                            <span class="font-bold uppercase">${p.nome}</span>
+                            <span class="${corData} font-black">${p.data.split('-').reverse().join('/')} - ${p.qtd} un</span>
+                        </div>`;
+                    });
+                });
+            }
+            
             lucide.createIcons();
         }
 
-        function irParaCadastro() { trocarTelaMestra('tela-cadastro'); }
-        function irParaLogin() { trocarTelaMestra('tela-login'); }
+        // FUNÇÕES DE AÇÃO
+        function novaLoja() {
+            const nome = prompt("Nome da nova loja:");
+            if(nome) {
+                lojas.push({ nome: nome, produtos: [] });
+                salvarDados();
+            }
+        }
 
-        // CADASTRO COM PERSISTÊNCIA
+        function moverLoja(index, direcao) {
+            const novoIndex = index + direcao;
+            if (novoIndex >= 0 && novoIndex < lojas.length) {
+                [lojas[index], lojas[novoIndex]] = [lojas[novoIndex], lojas[index]];
+                salvarDados();
+            }
+        }
+
+        function removerLoja(nome) {
+            if(confirm(`Excluir loja ${nome} e todos os seus produtos?`)) {
+                lojas = lojas.filter(l => l.nome !== nome);
+                salvarDados();
+            }
+        }
+
+        function salvarProduto() {
+            const p = {
+                nome: document.getElementById('p-nome').value,
+                qtd: document.getElementById('p-qtd').value,
+                data: document.getElementById('p-data').value,
+                loja: document.getElementById('p-loja').value
+            };
+
+            if(!p.nome || !p.data || !p.loja) return alert("Preencha todos os campos!");
+
+            const lojaIdx = lojas.findIndex(l => l.nome === p.loja);
+            lojas[lojaIdx].produtos.push(p);
+            salvarDados();
+            alert("Produto cadastrado!");
+            navegar('home');
+        }
+
+        function verDetalhesLoha(nomeLoja) {
+            const container = document.getElementById('conteudo-dinamico');
+            const loja = lojas.find(l => l.nome === nomeLoja);
+            container.innerHTML = `
+                <div class="flex items-center gap-2 mb-6" onclick="navegar('lojas')">
+                    <i data-lucide="arrow-left" class="text-amber-500"></i>
+                    <h2 class="text-2xl font-black uppercase italic">${nomeLoja}</h2>
+                </div>`;
+            
+            // Agrupamento de produtos
+            const agrupado = {};
+            loja.produtos.forEach(p => {
+                if(!agrupado[p.nome]) agrupado[p.nome] = [];
+                agrupado[p.nome].push(p);
+            });
+
+            // Ordenar nomes alfabeticamente
+            const nomesOrdenados = Object.keys(agrupado).sort();
+
+            nomesOrdenados.forEach(nomeProd => {
+                container.innerHTML += `
+                <div class="bg-gray-900 p-4 rounded-2xl mb-3 border border-gray-800">
+                    <div class="text-amber-500 font-black uppercase text-sm mb-2">${nomeProd}</div>
+                    ${agrupado[nomeProd].map(item => {
+                        const dias = calcularDiferencaDias(item.data);
+                        const cor = dias <= 3 ? 'text-red-500' : 'text-white';
+                        return `<div class="text-xs font-bold ${cor}">${item.data.split('-').reverse().join('/')} - ${item.qtd} UN</div>`;
+                    }).join('')}
+                </div>`;
+            });
+            lucide.createIcons();
+        }
+
+        function tentarLogin() { navegar('home'); } // Simplificado para o exemplo
+
+        // Início
+        renderizar();
+    </script>
+</body>
+</html>
+ÊNCIA
         function validarCadastro() {
             const dados = {
                 nome: document.getElementById('cad-nome').value,
