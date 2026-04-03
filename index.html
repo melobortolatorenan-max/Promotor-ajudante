@@ -12,68 +12,86 @@
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
-        
-        body { 
-            font-family: 'Inter', sans-serif; 
-            background-color: #030712; 
-            margin: 0; 
-            overflow: hidden; /* Impede a rolagem entre telas diferentes */
-        }
+        body { font-family: 'Inter', sans-serif; background-color: #030712; margin: 0; overflow: hidden; color: white; }
 
-        /* ESTADO INICIAL: Tudo fora da tela e invisível */
         .secao-master {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: none !important;
-            z-index: 10;
-            background-color: #030712;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            display: none !important; z-index: 10; background-color: #030712;
         }
-
-        /* APENAS A ATIVA APARECE */
-        .secao-master.active {
-            display: flex !important;
-            flex-direction: column;
-        }
-
-        /* CONTROLE DE CONTEÚDO INTERNO */
+        .secao-master.active { display: flex !important; flex-direction: column; }
+        
         .conteudo-app { display: none !important; }
         .conteudo-app.active { display: block !important; }
 
-        .nav-item.active-nav { 
-            background-color: #f59e0b !important; 
-            color: #030712 !important; 
-            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
-        }
-
-        /* Ajuste para garantir que o conteúdo interno role se for grande */
+        .nav-item.active-nav { background-color: #f59e0b !important; color: #030712 !important; }
+        
+        input { transition: all 0.2s; }
+        input:focus { border-color: #f59e0b !important; outline: none; }
+        
         main { overflow-y: auto; }
     </style>
 </head>
-<body class="text-white">
+<body>
 
-    <section id="tela-acesso" class="secao-master active items-center justify-center p-6 text-center">
-        <div class="w-full max-w-sm flex flex-col items-center">
-            <div class="bg-amber-500 w-20 h-20 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-amber-500/20">
+    <section id="tela-login" class="secao-master active items-center justify-center p-6">
+        <div class="w-full max-w-sm text-center">
+            <div class="bg-amber-500 w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-amber-500/20">
                 <i data-lucide="shield-check" class="w-12 h-12 text-gray-950"></i>
             </div>
             <h1 class="text-4xl font-black mb-2 uppercase tracking-tighter">Promotor <span class="text-amber-500">Ajudante</span></h1>
-            <p class="text-gray-400 mb-10 text-sm">Crie sua conta para começar o controle</p>
+            <p class="text-gray-400 mb-10 text-sm">Gerencie suas validades com facilidade</p>
             
-            <div class="w-full space-y-4">
-                <input type="text" placeholder="Nome completo" class="w-full bg-gray-900 border border-gray-800 p-4 rounded-xl focus:outline-none focus:border-amber-500">
-                <input type="email" placeholder="E-mail" class="w-full bg-gray-900 border border-gray-800 p-4 rounded-xl focus:outline-none focus:border-amber-500">
-                <button onclick="liberarApp()" class="w-full bg-amber-500 text-gray-950 font-black py-4 rounded-xl uppercase tracking-widest active:scale-95 transition-transform">
-                    Criar Minha Conta
-                </button>
+            <div class="space-y-4">
+                <input type="email" id="login-email" placeholder="E-mail" class="w-full bg-gray-900 border border-gray-800 p-4 rounded-xl">
+                <input type="password" id="login-senha" placeholder="Senha" class="w-full bg-gray-900 border border-gray-800 p-4 rounded-xl">
+                <button onclick="tentarLogin()" class="w-full bg-amber-500 text-gray-950 font-black py-4 rounded-xl uppercase tracking-widest">Entrar</button>
+                <button onclick="irParaCadastro()" class="w-full border border-gray-800 text-gray-400 font-bold py-4 rounded-xl text-sm">Criar nova conta</button>
             </div>
         </div>
     </section>
 
+    <section id="tela-cadastro" class="secao-master p-6">
+        <main class="w-full max-w-sm mx-auto py-8">
+            <h2 class="text-3xl font-black mb-2 uppercase">Cadastro</h2>
+            <p class="text-gray-500 text-sm mb-8">Preencha todos os campos obrigatórios</p>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Nome Completo</label>
+                    <input type="text" id="cad-nome" class="w-full bg-gray-900 border border-gray-800 p-4 rounded-xl">
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">E-mail para cadastro</label>
+                    <input type="email" id="cad-email" class="w-full bg-gray-900 border border-gray-800 p-4 rounded-xl">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Cidade</label>
+                        <input type="text" id="cad-cidade" class="w-full bg-gray-900 border border-gray-800 p-4 rounded-xl">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Empresa</label>
+                        <input type="text" id="cad-empresa" class="w-full bg-gray-900 border border-gray-800 p-4 rounded-xl">
+                    </div>
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Senha (6 dígitos)</label>
+                    <input type="password" id="cad-senha" maxlength="6" class="w-full bg-gray-900 border border-gray-800 p-4 rounded-xl">
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Confirmar Senha</label>
+                    <input type="password" id="cad-confirmar" maxlength="6" class="w-full bg-gray-900 border border-gray-800 p-4 rounded-xl">
+                </div>
+                
+                <button onclick="validarCadastro()" class="w-full bg-amber-500 text-gray-950 font-black py-4 rounded-xl uppercase flex items-center justify-center gap-2 mt-4">
+                    <i data-lucide="user-plus" class="w-5 h-5"></i> Finalizar Cadastro
+                </button>
+                <button onclick="irParaLogin()" class="w-full text-gray-500 font-bold py-2 text-xs uppercase">Voltar ao login</button>
+            </div>
+        </main>
+    </section>
+
     <section id="app-principal" class="secao-master">
-        
         <header class="p-4 flex items-center justify-between border-b border-gray-800 bg-gray-950">
             <div class="flex items-center gap-2">
                 <div class="bg-amber-500 p-1 rounded-md">
@@ -81,449 +99,175 @@
                 </div>
                 <div class="flex flex-col leading-none">
                     <span class="text-[8px] font-bold text-amber-500 uppercase">App</span>
-                    <span class="text-sm font-black text-white uppercase">Ajudante</span>
+                    <span id="header-nome" class="text-sm font-black text-white uppercase">Ajudante</span>
                 </div>
             </div>
             <div class="flex gap-1 bg-gray-900 p-1 rounded-xl">
-                <button onclick="navegar('home')" id="nav-h" class="nav-item active-nav px-4 py-2 rounded-lg text-[10px] font-bold uppercase transition-all">Início</button>
-                <button onclick="navegar('lojas')" id="nav-l" class="nav-item px-4 py-2 rounded-lg text-[10px] font-bold uppercase transition-all">Lojas</button>
+                <button onclick="navegar('home')" id="nav-h" class="nav-item active-nav px-4 py-2 rounded-lg text-[10px] font-bold uppercase">Início</button>
+                <button onclick="navegar('lojas')" id="nav-l" class="nav-item px-4 py-2 rounded-lg text-[10px] font-bold uppercase">Lojas</button>
+                <button onclick="deslogar()" class="px-2 py-2 text-red-500"><i data-lucide="log-out" class="w-4 h-4"></i></button>
             </div>
         </header>
 
         <main class="flex-1 p-6">
-            
-            <div id="cont-home" class="conteudo-app active text-center py-10">
-                <div class="bg-gray-900/50 p-10 rounded-[40px] border border-gray-800 border-dashed max-w-sm mx-auto">
-                    <div class="bg-gray-800 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                        <i data-lucide="store" class="w-8 h-8 text-amber-500/50"></i>
+            <div id="cont-home" class="conteudo-app active">
+                <div id="home-vazia" class="text-center py-10">
+                    <div class="bg-gray-900/50 p-10 rounded-[40px] border border-gray-800 border-dashed max-w-sm mx-auto">
+                        <i data-lucide="store" class="w-12 h-12 text-amber-500/30 mx-auto mb-4"></i>
+                        <h2 class="text-2xl font-black mb-2 uppercase">Olá, <span id="user-display-name">...</span></h2>
+                        <p class="text-gray-500 text-sm mb-8">Você ainda não possui lojas cadastradas.</p>
+                        <button onclick="navegar('lojas')" class="w-full bg-amber-500 text-gray-950 font-black py-4 rounded-2xl uppercase">Criar Primeira Loja</button>
                     </div>
-                    <h2 class="text-2xl font-black mb-2 uppercase">Sem lojas</h2>
-                    <p class="text-gray-500 text-sm mb-10 leading-relaxed">Você ainda não possui unidades cadastradas no sistema.</p>
-                    <button onclick="navegar('lojas')" class="w-full bg-amber-500 text-gray-950 font-black py-4 rounded-2xl shadow-lg shadow-amber-500/10">
-                        CRIAR PRIMEIRA LOJA
-                    </button>
                 </div>
+                <div id="home-dados" class="hidden">
+                    </div>
             </div>
 
             <div id="cont-lojas" class="conteudo-app">
                 <h2 class="text-2xl font-black mb-6 uppercase text-amber-500">Cadastrar Unidade</h2>
                 <div class="bg-gray-900 p-6 rounded-3xl border border-gray-800 space-y-4">
-                    <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Nome da Loja</label>
-                    <input type="text" placeholder="Ex: Matriz Centro" class="w-full bg-gray-950 border border-gray-800 p-4 rounded-xl focus:outline-none focus:border-amber-500">
-                    <button class="w-full bg-amber-500 text-gray-950 font-black py-4 rounded-xl uppercase tracking-wider">Salvar Loja</button>
+                    <input type="text" id="input-nome-loja" placeholder="Nome da Loja" class="w-full bg-gray-950 border border-gray-800 p-4 rounded-xl">
+                    <button onclick="salvarLoja()" class="w-full bg-amber-500 text-gray-950 font-black py-4 rounded-xl uppercase">Salvar Loja</button>
                 </div>
             </div>
-
         </main>
     </section>
 
     <script>
         lucide.createIcons();
 
-        function liberarApp() {
-            // Remove active da tela de acesso
-            document.getElementById('tela-acesso').classList.remove('active');
-            // Adiciona active no app principal
-            document.getElementById('app-principal').classList.add('active');
+        // FUNÇÕES DE NAVEGAÇÃO ENTRE TELAS MESTRAS
+        function trocarTelaMestra(id) {
+            document.querySelectorAll('.secao-master').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
             lucide.createIcons();
         }
 
+        function irParaCadastro() { trocarTelaMestra('tela-cadastro'); }
+        function irParaLogin() { trocarTelaMestra('tela-login'); }
+
+        // CADASTRO E VALIDAÇÃO
+        function validarCadastro() {
+            const dados = {
+                nome: document.getElementById('cad-nome').value,
+                email: document.getElementById('cad-email').value,
+                cidade: document.getElementById('cad-cidade').value,
+                empresa: document.getElementById('cad-empresa').value,
+                senha: document.getElementById('cad-senha').value,
+                conf: document.getElementById('cad-confirmar').value
+            };
+
+            if (!dados.nome || !dados.email || !dados.cidade || !dados.empresa || !dados.senha) {
+                alert("Por favor, preencha todos os campos obrigatórios.");
+                return;
+            }
+
+            if (dados.senha.length < 6) {
+                alert("A senha deve ter 6 dígitos.");
+                return;
+            }
+
+            if (dados.senha !== dados.conf) {
+                alert("As senhas não coincidem.");
+                return;
+            }
+
+            // SALVAMENTO AUTOMÁTICO NA "CONTA" (LocalStorage)
+            localStorage.setItem('userAccount', JSON.stringify(dados));
+            localStorage.setItem('lojas', JSON.stringify([])); // Inicia lista de lojas vazia
+            
+            alert("Cadastro realizado com sucesso! 🎉");
+            logarNoApp(dados);
+        }
+
+        // LOGIN
+        function tentarLogin() {
+            const email = document.getElementById('login-email').value;
+            const senha = document.getElementById('login-senha').value;
+            const contaSalva = JSON.parse(localStorage.getItem('userAccount'));
+
+            if (contaSalva && contaSalva.email === email && contaSalva.senha === senha) {
+                logarNoApp(contaSalva);
+            } else {
+                alert("E-mail ou senha incorretos.");
+            }
+        }
+
+        function logarNoApp(user) {
+            document.getElementById('user-display-name').innerText = user.nome.split(' ')[0];
+            document.getElementById('header-nome').innerText = user.empresa;
+            trocarTelaMestra('app-principal');
+            carregarLojas();
+        }
+
+        function deslogar() {
+            if(confirm("Deseja sair do app?")) {
+                trocarTelaMestra('tela-login');
+            }
+        }
+
+        // GERENCIAMENTO DE LOJAS (SALVAMENTO AUTOMÁTICO)
+        function salvarLoja() {
+            const nomeLoja = document.getElementById('input-nome-loja').value;
+            if(!nomeLoja) return;
+
+            let lojas = JSON.parse(localStorage.getItem('lojas')) || [];
+            lojas.push({ nome: nomeLoja, produtos: [] });
+            localStorage.setItem('lojas', JSON.stringify(lojas));
+
+            document.getElementById('input-nome-loja').value = "";
+            carregarLojas();
+            navegar('home');
+        }
+
+        function carregarLojas() {
+            const lojas = JSON.parse(localStorage.getItem('lojas')) || [];
+            const containerVazio = document.getElementById('home-vazia');
+            const containerDados = document.getElementById('home-dados');
+
+            if (lojas.length > 0) {
+                containerVazio.classList.add('hidden');
+                containerDados.classList.remove('hidden');
+                containerDados.innerHTML = `<h2 class="text-xl font-bold mb-4">Minhas Lojas</h2>`;
+                lojas.forEach(loja => {
+                    containerDados.innerHTML += `
+                        <div class="bg-gray-900 p-5 rounded-2xl border border-gray-800 mb-3 flex justify-between items-center">
+                            <span class="font-bold">${loja.nome}</span>
+                            <i data-lucide="chevron-right" class="text-amber-500 w-5 h-5"></i>
+                        </div>
+                    `;
+                });
+                lucide.createIcons();
+            } else {
+                containerVazio.classList.remove('hidden');
+                containerDados.classList.add('hidden');
+            }
+        }
+
         function navegar(alvo) {
-            // Reseta conteúdos
             document.getElementById('cont-home').classList.remove('active');
             document.getElementById('cont-lojas').classList.remove('active');
-            // Reseta botões
             document.getElementById('nav-h').classList.remove('active-nav');
             document.getElementById('nav-l').classList.remove('active-nav');
 
             if(alvo === 'home') {
                 document.getElementById('cont-home').classList.add('active');
                 document.getElementById('nav-h').classList.add('active-nav');
+                carregarLojas();
             } else {
                 document.getElementById('cont-lojas').classList.add('active');
                 document.getElementById('nav-l').classList.add('active-nav');
             }
             lucide.createIcons();
         }
-    </script>
-</body>
-</html>
 
-    <div id="tela-acesso" class="active min-h-screen w-full flex flex-col items-center justify-center p-6 text-center">
-        <div class="bg-amber-500 w-20 h-20 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-amber-500/20">
-            <i data-lucide="shield-check" class="w-12 h-12 text-gray-950"></i>
-        </div>
-        <h1 class="text-4xl font-black mb-2">PROMOTOR <span class="text-amber-500">AJUDANTE</span></h1>
-        <p class="text-gray-400 mb-10">Crie sua conta para começar</p>
-        
-        <div class="w-full max-w-sm space-y-4">
-            <input type="text" placeholder="Seu nome completo" class="w-full bg-gray-900 border border-gray-800 p-4 rounded-xl focus:outline-none focus:border-amber-500">
-            <input type="email" placeholder="Seu e-mail" class="w-full bg-gray-900 border border-gray-800 p-4 rounded-xl focus:outline-none focus:border-amber-500">
-            <input type="password" placeholder="Crie uma senha" class="w-full bg-gray-900 border border-gray-800 p-4 rounded-xl focus:outline-none focus:border-amber-500">
-            
-            <button onclick="entrarNoApp()" class="w-full bg-amber-500 text-gray-950 font-black py-4 rounded-xl hover:bg-amber-600 shadow-lg shadow-amber-500/20 transition-all">
-                CRIAR MINHA CONTA
-            </button>
-        </div>
-        <p class="mt-6 text-gray-500 text-sm">Já tem conta? <a href="#" class="text-amber-500 font-bold">Entrar agora</a></p>
-    </div>
-
-    <div id="app-principal" class="min-h-screen w-full">
-        
-        <header class="p-4 flex items-center justify-between border-b border-gray-800 bg-gray-950 sticky top-0 z-50">
-            <div class="flex items-center gap-2">
-                <div class="bg-amber-500 p-1 rounded-md">
-                    <i data-lucide="clock" class="w-4 h-4 text-gray-950"></i>
-                </div>
-                <div class="flex flex-col leading-none">
-                    <span class="text-[8px] font-bold text-amber-500 uppercase">Promotor</span>
-                    <span class="text-sm font-black text-white uppercase">Ajudante</span>
-                </div>
-            </div>
-            <div class="flex gap-1 bg-gray-900 p-1 rounded-xl">
-                <button onclick="navegar('home')" id="btn-h" class="nav-item active px-4 py-2 rounded-lg text-xs font-bold transition-all">Início</button>
-                <button onclick="navegar('lojas')" id="btn-l" class="nav-item px-4 py-2 rounded-lg text-xs font-bold transition-all">Lojas</button>
-            </div>
-        </header>
-
-        <main class="flex-1 p-6">
-            
-            <div id="home" class="secao-conteudo active text-center py-10">
-                <div class="bg-gray-900/40 p-8 rounded-[40px] border border-gray-800 max-w-sm mx-auto">
-                    <div class="bg-gray-800/50 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                        <i data-lucide="store" class="w-8 h-8 text-amber-500"></i>
-                    </div>
-                    <h2 class="text-2xl font-black mb-2">Nenhuma loja ainda</h2>
-                    <p class="text-gray-500 text-sm mb-8">Cadastre sua primeira loja para começar o controle.</p>
-                    <button onclick="navegar('lojas')" class="w-full bg-amber-500 text-gray-950 font-black py-4 rounded-2xl transition-transform active:scale-95">
-                        CRIAR PRIMEIRA LOJA
-                    </button>
-                </div>
-            </div>
-
-            <div id="lojas" class="secao-conteudo">
-                <h2 class="text-2xl font-black mb-6">Nova Loja</h2>
-                <div class="space-y-4">
-                    <input type="text" placeholder="Nome da Unidade" class="w-full bg-gray-900 border border-gray-800 p-4 rounded-xl focus:outline-none border-l-4 border-l-amber-500">
-                    <button class="w-full bg-amber-500 text-gray-950 font-black py-4 rounded-xl">SALVAR NOVO CADASTRO</button>
-                </div>
-            </div>
-
-        </main>
-    </div>
-
-    <script>
-        lucide.createIcons();
-
-        function entrarNoApp() {
-            // Remove active da tela de acesso e coloca no app
-            document.getElementById('tela-acesso').classList.remove('active');
-            document.getElementById('app-principal').classList.add('active');
-            window.scrollTo(0, 0);
-            lucide.createIcons(); // Recarrega os ícones
-        }
-
-        function navegar(destino) {
-            // Esconde todas as seções internas
-            document.querySelectorAll('.secao-conteudo').forEach(s => s.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-            
-            // Mostra a selecionada
-            document.getElementById(destino).classList.add('active');
-            
-            // Ativa o botão
-            if(destino === 'home') document.getElementById('btn-h').classList.add('active');
-            if(destino === 'lojas') document.getElementById('btn-l').classList.add('active');
-            
-            lucide.createIcons();
-        }
-    </script>
-</body>
-</html>
-                <input type="text" id="reg-nome" placeholder="Seu nome completo" class="w-full bg-gray-900 border border-gray-800 p-4 rounded-xl focus:outline-none focus:border-amber-500 transition-all">
-                <input type="email" id="reg-email" placeholder="Seu e-mail" class="w-full bg-gray-900 border border-gray-800 p-4 rounded-xl focus:outline-none focus:border-amber-500 transition-all">
-                <input type="password" id="reg-senha" placeholder="Crie uma senha" class="w-full bg-gray-900 border border-gray-800 p-4 rounded-xl focus:outline-none focus:border-amber-500 transition-all">
-                
-                <button onclick="finalizarCadastro()" class="w-full bg-amber-500 text-gray-950 font-black py-4 rounded-xl hover:bg-amber-600 transition-all shadow-lg shadow-amber-500/20">
-                    CRIAR MINHA CONTA
-                </button>
-            </div>
-            <p class="mt-6 text-gray-500 text-sm">Já tem conta? <a href="#" class="text-amber-500 font-bold">Entrar agora</a></p>
-        </div>
-    </div>
-
-    <div id="app-principal" class="tela-secao">
-        
-        <header class="p-4 flex items-center justify-between border-b border-gray-800 bg-gray-950 sticky top-0 z-50">
-            <div class="flex items-center gap-2">
-                <div class="bg-amber-500 p-1 rounded-md">
-                    <i data-lucide="clock" class="w-4 h-4 text-gray-950"></i>
-                </div>
-                <div class="flex flex-col leading-none">
-                    <span class="text-[8px] font-bold text-amber-500 uppercase">Promotor</span>
-                    <span class="text-sm font-black text-white uppercase">Ajudante</span>
-                </div>
-            </div>
-            <div class="flex gap-1 bg-gray-900 p-1 rounded-xl">
-                <button onclick="navegarApp('home')" id="btn-home" class="nav-item active px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all">
-                    <i data-lucide="home" class="w-3.5 h-3.5"></i> Início
-                </button>
-                <button onclick="navegarApp('lojas')" id="btn-lojas" class="nav-item px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all">
-                    <i data-lucide="store" class="w-3.5 h-3.5"></i> Lojas
-                </button>
-            </div>
-        </header>
-
-        <main class="flex-1 p-6 flex flex-col items-center justify-center text-center">
-            
-            <div id="conteudo-home" class="w-full max-w-sm">
-                <div class="bg-gray-900/40 p-8 rounded-[40px] border border-gray-800 mb-8">
-                    <div class="bg-gray-800/50 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                        <i data-lucide="store" class="w-8 h-8 text-amber-500"></i>
-                    </div>
-                    <h2 class="text-2xl font-black mb-2 text-white">Nenhuma loja ainda</h2>
-                    <p class="text-gray-500 text-sm mb-8 leading-relaxed">Para começar a controlar as validades, você precisa cadastrar sua primeira loja.</p>
-                    
-                    <button onclick="navegarApp('lojas')" class="w-full bg-amber-500 text-gray-950 font-black py-4 rounded-2xl hover:scale-105 transition-all">
-                        CRIAR PRIMEIRA LOJA
-                    </button>
-                </div>
-                
-                <div class="flex items-center justify-center gap-2 text-gray-600 opacity-50">
-                    <i data-lucide="shield-check" class="w-4 h-4"></i>
-                    <span class="text-[10px] font-bold tracking-widest uppercase">Sistema Seguro</span>
-                </div>
-            </div>
-
-            <div id="conteudo-lojas" class="hidden w-full text-left">
-                <h2 class="text-2xl font-black mb-6 text-amber-500">Cadastrar Nova Loja</h2>
-                <div class="space-y-4">
-                    <input type="text" placeholder="Nome da Loja (Ex: Supermercado X)" class="w-full bg-gray-900 border border-gray-800 p-4 rounded-xl focus:outline-none">
-                    <button class="w-full bg-amber-500 text-gray-950 font-black py-4 rounded-xl">SALVAR LOJA</button>
-                </div>
-            </div>
-
-        </main>
-    </div>
-
-    <script>
-        lucide.createIcons();
-
-        // Função para finalizar o cadastro e trocar a tela
-        function finalizarCadastro() {
-            // Esconde tela de acesso e mostra o app
-            document.getElementById('tela-acesso').classList.remove('active');
-            document.getElementById('app-principal').classList.add('active');
-            
-            // Força a atualização dos ícones na nova tela
-            lucide.createIcons();
-        }
-
-        // Navegação interna do App
-        function navegarApp(destino) {
-            const home = document.getElementById('conteudo-home');
-            const lojas = document.getElementById('conteudo-lojas');
-            const btnHome = document.getElementById('btn-home');
-            const btnLojas = document.getElementById('btn-lojas');
-
-            if(destino === 'home') {
-                home.classList.remove('hidden');
-                lojas.classList.add('hidden');
-                btnHome.classList.add('active');
-                btnLojas.classList.remove('active');
-            } else {
-                home.classList.add('hidden');
-                lojas.classList.remove('hidden');
-                btnLojas.classList.add('active');
-                btnHome.classList.remove('active');
-            }
-        }
-
-        // Service Worker para PWA
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js');
-            });
-        }
-    </script>
-</body>
-</html>
-        </div>
-    </div>
-
-    <div id="app-content" class="hidden flex flex-col min-h-screen">
-        
-        <header class="p-4 flex items-center justify-between border-b border-gray-800 bg-gray-950 sticky top-0 z-50">
-            <div class="flex items-center gap-2">
-                <div class="bg-amber-500 p-1 rounded-md">
-                    <i data-lucide="clock" class="w-4 h-4 text-gray-950"></i>
-                </div>
-                <div class="flex flex-col leading-none">
-                    <span class="text-[8px] font-bold text-amber-500 uppercase">Promotor</span>
-                    <span class="text-sm font-black text-white">AJUDANTE</span>
-                </div>
-            </div>
-            <div class="flex gap-1 bg-gray-900 p-1 rounded-xl">
-                <button onclick="mostrarTela('home')" class="nav-item active px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all">
-                    <i data-lucide="home" class="w-3.5 h-3.5"></i> Início
-                </button>
-                <button onclick="mostrarTela('lojas')" class="nav-item px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all">
-                    <i data-lucide="store" class="w-3.5 h-3.5"></i> Lojas
-                </button>
-                <button onclick="mostrarTela('relatorio')" class="nav-item px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all">
-                    <i data-lucide="box" class="w-3.5 h-3.5"></i> Relatório
-                </button>
-            </div>
-        </header>
-
-        <main class="flex-1 p-6">
-            <div id="home" class="tela active text-center">
-                <h2 class="text-3xl font-black mb-1">Painel</h2>
-                <p class="text-gray-500 mb-8">Resumo das suas lojas e produtos</p>
-                
-                <div class="grid grid-cols-2 gap-4 mb-12">
-                    <div class="bg-gray-900/50 border border-gray-800 p-6 rounded-3xl">
-                        <div class="text-amber-500 text-3xl font-black mb-1">1</div>
-                        <div class="text-gray-500 text-[10px] font-bold uppercase tracking-widest">Lojas</div>
-                    </div>
-                    <div class="bg-gray-900/50 border border-gray-800 p-6 rounded-3xl">
-                        <div class="text-amber-500 text-3xl font-black mb-1">1</div>
-                        <div class="text-gray-500 text-[10px] font-bold uppercase tracking-widest">Produtos</div>
-                    </div>
-                </div>
-
-                <div class="flex flex-col items-center justify-center opacity-30 mt-10">
-                    <i data-lucide="check-circle-2" class="w-16 h-16 mb-4"></i>
-                    <p class="font-bold tracking-widest text-sm uppercase">Tudo em dia!</p>
-                </div>
-            </div>
-
-            <div id="lojas" class="tela">
-                <h2 class="text-2xl font-black mb-4">Suas Lojas</h2>
-                </div>
-            
-            <div id="relatorio" class="tela">
-                <h2 class="text-2xl font-black mb-4">Relatório Geral</h2>
-                </div>
-        </main>
-    </div>
-
-    <script>
-        lucide.createIcons();
-
-        function fazerLogin() {
-            document.getElementById('login').classList.remove('active');
-            document.getElementById('app-content').classList.remove('hidden');
-            mostrarTela('home');
-        }
-
-        function mostrarTela(id) {
-            // Esconde todas as telas
-            document.querySelectorAll('.tela').forEach(t => t.classList.remove('active'));
-            // Remove active de todos os botões
-            document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
-            
-            // Mostra a tela correta
-            document.getElementById(id).classList.add('active');
-            
-            // Ativa o botão correto na nav
-            const botoes = { 'home': 0, 'lojas': 1, 'relatorio': 2 };
-            document.querySelectorAll('.nav-item')[botoes[id]].classList.add('active');
-        }
-
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js');
-            });
-        }
-    </script>
-</body>
-</html>
-    <div id="app-wrapper" class="w-full h-full flex flex-col min-h-screen">
-        
-        <nav class="w-full bg-gray-900 border-b border-gray-800 sticky top-0 z-50">
-            <div class="max-w-xl mx-auto px-4 py-2.5 flex justify-between items-center">
-                <div class="flex items-center gap-2 cursor-pointer" onclick="mostrarTela('home')">
-                    <div class="bg-amber-500 p-1.5 rounded-lg">
-                        <i data-lucide="layout-dashboard" class="w-5 h-5 text-gray-950"></i>
-                    </div>
-                    <div class="flex flex-col leading-none">
-                        <span class="text-[10px] font-bold text-amber-500 uppercase tracking-wider">App</span>
-                        <span class="text-sm font-extrabold text-white">PROMOTOR AJUDANTE</span>
-                    </div>
-                </div>
-                
-                <div class="flex gap-2">
-                    <button onclick="mostrarTela('lojas')" class="p-2 hover:bg-gray-800 rounded-full transition-colors">
-                        <i data-lucide="store" class="w-5 h-5 text-gray-400"></i>
-                    </button>
-                    <button onclick="mostrarTela('listaGeral')" class="p-2 hover:bg-gray-800 rounded-full transition-colors">
-                        <i data-lucide="clipboard-list" class="w-5 h-5 text-gray-400"></i>
-                    </button>
-                </div>
-            </div>
-        </nav>
-
-        <main class="flex-1 w-full max-w-xl mx-auto p-4 pb-24">
-            
-            <div id="home" class="tela active fade-in">
-                <div class="mb-10 text-center">
-                    <div class="bg-amber-500/10 w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-4 border border-amber-500/20">
-                        <i data-lucide="shield-check" class="w-10 h-10 text-amber-500"></i>
-                    </div>
-                    <h2 class="text-3xl font-extrabold mb-1">Olá, Promotor!</h2>
-                    <p class="text-gray-400 text-sm">Controle de validades no Promotor Ajudante.</p>
-                </div>
-
-                <div class="grid grid-cols-2 gap-4 mb-8">
-                    <div class="bg-gray-900 p-4 rounded-2xl border border-gray-800">
-                        <span class="text-gray-500 text-xs font-bold uppercase tracking-widest">Lojas</span>
-                        <div id="stat-lojas" class="text-3xl font-black mt-1">0</div>
-                    </div>
-                    <div class="bg-gray-900 p-4 rounded-2xl border border-gray-800">
-                        <span class="text-gray-500 text-xs font-bold uppercase tracking-widest">Vencendo</span>
-                        <div id="stat-vencidos" class="text-3xl font-black mt-1 text-red-500">0</div>
-                    </div>
-                </div>
-
-                <button onclick="mostrarTela('lojas')" class="w-full bg-amber-500 hover:bg-amber-600 text-gray-950 font-extrabold py-4 rounded-2xl transition-all shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2">
-                    <i data-lucide="plus-circle" class="w-5 h-5"></i>
-                    COMEÇAR VERIFICAÇÃO
-                </button>
-            </div>
-
-            <div id="lojas" class="tela fade-in">
-                <h3 class="text-xl font-bold mb-4">Minhas Lojas</h3>
-                <div id="lista-lojas" class="space-y-3">
-                    </div>
-            </div>
-
-            <div id="listaGeral" class="tela fade-in">
-                <h3 class="text-xl font-bold mb-4">Relatório Geral</h3>
-                <div id="relatorio-itens" class="space-y-3">
-                    </div>
-            </div>
-
-        </main>
-    </div>
-
-    <script>
-        lucide.createIcons();
-
-        function mostrarTela(id) {
-            document.querySelectorAll('.tela').forEach(t => t.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
-            window.scrollTo(0, 0);
-        }
-
-        // Service Worker
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('Promotor Ajudante: SW ativo!'))
-                    .catch(err => console.error('Erro no registro do SW', err));
-            });
-        }
+        // AUTO-LOGIN AO ABRIR O APP (OPCIONAL)
+        window.onload = () => {
+            const logado = localStorage.getItem('userAccount');
+            // Se quiser que ele peça login toda vez, deixe como está. 
+            // Se quiser auto-login, descomente a linha abaixo:
+            // if(logado) logarNoApp(JSON.parse(logado));
+        };
     </script>
 </body>
 </html>
