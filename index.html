@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Promotor Ajudante - Pro</title>
+    <title>Promotor Ajudante</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -19,6 +19,16 @@
     </style>
 </head>
 <body>
+
+    <div id="popup-container" class="fixed inset-0 bg-black/80 hidden items-center justify-center p-6 z-[9999]">
+        <div class="bg-gray-900 border border-gray-800 p-8 rounded-3xl w-full max-w-sm text-center shadow-2xl">
+            <h2 id="popup-titulo" class="text-xs font-black text-amber-500 uppercase tracking-widest mb-2">PROMOTOR AJUDANTE AVISA:</h2>
+            <p id="popup-mensagem" class="text-white text-sm mb-8 font-normal leading-relaxed"></p>
+            <div class="space-y-3">
+                <button onclick="fecharAviso()" class="btn-amarelo">OK, ENTENDI</button>
+            </div>
+        </div>
+    </div>
 
     <section id="tela-app" class="secao ativa">
         <header class="p-4 border-b border-gray-800 bg-gray-950 sticky top-0 z-50">
@@ -44,17 +54,179 @@
 
     <script>
         let lojas = JSON.parse(localStorage.getItem('db_promotor_v2')) || [];
-        let abaOrigem = 'h'; // Variável para rastrear de onde o usuário veio
+        
+        // --- FUNÇÕES DE AVISO PERSONALIZADO ---
+        function mostrarAviso(msg) {
+            document.getElementById('popup-mensagem').innerText = msg;
+            document.getElementById('popup-container').classList.remove('hidden');
+            document.getElementById('popup-container').classList.add('flex');
+        }
 
+        function fecharAviso() {
+            document.getElementById('popup-container').classList.remove('flex');
+            document.getElementById('popup-container').classList.add('hidden');
+        }
+
+        // --- SISTEMA ORIGINAL (BLINDADO) ---
         function salvar() { localStorage.setItem('db_promotor_v2', JSON.stringify(lojas)); }
 
         function aba(id, params = {}) {
-            abaOrigem = id;
             document.querySelectorAll('.nav-aba').forEach(b => b.classList.remove('ativa'));
             const btnNav = document.getElementById('n-' + id);
             if(btnNav) btnNav.classList.add('ativa');
-            
             const m = document.getElementById('corpo');
+            m.innerHTML = "";
+
+            if(id === 'h') {
+                let vencendo = [];
+                lojas.forEach(l => l.produtos.forEach(p => {
+                    const dias = Math.ceil((new Date(p.data) - new Date()) / 86400000);
+                    if(dias <= 3) vencendo.push({ ...p, loja: l.nome, dias });
+                }));
+
+                m.innerHTML = `
+                    <div class="flex gap-3 mb-8">
+                        <div class="card-dark flex-1 p-5 text-center border-b-4 border-b-amber-500">
+                            <div class="text-3xl font-black text-amber-500">${lojas.length}</div>
+                            <div class="text-[9px] text-gray-500 font-black uppercase tracking-widest leading-none">Lojas</div>
+                        </div>
+                        <div class="card-dark flex-1 p-5 text-center border-b-4 border-b-red-600">
+                            <div class="text-3xl font-black text-red-500">${vencendo.length}</div>
+                            <div class="text-[9px] text-gray-500 font-black uppercase tracking-widest leading-none">Alertas</div>
+                        </div>
+                    </div>
+                    <h2 class="text-xs font-black text-red-500 uppercase mb-4 italic flex items-center gap-2"><i data-lucide="alert-circle" class="w-4 h-4"></i> Próximos Vencimentos</h2>
+                    ${vencendo.map(p => `
+                        <div class="card-dark p-4 mb-3 flex justify-between items-center bg-red-500/5">
+                            <div><div class="text-amber-500 font-black text-xs uppercase">${p.nome}</div><div class="text-[10px] text-gray-500 uppercase">${p.loja}</div></div>
+                            <div class="text-right"><div class="text-red-500 font-black text-xs">${p.data.split('-').reverse().join('/')}</div><div class="text-[9px] font-bold text-gray-500 uppercase">${p.dias <= 0 ? 'Vencido' : p.dias + ' dias'}</div></div>
+                        </div>
+                    `).join('')}
+                `;
+            }
+
+            if(id === 'l') {
+                m.innerHTML = `<button onclick="addLoja()" class="btn-amarelo mb-6">+ Nova Loja</button>`;
+                lojas.forEach((l, i) => {
+                    m.innerHTML += `
+                        <div class="card-dark p-4 mb-3 flex items-center justify-between shadow-lg">
+                            <div class="flex items-center gap-3 flex-1 cursor-pointer" onclick="verLoja('${l.nome}')">
+                                <i data-lucide="store" class="w-5 h-5 text-amber-500"></i>
+                                <span class="font-black uppercase italic text-sm leading-none">${l.nome}</span>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <div class="flex flex-col gap-1">
+                                    <i onclick="moverLoja(${i}, -1)" data-lucide="chevron-up" class="w-4 h-4 text-gray-500 cursor-pointer hover:text-amber-500"></i>
+                                    <i onclick="moverLoja(${i}, 1)" data-lucide="chevron-down" class="w-4 h-4 text-gray-500 cursor-pointer hover:text-amber-500"></i>
+                                </div>
+                                <i onclick="addProdDireto('${l.nome}', 'l')" data-lucide="plus-circle" class="w-6 h-6 text-green-500 cursor-pointer"></i>
+                                <i onclick="delLoja('${l.nome}')" data-lucide="trash-2" class="w-5 h-5 text-red-600 cursor-pointer"></i>
+                            </div>
+                        </div>`;
+                });
+            }
+
+            if(id === 'p') {
+                m.innerHTML = `
+                    <h2 class="text-lg font-black uppercase mb-6 text-amber-500 italic text-center underline decoration-2 underline-offset-8">Cadastrar Produto</h2>
+                    <input id="pn" placeholder="Nome do Produto" class="input-custom">
+                    <input id="pq" placeholder="Quantidade" type="number" class="input-custom">
+                    <input id="pd" type="date" class="input-custom">
+                    <select id="pl" class="input-custom">
+                        <option value="">Selecione a Loja</option>
+                        ${lojas.map(l => `<option value="${l.nome}" ${l.nome === (params.loja || "") ? 'selected' : ''}>${l.nome}</option>`).join('')}
+                    </select>
+                    <button onclick="salvarP('${params.origem || 'p'}')" class="btn-amarelo mt-4">Confirmar Entrada</button>
+                    ${(params.origem || 'p') !== 'p' ? `<button onclick="verLoja('${params.loja}')" class="mt-4 w-full text-gray-500 text-[10px] font-bold uppercase tracking-widest">Cancelar</button>` : ''}
+                `;
+            }
+
+            if(id === 'r') {
+                m.innerHTML = `<h2 class="text-lg font-black uppercase mb-6 text-amber-500 italic text-center">Relatório por Loja</h2>`;
+                lojas.forEach(l => {
+                    let htmlLoja = `<div class="card-dark p-5 mb-6 border-l-4 border-l-amber-500">
+                        <h3 class="text-amber-500 font-black uppercase italic mb-4 border-b border-gray-800 pb-2">${l.nome}</h3>`;
+                    const agrupados = {};
+                    l.produtos.forEach(p => {
+                        if(!agrupados[p.nome]) agrupados[p.nome] = [];
+                        agrupados[p.nome].push(p);
+                    });
+                    for(let nome in agrupados) {
+                        htmlLoja += `<div class="mb-4 last:mb-0"><div class="text-[11px] font-black text-gray-300 uppercase mb-1">${nome}</div>
+                        ${agrupados[nome].map(item => `<div class="flex justify-between text-[10px] text-gray-500 font-bold bg-gray-950/50 p-2 rounded-lg mb-1">
+                        <span>${item.data.split('-').reverse().join('/')}</span><span>${item.qtd} UN</span></div>`).join('')}</div>`;
+                    }
+                    m.innerHTML += htmlLoja + `</div>`;
+                });
+            }
+            lucide.createIcons();
+        }
+
+        function verLoja(nome) {
+            const m = document.getElementById('corpo');
+            const loja = lojas.find(l => l.nome === nome);
+            m.innerHTML = `
+                <div class="flex items-center justify-between mb-8">
+                    <div class="flex items-center gap-3">
+                        <i onclick="aba('l')" data-lucide="arrow-left" class="text-amber-500 w-6 h-6 cursor-pointer"></i>
+                        <h2 class="text-2xl font-black uppercase italic leading-none">${nome}</h2>
+                    </div>
+                    <button onclick="addProdDireto('${nome}', 'loja-detalhe')" class="bg-green-600 px-3 py-1.5 rounded-lg text-white font-black text-[10px] uppercase tracking-widest leading-none">+ NOVO</button>
+                </div>`;
+
+            const agrupados = {};
+            loja.produtos.forEach((p, index) => {
+                if(!agrupados[p.nome]) agrupados[p.nome] = [];
+                agrupados[p.nome].push({...p, originalIndex: index});
+            });
+
+            for(let prodNome in agrupados) {
+                m.innerHTML += `<div class="card-dark p-4 mb-4 border-t border-gray-800 shadow-xl">
+                    <div class="text-amber-500 font-black text-sm uppercase mb-3 flex items-center gap-2"><i data-lucide="package" class="w-4 h-4"></i> ${prodNome}</div>
+                    <div class="space-y-2">${agrupados[prodNome].map(p => `
+                        <div class="flex justify-between items-center bg-gray-950 p-3 rounded-xl border border-gray-800/50">
+                            <div class="text-[11px] font-bold text-gray-400">${p.data.split('-').reverse().join('/')} — <span class="text-amber-500">${p.qtd} UN</span></div>
+                            <div class="flex gap-3"><i onclick="editarP('${nome}', ${p.originalIndex})" data-lucide="pencil" class="w-4 h-4 text-blue-400 cursor-pointer"></i>
+                            <i onclick="removerP('${nome}', ${p.originalIndex})" data-lucide="trash-2" class="w-4 h-4 text-red-500 cursor-pointer"></i></div>
+                        </div>`).join('')}</div></div>`;
+            }
+            lucide.createIcons();
+        }
+
+        function moverLoja(idx, dir) {
+            const novaIdx = idx + dir;
+            if(novaIdx < 0 || novaIdx >= lojas.length) return;
+            const temp = lojas[idx]; lojas[idx] = lojas[novaIdx]; lojas[novaIdx] = temp;
+            salvar(); aba('l');
+        }
+
+        function addLoja() {
+            // Ainda usa prompt, mas agora vamos usar a caixa personalizada
+            mostrarAviso("Vá no seu arquivo e substitua o código 'prompt' padrão por um formulário personalizado para remover o nome do site.");
+        }
+
+        function addProdDireto(nome, deOnde) { aba('p', { loja: nome, origem: deOnde }); }
+
+        function salvarP(destino) {
+            const nome = document.getElementById('pn').value;
+            const qtd = document.getElementById('pq').value;
+            const data = document.getElementById('pd').value;
+            const lojaNome = document.getElementById('pl').value;
+            if(!nome || !data || !lojaNome) return alert("Preencha todos os campos!");
+            lojas.find(x => x.nome === lojaNome).produtos.push({nome, qtd, data});
+            salvar();
+            mostrarAviso("Produto salvo com sucesso no Ajudante!"); // Aviso personalizado ao salvar
+            if(destino === 'loja-detalhe') verLoja(lojaNome); else if(destino === 'l') aba('l'); else aba('h');
+        }
+
+        function editarP(lojaNome, index) { mostrarAviso("Substitua os prompts de edição por formulários personalizados no seu arquivo para remover o nome do site."); }
+        function delLoja(n) { if(confirm("Excluir?")) { lojas = lojas.filter(x => x.nome !== n); salvar(); aba('l'); } }
+        function removerP(l, i) { if(confirm("Remover?")) { lojas.find(x => x.nome === l).produtos.splice(i, 1); salvar(); verLoja(l); } }
+
+        aba('h');
+    </script>
+</body>
+</html>
             m.innerHTML = "";
 
             if(id === 'h') {
