@@ -8,32 +8,203 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #030712; color: white; margin: 0; }
-        .secao { display: none; min-height: 100vh; flex-direction: column; }
-        .secao.active { display: flex !important; }
-        .input-field { width: 100%; background-color: #111827; border: 1px solid #1f2937; padding: 1rem; border-radius: 1rem; color: white; margin-bottom: 0.8rem; outline: none; }
-        .btn-amarelo { background-color: #f59e0b; color: #030712; font-weight: 900; padding: 1rem; border-radius: 1rem; text-transform: uppercase; width: 100%; cursor: pointer; border: none; }
+        body { font-family: 'Inter', sans-serif; background-color: #030712; color: white; margin: 0; overflow-x: hidden; }
+        .tela { display: none; min-height: 100vh; flex-direction: column; }
+        .tela.active { display: flex !important; }
+        .input-estilo { width: 100%; background-color: #111827; border: 1px solid #1f2937; padding: 1rem; border-radius: 1rem; color: white; margin-bottom: 0.8rem; outline: none; }
+        .btn-principal { background-color: #f59e0b; color: #030712; font-weight: 900; padding: 1rem; border-radius: 1rem; text-transform: uppercase; width: 100%; border: none; cursor: pointer; }
         .nav-active { background-color: #f59e0b !important; color: #030712 !important; }
-        input[type="date"]::before { content: "selecionar data"; width: 100%; color: #9ca3af; }
+        
+        /* Placeholder da data */
+        input[type="date"]::before { content: "selecionar data"; width: 100%; color: #6b7280; }
         input[type="date"]:focus::before, input[type="date"]:valid::before { display: none; }
     </style>
 </head>
 <body>
 
-    <section id="tela-login" class="secao active items-center justify-center p-6 text-center">
+    <section id="tela-login" class="tela active items-center justify-center p-6 text-center">
         <div class="w-full max-w-sm">
             <div class="bg-gray-900 border border-gray-800 p-4 rounded-2xl w-fit mx-auto mb-4">
-                <i data-lucide="user-round" class="w-12 h-12 text-amber-500"></i>
+                <i data-lucide="user-square-2" class="w-12 h-12 text-amber-500"></i>
             </div>
             <h1 class="text-3xl font-black mb-10 uppercase italic">Promotor <span class="text-amber-500">Ajudante</span></h1>
-            <input type="email" id="l-email" placeholder="E-mail" class="input-field">
-            <input type="password" id="l-senha" placeholder="Senha" class="input-field">
-            <button onclick="fazerLogin()" class="btn-amarelo">Entrar</button>
-            <button onclick="mudarTela('tela-cadastro')" class="mt-6 text-amber-500 text-xs font-bold uppercase">Criar Nova Conta</button>
+            <input type="email" id="login-email" placeholder="E-mail" class="input-estilo">
+            <input type="password" id="login-senha" placeholder="Senha" class="input-estilo">
+            <button onclick="executarLogin()" class="btn-principal">Entrar</button>
+            <button onclick="irPara('tela-cadastro')" class="mt-6 text-amber-500 text-xs font-bold uppercase tracking-widest">Criar Nova Conta</button>
         </div>
     </section>
 
-    <section id="tela-cadastro" class="secao items-center justify-center p-6 text-center">
+    <section id="tela-cadastro" class="tela items-center justify-center p-6 text-center">
+        <div class="w-full max-w-sm">
+            <h2 class="text-2xl font-black mb-6 uppercase text-amber-500 italic">Cadastro</h2>
+            <input type="text" id="cad-nome" placeholder="Nome Completo" class="input-estilo">
+            <input type="email" id="cad-email" placeholder="E-mail" class="input-estilo">
+            <input type="text" id="cad-empresa" placeholder="Empresa" class="input-estilo">
+            <input type="password" id="cad-senha" placeholder="Senha (6 dígitos)" maxlength="6" class="input-estilo">
+            <button onclick="executarCadastro()" class="btn-principal">Finalizar Cadastro</button>
+            <button onclick="irPara('tela-login')" class="mt-4 text-gray-500 text-xs font-bold uppercase">Voltar</button>
+        </div>
+    </section>
+
+    <section id="tela-app" class="tela">
+        <header class="p-4 flex items-center justify-between border-b border-gray-800 bg-gray-950">
+            <div class="flex items-center gap-2">
+                <div class="bg-gray-900 p-1.5 rounded-md border border-gray-800">
+                    <i data-lucide="user-square-2" class="w-4 h-4 text-amber-500"></i>
+                </div>
+                <div class="flex flex-col leading-none">
+                    <span class="text-[8px] font-bold text-gray-500 uppercase">Promotor</span>
+                    <span class="text-sm font-black text-amber-500 uppercase">Ajudante</span>
+                </div>
+            </div>
+            <nav class="flex gap-1 bg-gray-900 p-1 rounded-xl">
+                <button onclick="mudarAba('home')" id="btn-home" class="px-3 py-2 rounded-lg text-[10px] font-bold uppercase">Início</button>
+                <button onclick="mudarAba('lojas')" id="btn-lojas" class="px-3 py-2 rounded-lg text-[10px] font-bold uppercase">Lojas</button>
+                <button onclick="mudarAba('produtos')" id="btn-produtos" class="px-3 py-2 rounded-lg text-[10px] font-bold uppercase">Produtos</button>
+            </nav>
+        </header>
+        <main id="conteudo-principal" class="p-5 flex-1 overflow-y-auto pb-24"></main>
+    </section>
+
+    <script>
+        // Banco de Dados Local
+        let dados = JSON.parse(localStorage.getItem('app_dados')) || [];
+
+        // Inicialização
+        window.onload = () => { lucide.createIcons(); };
+
+        function irPara(id) {
+            document.querySelectorAll('.tela').forEach(t => t.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            lucide.createIcons();
+        }
+
+        // Sistema de Cadastro
+        function executarCadastro() {
+            const email = document.getElementById('cad-email').value;
+            const senha = document.getElementById('cad-senha').value;
+            if(!email || !senha) return alert("Preencha os campos!");
+            
+            localStorage.setItem('usuario_log', JSON.stringify({ email, senha }));
+            alert("Conta criada com sucesso!");
+            irPara('tela-login');
+        }
+
+        // Sistema de Login
+        function executarLogin() {
+            const email = document.getElementById('login-email').value;
+            const senha = document.getElementById('login-senha').value;
+            const conta = JSON.parse(localStorage.getItem('usuario_log'));
+
+            if(conta && conta.email === email && conta.senha === senha) {
+                irPara('tela-app');
+                mudarAba('home');
+            } else {
+                alert("E-mail ou senha incorretos.");
+            }
+        }
+
+        // Navegação Interna
+        function mudarAba(aba) {
+            document.getElementById('btn-home').classList.remove('nav-active');
+            document.getElementById('btn-lojas').classList.remove('nav-active');
+            document.getElementById('btn-produtos').classList.remove('nav-active');
+            document.getElementById('btn-' + aba).classList.add('nav-active');
+
+            const principal = document.getElementById('conteudo-principal');
+            principal.innerHTML = "";
+
+            if(aba === 'home') {
+                let vencendo = 0;
+                dados.forEach(l => l.produtos.forEach(p => {
+                    const dias = Math.ceil((new Date(p.data) - new Date()) / (86400000));
+                    if(dias <= 3) vencendo++;
+                }));
+
+                principal.innerHTML = `
+                    <div class="flex gap-4 mb-8">
+                        <div class="bg-gray-900 flex-1 p-6 rounded-3xl border border-gray-800 text-center">
+                            <div class="text-amber-500 text-3xl font-black">${dados.length}</div>
+                            <div class="text-[10px] text-gray-500 font-bold uppercase italic">Lojas</div>
+                        </div>
+                        <div class="bg-gray-900 flex-1 p-6 rounded-3xl border border-gray-800 text-center">
+                            <div class="text-red-500 text-3xl font-black">${vencendo}</div>
+                            <div class="text-[10px] text-gray-500 font-bold uppercase italic">Vencendo</div>
+                        </div>
+                    </div>
+                    <h2 class="text-xs font-black text-red-500 uppercase mb-4 italic">Atenção: Validade Próxima</h2>
+                `;
+            }
+
+            if(aba === 'lojas') {
+                principal.innerHTML = `<button onclick="novaLoja()" class="btn-principal mb-6">Cadastrar Unidade</button>`;
+                dados.forEach(l => {
+                    principal.innerHTML += `
+                        <div class="bg-gray-900 p-4 rounded-2xl mb-2 flex justify-between items-center border border-gray-800">
+                            <span onclick="abrirLoja('${l.nome}')" class="font-bold uppercase">${l.nome}</span>
+                            <i onclick="deletarLoja('${l.nome}')" data-lucide="trash-2" class="w-5 h-5 text-red-500 cursor-pointer"></i>
+                        </div>`;
+                });
+            }
+
+            if(aba === 'produtos') {
+                principal.innerHTML = `
+                    <h2 class="text-xl font-black uppercase mb-6 italic text-amber-500">Novo Produto</h2>
+                    <input id="p-nome" placeholder="Nome do Produto" class="input-estilo">
+                    <input id="p-qtd" placeholder="Quantidade" type="number" class="input-estilo">
+                    <input id="p-data" type="date" class="input-estilo" required>
+                    <select id="p-loja" class="input-estilo">
+                        ${dados.map(l => `<option value="${l.nome}">${l.nome}</option>`).join('')}
+                    </select>
+                    <button onclick="salvarProduto()" class="btn-principal mt-4">Salvar</button>
+                `;
+            }
+            lucide.createIcons();
+        }
+
+        // Funções de Dados
+        function novaLoja() {
+            const n = prompt("Nome da Loja:");
+            if(n) { dados.push({nome: n, produtos: []}); salvar(); mudarAba('lojas'); }
+        }
+
+        function abrirLoja(nome) {
+            const principal = document.getElementById('conteudo-principal');
+            const loja = dados.find(l => l.nome === nome);
+            principal.innerHTML = `
+                <div class="flex items-center gap-3 mb-6">
+                    <i onclick="mudarAba('lojas')" data-lucide="arrow-left" class="text-amber-500 w-6 h-6 cursor-pointer"></i>
+                    <h2 class="text-2xl font-black uppercase italic">${nome}</h2>
+                </div>`;
+            loja.produtos.forEach((p, i) => {
+                principal.innerHTML += `
+                    <div class="bg-gray-900 p-4 rounded-2xl mb-2 flex justify-between items-center border border-gray-800">
+                        <div><div class="text-amber-500 font-bold text-xs uppercase">${p.nome}</div>
+                        <div class="text-xs text-gray-400 font-bold">${p.data.split('-').reverse().join('/')} — ${p.qtd} un</div></div>
+                        <div class="flex gap-4 text-gray-600">
+                            <i data-lucide="pencil" class="w-4 h-4 cursor-pointer"></i>
+                            <i onclick="removerProduto('${nome}', ${i})" data-lucide="trash-2" class="w-4 h-4 text-red-500 cursor-pointer"></i>
+                        </div>
+                    </div>`;
+            });
+            lucide.createIcons();
+        }
+
+        function salvarProduto() {
+            const p = { nome: document.getElementById('p-nome').value, qtd: document.getElementById('p-qtd').value, data: document.getElementById('p-data').value };
+            const l = document.getElementById('p-loja').value;
+            if(!p.nome || !p.data || !l) return alert("Preencha tudo!");
+            dados.find(x => x.nome === l).produtos.push(p);
+            salvar(); alert("Produto Cadastrado!"); mudarAba('home');
+        }
+
+        function deletarLoja(n) { if(confirm("Excluir esta loja?")) { dados = dados.filter(x => x.nome !== n); salvar(); mudarAba('lojas'); } }
+        function removerProduto(l, i) { dados.find(x => x.nome === l).produtos.splice(i, 1); salvar(); abrirLoja(l); }
+        function salvar() { localStorage.setItem('app_dados', JSON.stringify(dados)); }
+    </script>
+</body>
+</html>
         <div class="w-full max-w-sm">
             <h2 class="text-2xl font-black mb-6 uppercase text-amber-500 italic">Cadastro</h2>
             <input type="text" id="c-nome" placeholder="Nome Completo" class="input-field">
