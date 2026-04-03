@@ -8,226 +8,205 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
-        
-        body { 
-            font-family: 'Inter', sans-serif; 
-            background-color: #030712; 
-            color: white; 
-            margin: 0; 
-            overflow-x: hidden;
-        }
-
-        /* Sistema de Troca de Telas */
-        .secao-principal { display: none; min-height: 100vh; width: 100%; flex-direction: column; }
-        .secao-principal.ativa { display: flex !important; }
-
-        /* Estilização de Inputs e Botões */
-        .input-custom { 
-            width: 100%; background-color: #111827; border: 1px solid #1f2937; 
-            padding: 1rem; border-radius: 1rem; color: white; margin-bottom: 0.8rem; outline: none; 
-        }
-        .btn-amarelo { 
-            background-color: #f59e0b; color: #030712; font-weight: 900; 
-            padding: 1rem; border-radius: 1rem; text-transform: uppercase; width: 100%; 
-            border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
-        }
+        body { font-family: 'Inter', sans-serif; background-color: #030712; color: white; margin: 0; }
+        .secao { display: none; min-height: 100vh; flex-direction: column; }
+        .secao.ativa { display: flex !important; }
+        .input-custom { width: 100%; background-color: #111827; border: 1px solid #1f2937; padding: 1rem; border-radius: 1rem; color: white; margin-bottom: 0.8rem; outline: none; }
+        .btn-amarelo { background-color: #f59e0b; color: #030712; font-weight: 900; padding: 1rem; border-radius: 1rem; text-transform: uppercase; width: 100%; border: none; cursor: pointer; }
         .nav-aba.ativa { background-color: #f59e0b !important; color: #030712 !important; }
-
-        /* Placeholder da Data */
-        input[type="date"]::before { content: "selecionar data"; width: 100%; color: #6b7280; }
+        input[type="date"]::before { content: "selecionar data "; color: #6b7280; }
         input[type="date"]:focus::before, input[type="date"]:valid::before { display: none; }
     </style>
 </head>
 <body>
 
-    <section id="tela-login" class="secao-principal ativa items-center justify-center p-6 text-center">
-        <div class="w-full max-w-sm">
-            <div class="bg-gray-900 border border-gray-800 p-4 rounded-3xl w-fit mx-auto mb-4">
-                <i data-lucide="user-square-2" class="w-12 h-12 text-amber-500"></i>
-            </div>
-            <h1 class="text-3xl font-black mb-10 uppercase italic tracking-tighter">
-                Promotor <span class="text-amber-500">Ajudante</span>
-            </h1>
-            
-            <input type="email" id="login-email" placeholder="E-mail" class="input-custom">
-            <input type="password" id="login-senha" placeholder="Senha" class="input-custom">
-            
-            <button onclick="realizarLogin()" class="btn-amarelo">Entrar</button>
-            <button onclick="navegarPara('tela-cadastro')" class="mt-6 text-amber-500 text-xs font-bold uppercase tracking-widest">Criar Nova Conta</button>
+    <section id="tela-login" class="secao ativa items-center justify-center p-6">
+        <div class="w-full max-w-sm text-center">
+            <div class="bg-gray-900 border border-gray-800 p-4 rounded-3xl w-fit mx-auto mb-4"><i data-lucide="user-square-2" class="w-12 h-12 text-amber-500"></i></div>
+            <h1 class="text-3xl font-black mb-10 uppercase italic">Promotor <span class="text-amber-500">Ajudante</span></h1>
+            <input type="email" id="l-email" placeholder="E-mail" class="input-custom">
+            <input type="password" id="l-senha" placeholder="Senha" class="input-custom">
+            <button onclick="logar()" class="btn-amarelo">Entrar</button>
+            <button onclick="irPara('tela-cadastro')" class="mt-6 text-amber-500 text-xs font-bold uppercase">Criar Nova Conta</button>
         </div>
     </section>
 
-    <section id="tela-cadastro" class="secao-principal items-center justify-center p-6 text-center">
-        <div class="w-full max-w-sm">
-            <div class="bg-gray-900 border border-gray-800 p-4 rounded-2xl w-fit mx-auto mb-4">
-                <i data-lucide="user-plus" class="w-10 h-10 text-amber-500"></i>
-            </div>
+    <section id="tela-cadastro" class="secao items-center justify-center p-6">
+        <div class="w-full max-w-sm text-center">
             <h2 class="text-2xl font-black mb-6 uppercase text-amber-500 italic">Cadastro</h2>
-            <input type="text" id="cad-nome" placeholder="Nome Completo" class="input-custom">
-            <input type="email" id="cad-email" placeholder="E-mail" class="input-custom">
-            <input type="text" id="cad-empresa" placeholder="Empresa" class="input-custom">
-            <input type="password" id="cad-senha" placeholder="Senha (6 dígitos)" maxlength="6" class="input-custom">
-            
-            <button onclick="salvarNovoUsuario()" class="btn-amarelo">Finalizar Cadastro</button>
-            <button onclick="navegarPara('tela-login')" class="mt-4 text-gray-500 text-xs font-bold uppercase">Voltar ao Login</button>
+            <input type="text" id="c-nome" placeholder="Nome Completo" class="input-custom">
+            <input type="email" id="c-email" placeholder="E-mail" class="input-custom">
+            <input type="password" id="c-senha" placeholder="Senha (6 dígitos)" maxlength="6" class="input-custom">
+            <button onclick="cadastrar()" class="btn-amarelo">Finalizar Cadastro</button>
+            <button onclick="irPara('tela-login')" class="mt-4 text-gray-500 text-xs font-bold uppercase">Voltar</button>
         </div>
     </section>
 
-    <section id="tela-app" class="secao-principal">
-        <header class="p-4 flex items-center justify-between border-b border-gray-800 bg-gray-950 sticky top-0 z-50">
-            <div class="flex items-center gap-2">
-                <div class="bg-gray-900 p-1.5 rounded-md border border-gray-800">
-                    <i data-lucide="user-square-2" class="w-4 h-4 text-amber-500"></i>
-                </div>
-                <div class="flex flex-col leading-none text-left">
-                    <span class="text-[8px] font-bold text-gray-500 uppercase">Promotor</span>
-                    <span class="text-sm font-black text-amber-500 uppercase italic">Ajudante</span>
+    <section id="tela-app" class="secao">
+        <header class="p-4 border-b border-gray-800 bg-gray-950 sticky top-0 z-50">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-2">
+                    <div class="bg-gray-900 p-1.5 rounded-md border border-gray-800"><i data-lucide="user-square-2" class="w-4 h-4 text-amber-500"></i></div>
+                    <div class="flex flex-col leading-none"><span class="text-[8px] font-bold text-gray-500 uppercase">Promotor</span><span class="text-sm font-black text-amber-500 uppercase italic">Ajudante</span></div>
                 </div>
             </div>
-            <nav class="flex gap-1 bg-gray-900 p-1 rounded-xl">
-                <button onclick="mudarAba('home')" id="nav-home" class="nav-aba px-3 py-2 rounded-lg text-[10px] font-bold uppercase">Início</button>
-                <button onclick="mudarAba('lojas')" id="nav-lojas" class="nav-aba px-3 py-2 rounded-lg text-[10px] font-bold uppercase">Lojas</button>
-                <button onclick="mudarAba('produtos')" id="nav-produtos" class="nav-aba px-3 py-2 rounded-lg text-[10px] font-bold uppercase">Produtos</button>
+            <nav class="flex gap-1 bg-gray-900 p-1 rounded-xl overflow-x-auto">
+                <button onclick="aba('h')" id="n-h" class="nav-aba flex-1 px-2 py-2 rounded-lg text-[9px] font-bold uppercase">Início</button>
+                <button onclick="aba('l')" id="n-l" class="nav-aba flex-1 px-2 py-2 rounded-lg text-[9px] font-bold uppercase">Lojas</button>
+                <button onclick="aba('p')" id="n-p" class="nav-aba flex-1 px-2 py-2 rounded-lg text-[9px] font-bold uppercase">Produtos</button>
+                <button onclick="aba('r')" id="n-r" class="nav-aba flex-1 px-2 py-2 rounded-lg text-[9px] font-bold uppercase">Relatório</button>
             </nav>
         </header>
-
-        <main id="conteudo-dinamico" class="p-5 flex-1 overflow-y-auto pb-24"></main>
+        <main id="corpo" class="p-5 flex-1 pb-24"></main>
     </section>
 
     <script>
-        // Banco de Dados Local
-        let bancoLojas = JSON.parse(localStorage.getItem('promotor_lojas')) || [];
-
-        // Inicialização de Ícones
+        let lojas = JSON.parse(localStorage.getItem('db_ajudante')) || [];
         lucide.createIcons();
 
-        // Navegação entre Login/Cadastro/App
-        function navegarPara(id) {
-            document.querySelectorAll('.secao-principal').forEach(s => s.classList.remove('ativa'));
+        function irPara(id) {
+            document.querySelectorAll('.secao').forEach(s => s.classList.remove('ativa'));
             document.getElementById(id).classList.add('ativa');
             lucide.createIcons();
         }
 
-        // Cadastro de Usuário
-        function salvarNovoUsuario() {
-            const email = document.getElementById('cad-email').value;
-            const senha = document.getElementById('cad-senha').value;
-            if(!email || !senha) return alert("Por favor, preencha os dados.");
-            
-            localStorage.setItem('usuario_cadastrado', JSON.stringify({ email, senha }));
-            alert("Conta criada! Faça seu login.");
-            navegarPara('tela-login');
+        function cadastrar() {
+            const e = document.getElementById('c-email').value;
+            const s = document.getElementById('c-senha').value;
+            if(!e || !s) return alert("Preencha os campos!");
+            localStorage.setItem('user_ajudante', JSON.stringify({e, s}));
+            alert("Cadastrado!"); irPara('tela-login');
         }
 
-        // Login
-        function realizarLogin() {
-            const email = document.getElementById('login-email').value;
-            const senha = document.getElementById('login-senha').value;
-            const salvo = JSON.parse(localStorage.getItem('usuario_cadastrado'));
-
-            if(salvo && salvo.email === email && salvo.senha === senha) {
-                navegarPara('tela-app');
-                mudarAba('home');
-            } else {
-                alert("Usuário ou senha incorretos.");
-            }
+        function logar() {
+            const e = document.getElementById('l-email').value;
+            const s = document.getElementById('l-senha').value;
+            const u = JSON.parse(localStorage.getItem('user_ajudante'));
+            if(u && u.e === e && u.s === s) { irPara('tela-app'); aba('h'); }
+            else { alert("Acesso negado."); }
         }
 
-        // Navegação das Abas do App
-        function mudarAba(aba) {
+        function aba(id) {
             document.querySelectorAll('.nav-aba').forEach(b => b.classList.remove('ativa'));
-            document.getElementById('nav-' + aba).classList.add('ativa');
-            const main = document.getElementById('conteudo-dinamico');
-            main.innerHTML = "";
+            document.getElementById('n-' + id).classList.add('ativa');
+            const m = document.getElementById('corpo');
+            m.innerHTML = "";
 
-            if(aba === 'home') {
-                let totalVencendo = 0;
-                bancoLojas.forEach(l => l.produtos.forEach(p => {
+            if(id === 'h') {
+                let v = [];
+                lojas.forEach(l => l.produtos.forEach(p => {
                     const dias = Math.ceil((new Date(p.data) - new Date()) / 86400000);
-                    if(dias <= 3) totalVencendo++;
+                    if(dias <= 3) v.push({ ...p, loja: l.nome, dias });
                 }));
 
-                main.innerHTML = `
-                    <div class="flex gap-4 mb-8">
+                m.innerHTML = `
+                    <div class="flex gap-4 mb-6">
                         <div class="bg-gray-900 flex-1 p-6 rounded-3xl border border-gray-800 text-center">
-                            <div class="text-amber-500 text-3xl font-black">${bancoLojas.length}</div>
-                            <div class="text-[10px] text-gray-500 font-bold uppercase italic">Lojas</div>
+                            <div class="text-amber-500 text-3xl font-black">${lojas.length}</div>
+                            <div class="text-[10px] text-gray-500 font-bold uppercase">Lojas</div>
                         </div>
                         <div class="bg-gray-900 flex-1 p-6 rounded-3xl border border-gray-800 text-center">
-                            <div class="text-red-500 text-3xl font-black">${totalVencendo}</div>
-                            <div class="text-[10px] text-gray-500 font-bold uppercase italic">Vencendo</div>
+                            <div class="text-red-500 text-3xl font-black">${v.length}</div>
+                            <div class="text-[10px] text-gray-500 font-bold uppercase">Vencendo</div>
                         </div>
                     </div>
-                    <h2 class="text-xs font-black text-red-500 uppercase mb-4 italic tracking-widest">Alertas Críticos</h2>
+                    <h2 class="text-xs font-black text-red-500 uppercase mb-4 italic">Produtos em Risco (3 dias)</h2>
+                    ${v.map(p => `
+                        <div class="bg-red-500/10 border border-red-500/20 p-4 rounded-2xl mb-2 flex justify-between items-center">
+                            <div>
+                                <div class="text-red-500 font-bold text-xs uppercase">${p.nome}</div>
+                                <div class="text-[10px] text-gray-400 uppercase">${p.loja}</div>
+                            </div>
+                            <div class="text-red-500 font-black text-xs italic">${p.dias <= 0 ? 'VENCIDO' : p.dias + ' DIAS'}</div>
+                        </div>
+                    `).join('')}
                 `;
             }
 
-            if(aba === 'lojas') {
-                main.innerHTML = `<button onclick="criarLoja()" class="btn-amarelo mb-6">Nova Loja</button>`;
-                bancoLojas.forEach(l => {
-                    main.innerHTML += `
+            if(id === 'l') {
+                m.innerHTML = `<button onclick="addLoja()" class="btn-amarelo mb-6">Nova Loja</button>`;
+                lojas.forEach(l => {
+                    m.innerHTML += `
                         <div class="bg-gray-900 p-4 rounded-2xl mb-2 flex justify-between items-center border border-gray-800">
-                            <span onclick="abrirLoja('${l.nome}')" class="font-bold uppercase cursor-pointer">${l.nome}</span>
-                            <i onclick="removerLoja('${l.nome}')" data-lucide="trash-2" class="w-5 h-5 text-red-500 cursor-pointer"></i>
+                            <div onclick="verLoja('${l.nome}')" class="flex items-center gap-3 cursor-pointer">
+                                <i data-lucide="map-pin" class="w-4 h-4 text-amber-500"></i>
+                                <span class="font-bold uppercase">${l.nome}</span>
+                            </div>
+                            <i onclick="delLoja('${l.nome}')" data-lucide="trash-2" class="w-5 h-5 text-red-500 cursor-pointer"></i>
                         </div>`;
                 });
             }
 
-            if(aba === 'produtos') {
-                main.innerHTML = `
-                    <h2 class="text-xl font-black uppercase mb-6 italic text-amber-500">Cadastrar Produto</h2>
-                    <input id="prod-nome" placeholder="Produto" class="input-custom">
-                    <input id="prod-qtd" placeholder="Qtd" type="number" class="input-custom">
-                    <input id="prod-data" type="date" class="input-custom" required>
-                    <select id="prod-loja" class="input-custom">
-                        ${bancoLojas.map(l => `<option value="${l.nome}">${l.nome}</option>`).join('')}
-                    </select>
-                    <button onclick="salvarProduto()" class="btn-amarelo mt-4">Salvar Produto</button>
+            if(id === 'p') {
+                m.innerHTML = `
+                    <h2 class="text-xl font-black uppercase mb-6 text-amber-500 italic text-center">Cadastro Geral</h2>
+                    <input id="pn" placeholder="Nome do Produto" class="input-custom">
+                    <input id="pq" placeholder="Quantidade" type="number" class="input-custom">
+                    <input id="pd" type="date" class="input-custom" required>
+                    <select id="pl" class="input-custom">${lojas.map(l => `<option value="${l.nome}">${l.nome}</option>`).join('')}</select>
+                    <button onclick="salvarP()" class="btn-amarelo mt-4">Salvar</button>
+                `;
+            }
+
+            if(id === 'r') {
+                let totalProd = 0;
+                lojas.forEach(l => totalProd += l.produtos.length);
+                m.innerHTML = `
+                    <h2 class="text-xl font-black uppercase mb-6 text-amber-500 italic text-center">Relatório</h2>
+                    <div class="bg-gray-900 p-6 rounded-3xl border border-gray-800 space-y-4">
+                        <div class="flex justify-between border-b border-gray-800 pb-2"><span class="text-xs font-bold text-gray-500 uppercase">Total de Lojas:</span><span class="font-black text-amber-500">${lojas.length}</span></div>
+                        <div class="flex justify-between border-b border-gray-800 pb-2"><span class="text-xs font-bold text-gray-500 uppercase">Total de Produtos:</span><span class="font-black text-amber-500">${totalProd}</span></div>
+                    </div>
                 `;
             }
             lucide.createIcons();
         }
 
-        // Funções de Gerenciamento
-        function criarLoja() {
-            const n = prompt("Nome da unidade:");
-            if(n) { bancoLojas.push({nome: n, produtos: []}); salvarDB(); mudarAba('lojas'); }
+        function addLoja() {
+            const n = prompt("Nome da Loja:");
+            if(n) { lojas.push({nome: n, produtos: []}); salvar(); aba('l'); }
         }
 
-        function abrirLoja(nome) {
-            const main = document.getElementById('conteudo-dinamico');
-            const loja = bancoLojas.find(l => l.nome === nome);
-            main.innerHTML = `
-                <div class="flex items-center gap-3 mb-6">
-                    <i onclick="mudarAba('lojas')" data-lucide="arrow-left" class="text-amber-500 w-6 h-6 cursor-pointer"></i>
-                    <h2 class="text-2xl font-black uppercase italic">${nome}</h2>
+        function verLoja(nome) {
+            const m = document.getElementById('corpo');
+            const loja = lojas.find(l => l.nome === nome);
+            m.innerHTML = `
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center gap-3">
+                        <i onclick="aba('l')" data-lucide="arrow-left" class="text-amber-500 w-6 h-6 cursor-pointer"></i>
+                        <h2 class="text-2xl font-black uppercase italic">${nome}</h2>
+                    </div>
+                    <button onclick="addProdDireto('${nome}')" class="bg-amber-500 p-2 rounded-lg text-gray-950 font-black text-[10px] uppercase">+ Produto</button>
                 </div>`;
             loja.produtos.forEach((p, i) => {
-                main.innerHTML += `
+                m.innerHTML += `
                     <div class="bg-gray-900 p-4 rounded-2xl mb-2 flex justify-between items-center border border-gray-800">
                         <div>
                             <div class="text-amber-500 font-bold text-xs uppercase">${p.nome}</div>
-                            <div class="text-xs text-gray-400 font-bold">${p.data.split('-').reverse().join('/')} — ${p.qtd} un</div>
+                            <div class="text-[10px] text-gray-400">${p.data.split('-').reverse().join('/')} — ${p.qtd} un</div>
                         </div>
-                        <i onclick="removerProduto('${nome}', ${i})" data-lucide="trash-2" class="w-4 h-4 text-red-500 cursor-pointer"></i>
+                        <i onclick="removerP('${nome}', ${i})" data-lucide="trash-2" class="w-4 h-4 text-red-500 cursor-pointer"></i>
                     </div>`;
             });
             lucide.createIcons();
         }
 
-        function salvarProduto() {
-            const n = document.getElementById('prod-nome').value;
-            const q = document.getElementById('prod-qtd').value;
-            const d = document.getElementById('prod-data').value;
-            const l = document.getElementById('prod-loja').value;
-            if(!n || !d || !l) return alert("Preencha tudo!");
-            bancoLojas.find(x => x.nome === l).produtos.push({nome: n, qtd: q, data: d});
-            salvarDB(); alert("Salvo!"); mudarAba('home');
+        function addProdDireto(nome) {
+            aba('p');
+            document.getElementById('pl').value = nome;
         }
 
-        function removerLoja(nome) { if(confirm("Excluir loja?")) { bancoLojas = bancoLojas.filter(x => x.nome !== nome); salvarDB(); mudarAba('lojas'); } }
-        function removerProduto(loja, idx) { bancoLojas.find(l => l.nome === loja).produtos.splice(idx, 1); salvarDB(); abrirLoja(loja); }
-        function salvarDB() { localStorage.setItem('promotor_lojas', JSON.stringify(bancoLojas)); }
+        function salvarP() {
+            const p = { nome: document.getElementById('pn').value, qtd: document.getElementById('pq').value, data: document.getElementById('pd').value };
+            const l = document.getElementById('pl').value;
+            if(!p.nome || !p.data || !l) return alert("Preencha tudo!");
+            lojas.find(x => x.nome === l).produtos.push(p);
+            salvar(); alert("Salvo!"); aba('h');
+        }
+
+        function delLoja(n) { if(confirm("Excluir?")) { lojas = lojas.filter(x => x.nome !== n); salvar(); aba('l'); } }
+        function removerP(l, i) { lojas.find(x => x.nome === l).produtos.splice(i, 1); salvar(); verLoja(l); }
+        function salvar() { localStorage.setItem('db_ajudante', JSON.stringify(lojas)); }
     </script>
 </body>
 </html>
