@@ -4,221 +4,196 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Promotor Ajudante</title>
-    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #030712; color: white; margin: 0; padding: 0; }
         
-        body { 
-            font-family: 'Inter', sans-serif; 
-            background-color: #030712; 
-            color: white; 
-            margin: 0; 
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        /* Bloqueador de visualização: Esconde todas as seções por padrão */
-        section { 
-            display: none !important; 
-            min-height: 100vh;
-            width: 100%;
-        }
-
-        /* Mostra apenas a seção que tiver a classe .ativa */
-        section.ativa { 
-            display: flex !important; 
-            flex-direction: column;
-        }
-
-        .campo-input {
-            width: 100%;
-            background-color: #111827;
-            border: 1px solid #1f2937;
-            padding: 1rem;
-            border-radius: 1rem;
-            color: white;
-            margin-bottom: 0.75rem;
-            outline: none;
-        }
-
-        .botao-amarelo {
-            background-color: #f59e0b;
-            color: #030712;
-            font-weight: 900;
-            padding: 1rem;
-            border-radius: 1rem;
-            text-transform: uppercase;
-            width: 100%;
-            border: none;
-            cursor: pointer;
-            transition: transform 0.1s;
-        }
-
-        .botao-amarelo:active { transform: scale(0.98); }
-
-        .item-nav.selecionado {
-            background-color: #f59e0b !important;
-            color: #030712 !important;
-        }
-
-        /* Placeholder customizado para data */
-        input[type="date"]::before {
-            content: "selecionar data";
-            width: 100%;
-            color: #6b7280;
-        }
-        input[type="date"]:focus::before, 
-        input[type="date"]:valid::before { display: none; }
+        /* Sistema de Abas: Garante que só uma tela apareça */
+        .secao-tela { display: none !important; min-height: 100vh; width: 100%; }
+        .secao-tela.ativa { display: flex !important; flex-direction: column; }
+        
+        .input-box { width: 100%; background-color: #111827; border: 1px solid #1f2937; padding: 14px; border-radius: 12px; color: white; margin-bottom: 10px; outline: none; }
+        .btn-main { background-color: #f59e0b; color: #030712; font-weight: 900; padding: 14px; border-radius: 12px; text-transform: uppercase; width: 100%; border: none; cursor: pointer; }
+        .nav-link.ativo { background-color: #f59e0b !important; color: #030712 !important; }
+        
+        /* Estilo para o placeholder da data */
+        input[type="date"]::before { content: "selecionar data "; color: #6b7280; margin-right: 5px; }
+        input[type="date"]:focus::before, input[type="date"]:valid::before { content: "" !important; }
     </style>
 </head>
 <body>
 
-    <section id="tela-login" class="ativa items-center justify-center p-6 text-center">
+    <section id="tela-login" class="secao-tela ativa items-center justify-center p-6 text-center">
         <div class="w-full max-w-sm">
-            <div class="bg-gray-900 border border-gray-800 p-4 rounded-3xl w-fit mx-auto mb-4">
+            <div class="bg-gray-900 border border-gray-800 p-4 rounded-2xl w-fit mx-auto mb-4">
                 <i data-lucide="user-square-2" class="w-12 h-12 text-amber-500"></i>
             </div>
-            <h1 class="text-3xl font-black mb-10 uppercase italic tracking-tighter">
-                Promotor <span class="text-amber-500">Ajudante</span>
-            </h1>
+            <h1 class="text-3xl font-black mb-8 uppercase italic italic">Promotor <span class="text-amber-500">Ajudante</span></h1>
             
-            <input type="email" id="l-email" placeholder="E-mail" class="campo-input">
-            <input type="password" id="l-senha" placeholder="Senha" class="campo-input">
+            <input type="email" id="l-email" placeholder="E-mail" class="input-box">
+            <input type="password" id="l-senha" placeholder="Senha" class="input-box">
             
-            <button onclick="entrar()" class="botao-amarelo">Entrar</button>
-            <button onclick="mudarPara('tela-cadastro')" class="mt-6 text-amber-500 text-xs font-bold uppercase tracking-widest">Criar Conta Agora</button>
+            <button onclick="acaoLogin()" class="btn-main">Entrar</button>
+            <button onclick="irPara('tela-cadastro')" class="mt-6 text-amber-500 text-xs font-bold uppercase">Criar Nova Conta</button>
         </div>
     </section>
 
-    <section id="tela-cadastro" class="items-center justify-center p-6 text-center">
+    <section id="tela-cadastro" class="secao-tela items-center justify-center p-6 text-center">
         <div class="w-full max-w-sm">
-            <h2 class="text-2xl font-black mb-6 uppercase text-amber-500 italic">Novo Cadastro</h2>
-            <input type="text" id="c-nome" placeholder="Nome Completo" class="campo-input">
-            <input type="email" id="c-email" placeholder="E-mail" class="campo-input">
-            <input type="text" id="c-empresa" placeholder="Sua Empresa" class="campo-input">
-            <input type="password" id="c-senha" placeholder="Senha (6 dígitos)" maxlength="6" class="campo-input">
+            <h2 class="text-2xl font-black mb-6 uppercase text-amber-500 italic">Cadastro</h2>
+            <input type="text" id="c-nome" placeholder="Nome Completo" class="input-box">
+            <input type="email" id="c-email" placeholder="E-mail" class="input-box">
+            <input type="text" id="c-empresa" placeholder="Empresa" class="input-box">
+            <input type="password" id="c-senha" placeholder="Senha (6 dígitos)" maxlength="6" class="input-box">
             
-            <button onclick="registrar()" class="botao-amarelo">Finalizar Cadastro</button>
-            <button onclick="mudarPara('tela-login')" class="mt-4 text-gray-500 text-xs font-bold uppercase">Voltar ao Login</button>
+            <button onclick="acaoCadastro()" class="btn-main">Finalizar Cadastro</button>
+            <button onclick="irPara('tela-login')" class="mt-4 text-gray-500 text-xs font-bold uppercase">Voltar</button>
         </div>
     </section>
 
-    <section id="tela-app">
-        <header class="p-4 flex items-center justify-between border-b border-gray-800 bg-gray-950 sticky top-0 z-50">
+    <section id="tela-app" class="secao-tela">
+        <header class="p-4 flex items-center justify-between border-b border-gray-800 bg-gray-950">
             <div class="flex items-center gap-2">
-                <div class="bg-gray-900 p-1.5 rounded-md border border-gray-800">
+                <div class="bg-gray-900 p-1 rounded-md border border-gray-800">
                     <i data-lucide="user-square-2" class="w-4 h-4 text-amber-500"></i>
                 </div>
                 <div class="flex flex-col leading-none text-left">
                     <span class="text-[8px] font-bold text-gray-500 uppercase">Promotor</span>
-                    <span class="text-sm font-black text-amber-500 uppercase tracking-tighter">Ajudante</span>
+                    <span class="text-sm font-black text-amber-500 uppercase">Ajudante</span>
                 </div>
             </div>
             <nav class="flex gap-1 bg-gray-900 p-1 rounded-xl">
-                <button onclick="navegar('inicio')" id="btn-inicio" class="item-nav px-3 py-2 rounded-lg text-[10px] font-bold uppercase">Início</button>
-                <button onclick="navegar('lojas')" id="btn-lojas" class="item-nav px-3 py-2 rounded-lg text-[10px] font-bold uppercase">Lojas</button>
-                <button onclick="navegar('produtos')" id="btn-produtos" class="item-nav px-3 py-2 rounded-lg text-[10px] font-bold uppercase">Produtos</button>
+                <button onclick="mudarAba('h')" id="nav-h" class="nav-link px-3 py-2 rounded-lg text-[10px] font-bold uppercase">Início</button>
+                <button onclick="mudarAba('l')" id="nav-l" class="nav-link px-3 py-2 rounded-lg text-[10px] font-bold uppercase">Lojas</button>
+                <button onclick="mudarAba('p')" id="nav-p" class="nav-link px-3 py-2 rounded-lg text-[10px] font-bold uppercase">Produtos</button>
             </nav>
         </header>
 
-        <main id="conteudo" class="p-5 flex-1 pb-24"></main>
+        <main id="conteudo-app" class="p-5 flex-1 overflow-y-auto pb-24"></main>
     </section>
 
     <script>
-        // Banco de Dados Local
-        let db = JSON.parse(localStorage.getItem('app_db')) || [];
+        // Memória do App
+        let dbLojas = JSON.parse(localStorage.getItem('lojas_ajudante')) || [];
 
-        // Inicializar Ícones ao carregar
-        window.onload = function() { lucide.createIcons(); };
+        // Iniciar ícones
+        lucide.createIcons();
 
-        // Troca de Telas Principais
-        function mudarPara(id) {
-            const secoes = document.querySelectorAll('section');
-            for (let i = 0; i < secoes.length; i++) {
-                secoes[i].classList.remove('ativa');
-            }
-            document.getElementById(id).classList.add('ativa');
+        function irPara(idTela) {
+            document.querySelectorAll('.secao-tela').forEach(t => t.classList.remove('ativa'));
+            document.getElementById(idTela).classList.add('ativa');
             lucide.createIcons();
         }
 
-        // Cadastro
-        function registrar() {
+        function acaoCadastro() {
             const email = document.getElementById('c-email').value;
             const senha = document.getElementById('c-senha').value;
             if(!email || !senha) { alert("Preencha os campos!"); return; }
-            localStorage.setItem('user_auth', JSON.stringify({ email, senha }));
-            alert("Cadastro feito com sucesso!");
-            mudarPara('tela-login');
+            localStorage.setItem('user_ajudante', JSON.stringify({ email, senha }));
+            alert("Cadastro realizado!");
+            irPara('tela-login');
         }
 
-        // Login
-        function entrar() {
-            const email = document.getElementById('l-email').value;
-            const senha = document.getElementById('l-senha').value;
-            const salvo = JSON.parse(localStorage.getItem('user_auth'));
-
-            if(salvo && salvo.email === email && salvo.senha === senha) {
-                mudarPara('tela-app');
-                navegar('inicio');
+        function acaoLogin() {
+            const e = document.getElementById('l-email').value;
+            const s = document.getElementById('l-senha').value;
+            const salvo = JSON.parse(localStorage.getItem('user_ajudante'));
+            if(salvo && salvo.email === e && salvo.senha === s) {
+                irPara('tela-app');
+                mudarAba('h');
             } else {
                 alert("E-mail ou senha incorretos.");
             }
         }
 
-        // Navegação de Abas
-        function navegar(aba) {
-            document.getElementById('btn-inicio').classList.remove('selecionado');
-            document.getElementById('btn-lojas').classList.remove('selecionado');
-            document.getElementById('btn-produtos').classList.remove('selecionado');
-            document.getElementById('btn-' + aba).classList.add('selecionado');
+        function mudarAba(aba) {
+            document.getElementById('nav-h').classList.remove('ativo');
+            document.getElementById('nav-l').classList.remove('ativo');
+            document.getElementById('nav-p').classList.remove('ativo');
+            document.getElementById('nav-' + aba).classList.add('ativo');
 
-            const m = document.getElementById('conteudo');
-            m.innerHTML = "";
+            const container = document.getElementById('conteudo-app');
+            container.innerHTML = "";
 
-            if(aba === 'inicio') {
-                let v = 0;
-                db.forEach(l => l.produtos.forEach(p => {
-                    const diff = Math.ceil((new Date(p.data) - new Date()) / 86400000);
-                    if(diff <= 3) v++;
-                }));
+            if(aba === 'h') {
+                let countVencendo = 0;
+                dbLojas.forEach(loja => {
+                    loja.produtos.forEach(p => {
+                        const diff = Math.ceil((new Date(p.data) - new Date()) / 86400000);
+                        if(diff <= 3) countVencendo++;
+                    });
+                });
 
-                m.innerHTML = '<div class="flex gap-4 mb-8">' +
-                    '<div class="bg-gray-900 flex-1 p-6 rounded-3xl border border-gray-800 text-center">' +
-                        '<div class="text-amber-500 text-3xl font-black">' + db.length + '</div>' +
-                        '<div class="text-[10px] text-gray-500 font-bold uppercase">Lojas</div>' +
-                    '</div>' +
-                    '<div class="bg-gray-900 flex-1 p-6 rounded-3xl border border-gray-800 text-center">' +
-                        '<div class="text-red-500 text-3xl font-black">' + v + '</div>' +
-                        '<div class="text-[10px] text-gray-500 font-bold uppercase">Vencendo</div>' +
-                    '</div>' +
-                '</div><h2 class="text-xs font-black text-red-500 uppercase mb-4 italic">Alertas Críticos</h2>';
+                container.innerHTML = `
+                    <div class="flex gap-4 mb-6">
+                        <div class="bg-gray-900 flex-1 p-6 rounded-3xl border border-gray-800 text-center">
+                            <div class="text-amber-500 text-3xl font-black">${dbLojas.length}</div>
+                            <div class="text-[10px] text-gray-500 font-bold uppercase">Lojas</div>
+                        </div>
+                        <div class="bg-gray-900 flex-1 p-6 rounded-3xl border border-gray-800 text-center">
+                            <div class="text-red-500 text-3xl font-black">${countVencendo}</div>
+                            <div class="text-[10px] text-gray-500 font-bold uppercase">Vencendo</div>
+                        </div>
+                    </div>
+                    <h2 class="text-xs font-black text-red-500 uppercase mb-4 italic">Alertas de Validade</h2>
+                `;
             }
 
-            if(aba === 'lojas') {
-                m.innerHTML = '<button onclick="addLoja()" class="botao-amarelo mb-6">Nova Loja</button>';
-                db.forEach(l => {
-                    m.innerHTML += '<div class="bg-gray-900 p-4 rounded-2xl mb-2 flex justify-between items-center border border-gray-800">' +
-                        '<span onclick="verLoja(\''+l.nome+'\')" class="font-bold uppercase">' + l.nome + '</span>' +
-                        '<i onclick="delLoja(\''+l.nome+'\')" data-lucide="trash-2" class="w-5 h-5 text-red-500 cursor-pointer"></i>' +
-                    '</div>';
+            if(aba === 'l') {
+                container.innerHTML = `<button onclick="novaLoja()" class="btn-main mb-6">Nova Loja</button>`;
+                dbLojas.forEach(l => {
+                    container.innerHTML += `
+                        <div class="bg-gray-900 p-4 rounded-2xl mb-2 flex justify-between items-center border border-gray-800">
+                            <span class="font-bold uppercase">${l.nome}</span>
+                            <i onclick="excluirLoja('${l.nome}')" data-lucide="trash-2" class="w-5 h-5 text-red-500 cursor-pointer"></i>
+                        </div>`;
                 });
             }
 
-            if(aba === 'produtos') {
-                m.innerHTML = '<h2 class="text-xl font-black uppercase mb-6 text-amber-500 italic">Cadastrar</h2>' +
-                    '<input id="p-nome" placeholder="Produto" class="campo-input">' +
-                    '<input id="p-qtd" placeholder="Qtd" type="number" class="campo-input">' +
-                    '<input id="p-data" type="date" class="campo-input" required>' +
-                    '<select id="p-loja" class="campo-input">' + db.map(l => '<option value="'+l.nome+'">'+l.nome+'</option>').join('') + '</select>' +
-                    '<button onclick="salvarP()" class="botao-amarelo mt-4">Salvar</button>';
+            if(aba === 'p') {
+                container.innerHTML = `
+                    <h2 class="text-xl font-black uppercase mb-4 text-amber-500 italic">Cadastrar Produto</h2>
+                    <input id="p-nome" placeholder="Produto" class="input-box">
+                    <input id="p-qtd" placeholder="Qtd" type="number" class="input-box">
+                    <input id="p-data" type="date" class="input-box" required>
+                    <select id="p-loja" class="input-box">
+                        ${dbLojas.map(l => `<option value="${l.nome}">${l.nome}</option>`).join('')}
+                    </select>
+                    <button onclick="salvarP()" class="btn-main mt-2">Salvar</button>
+                `;
             }
             lucide.createIcons();
         }
 
-        // Funções de Dados
-        function addLoja() { const n = prompt("Nome da Loja:"); if(n) { db.push({nome: n, produtos: []}); salvar(); navegar('lojas'); } }
+        function novaLoja() {
+            const n = prompt("Nome da Loja:");
+            if(n) { dbLojas.push({nome: n, produtos: []}); salvarLocal(); mudarAba('l'); }
+        }
+
+        function salvarP() {
+            const n = document.getElementById('p-nome').value;
+            const q = document.getElementById('p-qtd').value;
+            const d = document.getElementById('p-data').value;
+            const l = document.getElementById('p-loja').value;
+            if(!n || !d || !l) return alert("Preencha tudo!");
+            dbLojas.find(x => x.nome === l).produtos.push({nome: n, qtd: q, data: d});
+            salvarLocal(); alert("Salvo!"); mudarAba('h');
+        }
+
+        function excluirLoja(nome) {
+            if(confirm("Deseja excluir esta loja?")) {
+                dbLojas = dbLojas.filter(x => x.nome !== nome);
+                salvarLocal(); mudarAba('l');
+            }
+        }
+
+        function salvarLocal() { localStorage.setItem('lojas_ajudante', JSON.stringify(dbLojas)); }
+    </script>
+</body>
+</html>
+ { db.push({nome: n, produtos: []}); salvar(); navegar('lojas'); } }
         function delLoja(n) { if(confirm("Excluir loja?")) { db = db.filter(x => x.nome !== n); salvar(); navegar('lojas'); } }
         function salvarP() {
             const p = { nome: document.getElementById('p-nome').value, qtd: document.getElementById('p-qtd').value, data: document.getElementById('p-data').value };
