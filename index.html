@@ -8,11 +8,11 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #030712; color: white; margin: 0; }
+        body { font-family: 'Inter', sans-serif; background-color: #030712; color: white; margin: 0; overflow-x: hidden; }
         .secao-master { display: none; min-height: 100vh; flex-direction: column; }
         .secao-master.active { display: flex !important; }
         .input-field { width: 100%; background-color: #111827; border: 1px solid #1f2937; padding: 1rem; border-radius: 1rem; color: white; margin-bottom: 0.8rem; outline: none; }
-        .btn-amarelo { background-color: #f59e0b; color: #030712; font-weight: 900; padding: 1rem; border-radius: 1rem; text-transform: uppercase; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-amarelo { background-color: #f59e0b; color: #030712; font-weight: 900; padding: 1rem; border-radius: 1rem; text-transform: uppercase; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; }
         .nav-item.active-nav { background-color: #f59e0b !important; color: #030712 !important; }
         
         /* Placeholder da Data solicitado */
@@ -27,13 +27,247 @@
             <div class="bg-gray-900 border border-gray-800 p-4 rounded-2xl w-fit mx-auto mb-4">
                 <i data-lucide="user-square-2" class="w-12 h-12 text-amber-500"></i>
             </div>
-            <h1 class="text-3xl font-black mb-10 uppercase italic">Promotor <span class="text-amber-500">Ajudante</span></h1>
+            <h1 class="text-3xl font-black mb-10 uppercase italic tracking-tighter">Promotor <span class="text-amber-500">Ajudante</span></h1>
             
             <input type="email" id="login-email" placeholder="E-mail" class="input-field">
             <input type="password" id="login-senha" placeholder="Senha" class="input-field">
             
             <button onclick="tentarLogin()" class="btn-amarelo">Entrar</button>
+            <button onclick="irPara('tela-cadastro')" class="mt-6 text-amber-500 text-xs font-bold uppercase tracking-widest">Criar Nova Conta</button>
+        </div>
+    </section>
+
+    <section id="tela-cadastro" class="secao-master items-center justify-center p-6 text-center">
+        <div class="w-full max-w-sm">
+            <div class="bg-gray-900 border border-gray-800 p-4 rounded-2xl w-fit mx-auto mb-4">
+                <i data-lucide="user-plus" class="w-10 h-10 text-amber-500"></i>
+            </div>
+            <h2 class="text-2xl font-black mb-6 uppercase italic text-amber-500">Cadastro</h2>
+            <input type="text" id="cad-nome" placeholder="Nome Completo" class="input-field">
+            <input type="email" id="cad-email" placeholder="E-mail" class="input-field">
+            <input type="text" id="cad-empresa" placeholder="Empresa" class="input-field">
+            <input type="password" id="cad-senha" placeholder="Senha (6 dígitos)" maxlength="6" class="input-field">
             
+            <button onclick="validarCadastro()" class="btn-amarelo">Finalizar Cadastro</button>
+            <button onclick="irPara('tela-login')" class="mt-4 text-gray-500 text-xs font-bold uppercase">Voltar ao Login</button>
+        </div>
+    </section>
+
+    <section id="app-principal" class="secao-master">
+        <header class="p-4 flex items-center justify-between border-b border-gray-800 bg-gray-950">
+            <div class="flex items-center gap-2">
+                <div class="bg-gray-900 p-1.5 rounded-md border border-gray-800">
+                    <i data-lucide="user-square-2" class="w-4 h-4 text-amber-500"></i>
+                </div>
+                <div class="flex flex-col leading-none text-left">
+                    <span class="text-[8px] font-bold text-gray-500 uppercase">Promotor</span>
+                    <span class="text-sm font-black text-amber-500 uppercase">Ajudante</span>
+                </div>
+            </div>
+            <nav class="flex gap-1 bg-gray-900 p-1 rounded-xl">
+                <button onclick="navegar('home')" id="nav-h" class="nav-item active-nav px-3 py-2 rounded-lg text-[10px] font-bold uppercase">Início</button>
+                <button onclick="navegar('lojas')" id="nav-l" class="nav-item px-3 py-2 rounded-lg text-[10px] font-bold uppercase">Lojas</button>
+                <button onclick="navegar('produtos')" id="nav-p" class="nav-item px-3 py-2 rounded-lg text-[10px] font-bold uppercase">Produtos</button>
+            </nav>
+        </header>
+
+        <main id="conteudo-dinamico" class="flex-1 p-5 overflow-y-auto pb-24"></main>
+    </section>
+
+    <div id="modal-excluir" class="fixed inset-0 bg-black/90 z-50 hidden flex items-center justify-center p-6 text-center">
+        <div class="bg-gray-900 border border-gray-800 p-8 rounded-3xl w-full max-w-xs">
+            <i data-lucide="alert-triangle" class="w-12 h-12 text-red-600 mx-auto mb-4"></i>
+            <h2 class="text-white text-xl font-bold mb-2 uppercase">Excluir Loja?</h2>
+            <p class="text-white text-sm mb-8 font-normal">Isso apagará todos os produtos desta loja.</p>
+            <button id="confirm-excluir" class="w-full bg-red-600 text-white font-black py-4 rounded-xl uppercase mb-3">Excluir</button>
+            <button onclick="fecharModal()" class="text-gray-400 font-bold uppercase text-xs">Cancelar</button>
+        </div>
+    </div>
+
+    <script>
+        // Dados do App
+        let lojas = JSON.parse(localStorage.getItem('lojas')) || [];
+
+        // Inicializar Ícones
+        lucide.createIcons();
+
+        // Navegação de Telas
+        function irPara(id) {
+            document.querySelectorAll('.secao-master').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            lucide.createIcons();
+        }
+
+        // Sistema de Login
+        function tentarLogin() {
+            const email = document.getElementById('login-email').value;
+            const senha = document.getElementById('login-senha').value;
+            const salvo = JSON.parse(localStorage.getItem('userAccount'));
+
+            if (salvo && salvo.email === email && salvo.senha === senha) {
+                irPara('app-principal');
+                navegar('home');
+            } else {
+                alert("E-mail ou senha incorretos.");
+            }
+        }
+
+        // Sistema de Cadastro
+        function validarCadastro() {
+            const nome = document.getElementById('cad-nome').value;
+            const email = document.getElementById('cad-email').value;
+            const empresa = document.getElementById('cad-empresa').value;
+            const senha = document.getElementById('cad-senha').value;
+
+            if(!nome || !email || !empresa || !senha) {
+                alert("Por favor, preencha todos os campos.");
+                return;
+            }
+
+            localStorage.setItem('userAccount', JSON.stringify({ nome, email, empresa, senha }));
+            alert("Cadastro realizado com sucesso! Agora faça login.");
+            irPara('tela-login');
+        }
+
+        // Menu do App
+        function navegar(aba) {
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active-nav'));
+            if(aba === 'home') document.getElementById('nav-h').classList.add('active-nav');
+            if(aba === 'lojas') document.getElementById('nav-l').classList.add('active-nav');
+            if(aba === 'produtos') document.getElementById('nav-p').classList.add('active-nav');
+            renderizar(aba);
+        }
+
+        function renderizar(aba) {
+            const root = document.getElementById('conteudo-dinamico');
+            root.innerHTML = "";
+
+            if(aba === 'home') {
+                let totalVencendo = 0;
+                let alertasHtml = "";
+                
+                lojas.forEach(l => {
+                    l.produtos.forEach(p => { 
+                        const diff = Math.ceil((new Date(p.data) - new Date()) / (1000*60*60*24));
+                        if(diff <= 3) {
+                            totalVencendo++;
+                            alertasHtml += `
+                                <div class="bg-gray-900 border-l-4 border-red-500 p-4 rounded-r-2xl mb-3">
+                                    <div class="text-[10px] text-gray-500 font-bold uppercase">${l.nome}</div>
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-amber-500 font-black uppercase text-sm">${p.nome}</span>
+                                        <span class="text-red-500 font-black text-sm">${p.data.split('-').reverse().join('/')}</span>
+                                    </div>
+                                </div>`;
+                        }
+                    });
+                });
+
+                root.innerHTML = `
+                    <div class="flex gap-4 mb-8">
+                        <div class="bg-gray-900 flex-1 p-6 rounded-3xl text-center border border-gray-800">
+                            <div class="text-amber-500 text-3xl font-black">${lojas.length}</div>
+                            <div class="text-[10px] text-gray-500 font-bold uppercase">Lojas</div>
+                        </div>
+                        <div class="bg-gray-900 flex-1 p-6 rounded-3xl text-center border border-gray-800">
+                            <div class="text-red-500 text-3xl font-black">${totalVencendo}</div>
+                            <div class="text-[10px] text-gray-500 font-bold uppercase">Vencendo</div>
+                        </div>
+                    </div>
+                    <h2 class="text-xs font-black text-red-500 uppercase mb-4 italic">Atenção: Validade Próxima</h2>
+                    ${alertasHtml || '<p class="text-gray-600 text-center text-xs uppercase py-10 font-bold">Tudo em dia!</p>'}
+                `;
+            }
+
+            if(aba === 'lojas') {
+                root.innerHTML = `<button onclick="addLoja()" class="btn-amarelo mb-6">Nova Loja</button>`;
+                lojas.forEach(l => {
+                    root.innerHTML += `
+                        <div class="bg-gray-900 p-4 rounded-2xl mb-2 flex justify-between items-center border border-gray-800">
+                            <span onclick="verLoja('${l.nome}')" class="font-bold uppercase flex-1">${l.nome}</span>
+                            <i onclick="confirmarExclusao('${l.nome}')" data-lucide="trash-2" class="w-5 h-5 text-red-500 cursor-pointer"></i>
+                        </div>`;
+                });
+            }
+
+            if(aba === 'produtos') {
+                root.innerHTML = `
+                    <h2 class="text-xl font-black uppercase mb-6 italic text-amber-500">Cadastrar Produto</h2>
+                    <input type="text" id="p-nome" placeholder="Nome do Produto" class="input-field">
+                    <input type="number" id="p-qtd" placeholder="Quantidade" class="input-field">
+                    <input type="date" id="p-data" class="input-field" required>
+                    <select id="p-loja" class="input-field">
+                        ${lojas.map(l => `<option value="${l.nome}">${l.nome}</option>`).join('')}
+                    </select>
+                    <button onclick="salvarP()" class="btn-amarelo mt-4">Salvar Produto</button>
+                `;
+            }
+            lucide.createIcons();
+        }
+
+        // Funções de Gerenciamento
+        function addLoja() { 
+            const n = prompt("Nome da loja:"); 
+            if(n) { lojas.push({nome:n, produtos:[]}); salvar(); renderizar('lojas'); } 
+        }
+
+        function salvarP() { 
+            const p = { nome: document.getElementById('p-nome').value, qtd: document.getElementById('p-qtd').value, data: document.getElementById('p-data').value };
+            const lojaNome = document.getElementById('p-loja').value;
+            if(!p.nome || !p.data || !lojaNome) return alert("Preencha todos os campos!");
+            lojas.find(l => l.nome === lojaNome).produtos.push(p);
+            salvar(); 
+            alert("Produto salvo!");
+            navegar('home'); 
+        }
+
+        function confirmarExclusao(n) { 
+            document.getElementById('modal-excluir').classList.remove('hidden'); 
+            document.getElementById('confirm-excluir').onclick = () => { 
+                lojas = lojas.filter(l => l.nome !== n); 
+                salvar(); 
+                fecharModal(); 
+                renderizar('lojas'); 
+            } 
+        }
+
+        function fecharModal() { document.getElementById('modal-excluir').classList.add('hidden'); }
+        function salvar() { localStorage.setItem('lojas', JSON.stringify(lojas)); }
+
+        // Visualizar Loja
+        function verLoja(nome) {
+            const root = document.getElementById('conteudo-dinamico');
+            const loja = lojas.find(l => l.nome === nome);
+            root.innerHTML = `
+                <div class="flex items-center gap-3 mb-6">
+                    <i onclick="navegar('lojas')" data-lucide="arrow-left" class="text-amber-500 w-6 h-6 cursor-pointer"></i>
+                    <h2 class="text-2xl font-black uppercase italic">${nome}</h2>
+                </div>`;
+            loja.produtos.forEach((p, idx) => {
+                root.innerHTML += `
+                    <div class="bg-gray-900 p-4 rounded-2xl mb-2 flex justify-between items-center border border-gray-800">
+                        <div>
+                            <div class="text-amber-500 font-bold text-xs uppercase">${p.nome}</div>
+                            <div class="text-xs text-gray-400 font-bold">${p.data.split('-').reverse().join('/')} — ${p.qtd} un</div>
+                        </div>
+                        <div class="flex gap-4 text-gray-500">
+                            <i data-lucide="pencil" class="w-4 h-4"></i>
+                            <i onclick="removeP('${nome}', ${idx})" data-lucide="trash-2" class="w-4 h-4 text-red-500 cursor-pointer"></i>
+                        </div>
+                    </div>`;
+            });
+            lucide.createIcons();
+        }
+
+        function removeP(lojaNome, idx) { 
+            if(confirm("Remover este produto?")) {
+                lojas.find(l => l.nome === lojaNome).produtos.splice(idx,1); 
+                salvar(); verLoja(lojaNome); 
+            }
+        }
+    </script>
+</body>
+</html>
             <button onclick="irPara('tela-cadastro')" class="mt-6 text-amber-500 text-xs font-bold uppercase tracking-widest">Criar Nova Conta</button>
         </div>
     </section>
