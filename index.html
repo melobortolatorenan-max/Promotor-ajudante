@@ -12,28 +12,251 @@
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
-        
-        body { 
-            font-family: 'Inter', sans-serif; 
-            background-color: #030712; 
-            margin: 0; 
-            overflow: hidden; 
-            color: white;
-        }
+        body { font-family: 'Inter', sans-serif; background-color: #030712; margin: 0; overflow: hidden; color: white; }
 
-        /* SISTEMA DE CAMADAS FIXAS (Evita rolagem entre telas) */
         .secao-master {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: none !important;
-            z-index: 10;
-            background-color: #030712;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            display: none !important; z-index: 10; background-color: #030712;
+        }
+        .secao-master.active { display: flex !important; flex-direction: column; }
+        
+        .conteudo-app { display: none !important; }
+        .conteudo-app.active { display: block !important; }
+
+        .nav-item.active-nav { background-color: #f59e0b !important; color: #030712 !important; }
+        
+        .input-field {
+            width: 100%; background-color: #111827; border: 1px solid #1f2937;
+            padding: 0.75rem 1rem; border-radius: 0.75rem; color: white; margin-bottom: 0.5rem;
+        }
+        
+        main { overflow-y: auto; padding-bottom: 100px; }
+        .card-estatistica { background: #111827; border: 1px solid #1f2937; border-radius: 1.5rem; padding: 1.5rem; text-align: center; }
+    </style>
+</head>
+<body>
+
+    <section id="tela-login" class="secao-master active items-center justify-center p-6">
+        <div class="w-full max-w-sm text-center">
+            <div class="bg-amber-500 w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-amber-500/20">
+                <i data-lucide="shield-check" class="w-12 h-12 text-gray-950"></i>
+            </div>
+            <h1 class="text-4xl font-black mb-10 uppercase tracking-tighter">Promotor <span class="text-amber-500">Ajudante</span></h1>
+            <div class="space-y-4">
+                <input type="email" id="login-email" placeholder="E-mail" class="input-field">
+                <input type="password" id="login-senha" placeholder="Senha" class="input-field">
+                <button onclick="tentarLogin()" class="w-full bg-amber-500 text-gray-950 font-black py-4 rounded-xl uppercase">Entrar</button>
+                <button onclick="irParaCadastro()" class="w-full text-amber-500 font-bold py-2 text-xs uppercase">Cadastre-se aqui</button>
+            </div>
+        </div>
+    </section>
+
+    <section id="tela-cadastro" class="secao-master p-4">
+        <main class="w-full max-w-sm mx-auto flex flex-col items-center justify-center min-h-screen">
+            <h2 class="text-3xl font-black mb-6 uppercase">Cadastro</h2>
+            <div class="w-full space-y-3">
+                <input type="text" id="cad-nome" placeholder="Nome Completo" class="input-field">
+                <input type="email" id="cad-email" placeholder="E-mail para cadastro" class="input-field">
+                <input type="text" id="cad-cidade" placeholder="Cidade de trabalho" class="input-field">
+                <input type="text" id="cad-empresa" placeholder="Empresa que trabalha" class="input-field">
+                <input type="password" id="cad-senha" maxlength="6" placeholder="Senha (6 dígitos)" class="input-field">
+                <input type="password" id="cad-confirmar" maxlength="6" placeholder="Confirmar senha" class="input-field">
+                <button onclick="validarCadastro()" class="w-full bg-amber-500 text-gray-950 font-black py-4 rounded-xl uppercase mt-4">Finalizar Cadastro</button>
+                <button onclick="irParaLogin()" class="w-full text-gray-500 font-bold py-2 text-xs uppercase">Voltar</button>
+            </div>
+        </main>
+    </section>
+
+    <section id="app-principal" class="secao-master">
+        <header class="p-4 flex items-center justify-between border-b border-gray-800 bg-gray-950 sticky top-0 z-50">
+            <div class="flex items-center gap-2">
+                <div class="bg-amber-500 p-1 rounded-md"><i data-lucide="clock" class="w-4 h-4 text-gray-950"></i></div>
+                <div class="flex flex-col leading-none">
+                    <span class="text-[8px] font-bold text-amber-500 uppercase">Promotor</span>
+                    <span id="header-empresa" class="text-sm font-black text-white uppercase">Ajudante</span>
+                </div>
+            </div>
+            <div class="flex gap-1 bg-gray-900 p-1 rounded-xl">
+                <button onclick="navegar('home')" id="nav-h" class="nav-item active-nav px-3 py-2 rounded-lg flex items-center gap-1 text-[10px] font-bold uppercase">
+                    <i data-lucide="home" class="w-3 h-3"></i> Início
+                </button>
+                <button onclick="navegar('lojas')" id="nav-l" class="nav-item px-3 py-2 rounded-lg flex items-center gap-1 text-[10px] font-bold uppercase">
+                    <i data-lucide="store" class="w-3 h-3"></i> Lojas
+                </button>
+                <button onclick="deslogar()" class="px-2 text-red-500"><i data-lucide="log-out" class="w-4 h-4"></i></button>
+            </div>
+        </header>
+
+        <main class="flex-1 p-6">
+            <div id="cont-home" class="conteudo-app active">
+                <div class="text-center mb-8">
+                    <h2 class="text-3xl font-black uppercase">Painel</h2>
+                    <p class="text-gray-500 text-sm">Resumo das suas lojas e produtos</p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-8">
+                    <div class="card-estatistica">
+                        <span id="stat-lojas" class="block text-4xl font-black text-amber-500">0</span>
+                        <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Lojas</span>
+                    </div>
+                    <div class="card-estatistica">
+                        <span id="stat-produtos" class="block text-4xl font-black text-red-500">0</span>
+                        <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Vencendo</span>
+                    </div>
+                </div>
+
+                <div id="lista-lojas-cards" class="space-y-3">
+                    </div>
+            </div>
+
+            <div id="cont-lojas" class="conteudo-app">
+                <h2 class="text-2xl font-black mb-6 uppercase text-amber-500">Nova Loja</h2>
+                <div class="bg-gray-900 p-6 rounded-3xl border border-gray-800 space-y-4">
+                    <input type="text" id="input-nome-loja" placeholder="Nome da Unidade" class="input-field">
+                    <button onclick="salvarLoja()" class="w-full bg-amber-500 text-gray-950 font-black py-4 rounded-xl uppercase">Salvar Loja</button>
+                </div>
+            </div>
+
+            <div id="cont-produtos" class="conteudo-app">
+                <div class="flex items-center gap-4 mb-6">
+                    <button onclick="navegar('home')" class="bg-gray-800 p-2 rounded-full text-amber-500"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
+                    <h2 id="nome-loja-titulo" class="text-2xl font-black uppercase">Loja</h2>
+                </div>
+                
+                <div class="bg-gray-900 p-6 rounded-3xl border border-gray-800 mb-6">
+                    <h3 class="text-xs font-bold text-gray-500 uppercase mb-4">Adicionar Produto</h3>
+                    <input type="text" id="p-nome" placeholder="Nome do Produto" class="input-field">
+                    <input type="date" id="p-data" class="input-field">
+                    <button onclick="adicionarProduto()" class="w-full bg-amber-500 text-gray-950 font-black py-3 rounded-xl uppercase text-xs">Adicionar</button>
+                </div>
+
+                <div id="lista-produtos" class="space-y-2">
+                    </div>
+            </div>
+        </main>
+    </section>
+
+    <script>
+        let lojaAtualIndex = null;
+
+        function trocarTela(id) {
+            document.querySelectorAll('.secao-master').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            lucide.createIcons();
         }
 
-        .secao-master.active {
+        function irParaCadastro() { trocarTela('tela-cadastro'); }
+        function irParaLogin() { trocarTela('tela-login'); }
+
+        function validarCadastro() {
+            const dados = {
+                nome: document.getElementById('cad-nome').value,
+                email: document.getElementById('cad-email').value,
+                empresa: document.getElementById('cad-empresa').value,
+                senha: document.getElementById('cad-senha').value,
+                conf: document.getElementById('cad-confirmar').value
+            };
+            if(!dados.nome || dados.senha !== dados.conf) return alert("Verifique os dados!");
+            localStorage.setItem('userAccount', JSON.stringify(dados));
+            localStorage.setItem('lojas', JSON.stringify([]));
+            loginSucesso(dados);
+        }
+
+        function tentarLogin() {
+            const email = document.getElementById('login-email').value;
+            const senha = document.getElementById('login-senha').value;
+            const salvo = JSON.parse(localStorage.getItem('userAccount'));
+            if(salvo && salvo.email === email && salvo.senha === senha) loginSucesso(salvo);
+            else alert("Erro no login");
+        }
+
+        function loginSucesso(user) {
+            document.getElementById('header-empresa').innerText = user.empresa;
+            trocarTela('app-principal');
+            renderizarHome();
+        }
+
+        function deslogar() { if(confirm("Sair?")) trocarTela('tela-login'); }
+
+        function salvarLoja() {
+            const nome = document.getElementById('input-nome-loja').value;
+            if(!nome) return;
+            let lojas = JSON.parse(localStorage.getItem('lojas')) || [];
+            lojas.push({ nome: nome, produtos: [] });
+            localStorage.setItem('lojas', JSON.stringify(lojas));
+            document.getElementById('input-nome-loja').value = "";
+            navegar('home');
+        }
+
+        function abrirLoja(index) {
+            lojaAtualIndex = index;
+            const lojas = JSON.parse(localStorage.getItem('lojas'));
+            const loja = lojas[index];
+            document.getElementById('nome-loja-titulo').innerText = loja.nome;
+            navegar('produtos');
+            renderizarProdutos();
+        }
+
+        function adicionarProduto() {
+            const nome = document.getElementById('p-nome').value;
+            const data = document.getElementById('p-data').value;
+            if(!nome || !data) return;
+            let lojas = JSON.parse(localStorage.getItem('lojas'));
+            lojas[lojaAtualIndex].produtos.push({ nome, data });
+            localStorage.setItem('lojas', JSON.stringify(lojas));
+            renderizarProdutos();
+        }
+
+        function renderizarProdutos() {
+            const lojas = JSON.parse(localStorage.getItem('lojas'));
+            const container = document.getElementById('lista-produtos');
+            container.innerHTML = "";
+            lojas[lojaAtualIndex].produtos.forEach(p => {
+                container.innerHTML += `<div class="bg-gray-800 p-4 rounded-xl flex justify-between">
+                    <span>${p.nome}</span><span class="text-amber-500 font-bold">${p.data}</span>
+                </div>`;
+            });
+        }
+
+        function renderizarHome() {
+            const lojas = JSON.parse(localStorage.getItem('lojas')) || [];
+            document.getElementById('stat-lojas').innerText = lojas.length;
+            
+            let totalVencendo = 0;
+            const container = document.getElementById('lista-lojas-cards');
+            container.innerHTML = "";
+
+            lojas.forEach((l, index) => {
+                totalVencendo += l.produtos.length;
+                container.innerHTML += `
+                    <div onclick="abrirLoja(${index})" class="bg-gray-900 p-5 rounded-2xl border border-gray-800 flex justify-between items-center">
+                        <span class="font-bold">${l.nome}</span>
+                        <i data-lucide="chevron-right" class="text-amber-500 w-5 h-5"></i>
+                    </div>`;
+            });
+            document.getElementById('stat-produtos').innerText = totalVencendo;
+            lucide.createIcons();
+        }
+
+        function navegar(alvo) {
+            document.querySelectorAll('.conteudo-app').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active-nav'));
+            
+            if(alvo === 'home') {
+                document.getElementById('cont-home').classList.add('active');
+                document.getElementById('nav-h').classList.add('active-nav');
+                renderizarHome();
+            } else if(alvo === 'lojas') {
+                document.getElementById('cont-lojas').classList.add('active');
+                document.getElementById('nav-l').classList.add('active-nav');
+            } else if(alvo === 'produtos') {
+                document.getElementById('cont-produtos').classList.add('active');
+            }
+            lucide.createIcons();
+        }
+    </script>
+</body>
+</html>
             display: flex !important;
             flex-direction: column;
         }
