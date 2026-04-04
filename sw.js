@@ -1,39 +1,23 @@
-// ... (mantenha todo o seu código anterior de estilo e estrutura)
+self.addEventListener('install', (event) => {
+    self.skipWaiting();
+});
 
-<script>
-    let lojas = JSON.parse(localStorage.getItem('db_promotor_v2')) || [];
-    let promptInstalacao = null;
+self.addEventListener('activate', (event) => {
+    event.waitUntil(clients.claim());
+});
 
-    // --- LOGICA DE NOTIFICAÇÕES ---
-
-    // Solicita permissão ao carregar
-    if ("Notification" in window) {
-        Notification.requestPermission();
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'NOTIFICAR') {
+        const options = {
+            body: event.data.body,
+            icon: 'https://raw.githubusercontent.com/melobortolatorenan-max/Promotor-ajudante/main/logo.png',
+            badge: 'https://raw.githubusercontent.com/melobortolatorenan-max/Promotor-ajudante/main/logo.png',
+            vibrate: [200, 100, 200],
+            data: { dateOfArrival: Date.now() }
+        };
+        self.registration.showNotification(event.data.title, options);
     }
-
-    // Registra o Service Worker
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js');
-    }
-
-    function dispararNotificacao(produto, loja) {
-        if (Notification.permission === "granted") {
-            const titulo = "PROMOTOR AJUDANTE AVISA:";
-            const corpo = `- Seu ${produto.nome} na ${loja} com vencimento para ${produto.data.split('-').reverse().join('/')} está próximo de vencer. Por favor retire o quanto antes.`;
-            
-            navigator.serviceWorker.ready.then(registration => {
-                registration.active.postMessage({
-                    type: 'NOTIFICAR',
-                    title: titulo,
-                    body: corpo
-                });
-            });
-        }
-    }
-
-    function verificarVencimentosGerais() {
-        lojas.forEach(l => {
-            l.produtos.forEach(p => {
+});
                 const hoje = new Date();
                 hoje.setHours(0,0,0,0);
                 const dataVenc = new Date(p.data + 'T00:00:00');
