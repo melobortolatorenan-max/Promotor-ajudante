@@ -21,7 +21,6 @@
         .btn-amarelo { background-color: #f59e0b; color: #030712; font-weight: 900; padding: 1rem; border-radius: 1rem; text-transform: uppercase; width: 100%; border: none; cursor: pointer; }
         .nav-aba.ativa { background-color: #f59e0b !important; color: #030712 !important; }
         
-        /* Esconde o banner se já estiver no modo App instalado */
         @media (display-mode: standalone) { #banner-instalar { display: none !important; } }
         
         .item-linha { background-color: #111827; border: 1px solid #1f2937; border-radius: 1rem; padding: 0.6rem 0.8rem; margin-bottom: 0.4rem; display: flex; align-items: center; justify-content: space-between; }
@@ -34,6 +33,53 @@
 <body>
 
     <div id="modal-container">
+        <div class="bg-gray-900 border border-gray-800 p-8 rounded-[2.5rem] w-full max-w-sm text-center">
+            <div id="modal-body" class="mb-8 text-gray-300 font-bold uppercase text-sm"></div>
+            <div id="modal-footer" class="flex flex-col gap-3"></div>
+        </div>
+    </div>
+
+    <section id="tela-app" class="secao ativa">
+        <header class="p-4 border-b border-gray-800 bg-gray-950">
+            <div class="flex items-center gap-3 mb-4">
+                <img src="https://raw.githubusercontent.com/melobortolatorenan-max/Promotor-ajudante/main/logo.png" class="w-10 h-10 rounded-lg border border-amber-500/20">
+                <div>
+                    <h1 class="text-xs font-bold text-gray-500 uppercase tracking-widest leading-none italic">Promotor</h1>
+                    <span class="text-lg font-black text-amber-500 uppercase italic leading-none">Ajudante</span>
+                </div>
+            </div>
+            <nav class="flex gap-1 bg-gray-900 p-1 rounded-xl">
+                <button onclick="aba('h')" id="n-h" class="nav-aba flex-1 py-2 rounded-lg text-[10px] font-black uppercase">Início</button>
+                <button onclick="aba('l')" id="n-l" class="nav-aba flex-1 py-2 rounded-lg text-[10px] font-black uppercase">Lojas</button>
+                <button onclick="aba('p')" id="n-p" class="nav-aba flex-1 py-2 rounded-lg text-[10px] font-black uppercase">Produtos</button>
+                <button onclick="aba('r')" id="n-r" class="nav-aba flex-1 py-2 rounded-lg text-[10px] font-black uppercase">Relat.</button>
+            </nav>
+        </header>
+        <main id="corpo" class="p-4 flex-1 overflow-y-auto pb-24"></main>
+    </section>
+
+    <script>
+        let lojas = JSON.parse(localStorage.getItem('db_promotor_v2')) || [];
+        let deferredPrompt;
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+        });
+
+        function instalarApp() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then(() => { deferredPrompt = null; });
+            } else {
+                alert("Clique nos 3 pontos do navegador e selecione 'Adicionar à tela inicial'.");
+            }
+        }
+
+        function salvar() { localStorage.setItem('db_promotor_v2', JSON.stringify(lojas)); }
+
+        function aba(id, params = {}) {
+            document.querySelectorAll('.nav-aba
         <div class="bg-gray-900 border border-gray-800 p-8 rounded-[2.5rem] w-full max-w-sm text-center">
             <div id="modal-body" class="mb-8 text-gray-300 font-bold uppercase text-sm"></div>
             <div id="modal-footer" class="flex flex-col gap-3"></div>
