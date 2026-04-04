@@ -18,22 +18,107 @@
         .input-custom { width: 100%; background-color: #0f172a; border: 1px solid #1e293b; padding: 0.8rem; border-radius: 0.8rem; color: white; margin-bottom: 0.6rem; outline: none; }
         .btn-amarelo { background-color: #f59e0b; color: #030712; font-weight: 900; padding: 1rem; border-radius: 1rem; text-transform: uppercase; width: 100%; border: none; cursor: pointer; }
         .nav-aba.ativa { background-color: #f59e0b !important; color: #030712 !important; }
-        .card-dark { background-color: #111827; border: 1px solid #1f2937; border-radius: 1.2rem; }
+        .vencimento-item { border-radius: 2rem; border-left: 4px solid #ef4444; padding: 1.5rem; margin-bottom: 0.75rem; display: flex; justify-content: space-between; align-items: center; }
+        #modal-container { background: rgba(0,0,0,0.95); z-index: 10000; display: none; align-items: center; justify-content: center; position: fixed; inset: 0; padding: 20px; }
     </style>
 </head>
 <body>
 
+    <div id="modal-container">
+        <div class="bg-gray-900 border border-gray-800 p-8 rounded-[2.5rem] w-full max-w-sm text-center">
+            <div id="modal-body" class="mb-8 text-gray-300 font-bold uppercase text-sm"></div>
+            <div id="modal-footer" class="flex flex-col gap-3"></div>
+        </div>
+    </div>
+
     <section id="tela-app" class="secao ativa">
         <header class="p-4 border-b border-gray-800 bg-gray-950">
             <div class="flex items-center gap-3 mb-4">
-                <img src="https://raw.githubusercontent.com/melobortolatorenan-max/Promotor-ajudante/main/logo.png" class="w-10 h-10 rounded-lg">
+                <img src="https://raw.githubusercontent.com/melobortolatorenan-max/Promotor-ajudante/main/logo.png" class="w-10 h-10 rounded-lg border border-amber-500/20">
                 <div>
-                    <h1 class="text-xs font-bold text-gray-500 uppercase tracking-widest leading-none">Promotor</h1>
+                    <h1 class="text-xs font-bold text-gray-500 uppercase tracking-widest leading-none italic">Promotor</h1>
                     <span class="text-lg font-black text-amber-500 uppercase italic leading-none">Ajudante</span>
                 </div>
             </div>
             <nav class="flex gap-1 bg-gray-900 p-1 rounded-xl">
                 <button onclick="aba('h')" id="n-h" class="nav-aba flex-1 py-2 rounded-lg text-[10px] font-black uppercase">Início</button>
+                <button onclick="aba('l')" id="n-l" class="nav-aba flex-1 py-2 rounded-lg text-[10px] font-black uppercase">Lojas</button>
+                <button onclick="aba('p')" id="n-p" class="nav-aba flex-1 py-2 rounded-lg text-[10px] font-black uppercase">Produtos</button>
+                <button onclick="aba('r')" id="n-r" class="nav-aba flex-1 py-2 rounded-lg text-[10px] font-black uppercase">Relat.</button>
+            </nav>
+        </header>
+        <main id="corpo" class="p-4 flex-1 overflow-y-auto pb-24"></main>
+    </section>
+
+    <script>
+        let lojas = JSON.parse(localStorage.getItem('db_promotor_v2')) || [];
+        function salvar() { localStorage.setItem('db_promotor_v2', JSON.stringify(lojas)); }
+
+        function aba(id, params = {}) {
+            document.querySelectorAll('.nav-aba').forEach(b => b.classList.remove('ativa'));
+            document.getElementById('n-' + id).classList.add('ativa');
+            const m = document.getElementById('corpo'); m.innerHTML = "";
+
+            if(id === 'h') {
+                let proxVenc = [];
+                const hoje = new Date(); hoje.setHours(0,0,0,0);
+                
+                // Calcula vencimentos próximos
+                lojas.forEach(loja => {
+                    if(loja.produtos) {
+                        loja.produtos.forEach(p => {
+                            const dataV = new Date(p.data + "T12:00:00");
+                            const diffTempo = dataV.getTime() - hoje.getTime();
+                            const diffDias = Math.ceil(diffTempo / (1000 * 3600 * 24));
+                            if (diffDias >= -1) { // Inclui vencidos ontem/hoje
+                                proxVenc.push({...p, loja: loja.nome, dias: diffDias});
+                            }
+                        });
+                    }
+                });
+
+                // Ordenar por data (mais próximos primeiro)
+                proxVenc.sort((a,b) => a.dias - b.dias);
+                
+                // Alertas urgentes (3 dias ou menos)
+                const alertasUrgentes = proxVenc.filter(x => x.dias <= 3).length;
+
+                m.innerHTML = `
+                    <div class="bg-gray-900 p-6 rounded-2xl border border-gray-800 flex items-center justify-between mb-8">
+                        <div class="flex items-center gap-3">
+                            <i data-lucide="smartphone" class="w-7 h-7 text-amber-500"></i>
+                            <span class="text-xs font-black uppercase italic tracking-wider">Instalar Aplicativo</span>
+                        </div>
+                        <i data-lucide="chevron-right" class="w-6 h-6 text-gray-600"></i>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3 mb-8">
+                        <div class="bg-gray-900 border border-gray-800 p-8 rounded-[2.5rem] border-b-4 border-amber-500 text-center">
+                            <div class="text-5xl font-black text-amber-500 italic mb-2">${lojas.length}</div>
+                            <div class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Lojas</div>
+                        </div>
+                        <div class="bg-gray-900 border border-gray-800 p-8 rounded-[2.5rem] border-b-4 border-red-500 text-center">
+                            <div class="text-5xl font-black text-red-500 italic mb-2">${alertasUrgentes}</div>
+                            <div class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Alertas</div>
+                        </div>
+                    </div>
+                    
+                    <h3 class="text-xs font-black uppercase text-red-500 mb-6 tracking-wider italic flex items-center gap-2">
+                        <i data-lucide="alert-triangle" class="w-5 h-5"></i> VENCIMENTOS PRÓXIMOS
+                    </h3>
+
+                    ${proxVenc.map(p => {
+                        const corFundo = p.dias <= 3 ? 'bg-[#181018]' : 'bg-gray-900';
+                        const textoDias = p.dias < 0 ? 'Vencido' : (p.dias === 0 ? 'Vence Hoje' : `${p.dias} dias`);
+                        
+                        return `
+                            <div class="vencimento-item ${corFundo} border border-gray-800">
+                                <div>
+                                    <span class="text-amber-500 font-black uppercase text-sm italic mb-1 block">${p.nome}</span>
+                                    <span class="text-[10px] text-gray-500 font-bold uppercase">${p.loja}</span>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-
                 <button onclick="aba('l')" id="n-l" class="nav-aba flex-1 py-2 rounded-lg text-[10px] font-black uppercase">Lojas</button>
                 <button onclick="aba('p')" id="n-p" class="nav-aba flex-1 py-2 rounded-lg text-[10px] font-black uppercase">Produtos</button>
                 <button onclick="aba('r')" id="n-r" class="nav-aba flex-1 py-2 rounded-lg text-[10px] font-black uppercase">Relat.</button>
