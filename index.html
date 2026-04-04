@@ -4,36 +4,104 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Promotor Ajudante</title>
-    <link rel="manifest" href="manifest.json">
-    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/melobortolatorenan-max/Promotor-ajudante/main/logo.png">
-    <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/melobortolatorenan-max/Promotor-ajudante/main/logo.png">
-    <meta name="theme-color" content="#030712">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #030712; color: white; margin: 0; overflow: hidden; touch-action: manipulation; }
-        .secao { display: none; height: 100vh; flex-direction: column; }
-        .secao.ativa { display: flex !important; }
-        .input-custom { width: 100%; background-color: #0f172a; border: 1px solid #1e293b; padding: 0.6rem; border-radius: 0.6rem; color: white; margin-bottom: 0.5rem; outline: none; font-size: 10px; }
-        .btn-amarelo { background-color: #f59e0b; color: #030712; font-weight: 900; padding: 0.7rem; border-radius: 0.8rem; text-transform: uppercase; width: 100%; border: none; cursor: pointer; font-size: 10px; }
-        
+        body { font-family: 'Inter', sans-serif; background-color: #030712; color: white; margin: 0; overflow-x: hidden; }
         .nav-aba.ativa { background-color: #f97316 !important; color: white !important; font-weight: 900 !important; }
-        
-        .vencimento-item { 
-            border-radius: 1.2rem; 
-            padding: 0.8rem 1.2rem; 
-            margin-bottom: 0.5rem; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            border: 1px solid #1f2937;
-        }
+        .card-loja { background-color: #0f111a; border: 1px solid #1f2937; border-radius: 1.5rem; padding: 1rem; margin-bottom: 1rem; }
+        .produto-agrupado { border-bottom: 1px solid #1f2937; padding: 0.5rem 0; }
+        .produto-agrupado:last-child { border-bottom: none; }
     </style>
 </head>
 <body>
 
-    <section id="tela-app" class="secao ativa">
+    <header class="p-3 border-b border-gray-800 bg-gray-950 sticky top-0 z-10">
+        <div class="flex items-center gap-2 mb-3">
+            <div class="w-6 h-6 bg-amber-500 rounded-md flex items-center justify-center">
+                <i data-lucide="package" class="w-4 h-4 text-black"></i>
+            </div>
+            <div>
+                <h1 class="text-[8px] font-bold text-gray-500 uppercase italic leading-none">Promotor</h1>
+                <span class="text-sm font-black text-amber-500 uppercase italic leading-none">Ajudante</span>
+            </div>
+        </div>
+        <nav class="flex gap-1 bg-gray-900 p-0.5 rounded-lg">
+            <button onclick="aba('h')" id="n-h" class="nav-aba flex-1 py-1 rounded-md text-[8px] font-bold uppercase text-gray-500">Início</button>
+            <button onclick="aba('l')" id="n-l" class="nav-aba flex-1 py-1 rounded-md text-[8px] font-bold uppercase text-gray-500">Lojas</button>
+            <button onclick="aba('p')" id="n-p" class="nav-aba flex-1 py-1 rounded-md text-[8px] font-bold uppercase text-gray-500">Produtos</button>
+            <button onclick="aba('r')" id="n-r" class="nav-aba flex-1 py-1 rounded-md text-[8px] font-bold uppercase text-gray-500">Relat.</button>
+        </nav>
+    </header>
+
+    <main id="corpo" class="p-3 pb-20"></main>
+
+    <script>
+        // Dados de exemplo baseados nas fotos enviadas
+        let lojas = JSON.parse(localStorage.getItem('db_promotor_v3')) || [
+            {
+                nome: "ANGELONI 11",
+                produtos: [
+                    {nome: "TESTE 3", qtd: 3, data: "2026-04-06"},
+                    {nome: "TESTE 3", qtd: 5, data: "2026-04-07"},
+                    {nome: "TESTE 4", qtd: 4, data: "2026-04-06"},
+                    {nome: "TESTE", qtd: 5, data: "2026-04-05"}
+                ]
+            },
+            {
+                nome: "CARREFOUR",
+                produtos: [
+                    {nome: "TESTE 1", qtd: 2, data: "2026-04-06"}
+                ]
+            }
+        ];
+
+        function aba(id) {
+            document.querySelectorAll('.nav-aba').forEach(b => b.classList.remove('ativa'));
+            document.getElementById('n-' + id).classList.add('ativa');
+            const m = document.getElementById('corpo'); m.innerHTML = "";
+
+            if(id === 'h' || id === 'r') {
+                lojas.forEach(loja => {
+                    let htmlLoja = `<div class="card-loja">
+                        <h2 class="text-amber-500 font-black text-[10px] uppercase italic mb-2 border-b border-gray-800 pb-1">${loja.nome}</h2>`;
+                    
+                    // Agrupamento por nome de produto
+                    const agrupado = {};
+                    loja.produtos.forEach(p => {
+                        if (!agrupado[p.nome]) agrupado[p.nome] = [];
+                        agrupado[p.nome].push(p);
+                    });
+
+                    for (let nomeProd in agrupado) {
+                        htmlLoja += `<div class="produto-agrupado">
+                            <div class="text-amber-500 font-black text-[11px] uppercase italic">${nomeProd}</div>`;
+                        
+                        agrupado[nomeProd].forEach(item => {
+                            const dataFormatada = item.data.split('-').reverse().slice(0,2).join('/');
+                            htmlLoja += `<div class="flex justify-between text-[9px] text-gray-400 font-bold mt-0.5">
+                                <span>${dataFormatada}</span>
+                                <span>${item.qtd} un</span>
+                            </div>`;
+                        });
+                        htmlLoja += `</div>`;
+                    }
+                    htmlLoja += `</div>`;
+                    m.innerHTML += htmlLoja;
+                });
+            } else if (id === 'l') {
+                m.innerHTML = `<div class="text-center text-[10px] text-gray-500 uppercase font-black mt-10 italic">Lista de Lojas Cadastradas</div>`;
+            } else if (id === 'p') {
+                m.innerHTML = `<div class="text-center text-[10px] text-gray-500 uppercase font-black mt-10 italic">Formulário de Cadastro</div>`;
+            }
+            lucide.createIcons();
+        }
+
+        aba('h');
+    </script>
+</body>
+</html>
         <header class="p-3 border-b border-gray-800 bg-gray-950">
             <div class="flex items-center gap-2 mb-3">
                 <img src="https://raw.githubusercontent.com/melobortolatorenan-max/Promotor-ajudante/main/logo.png" class="w-6 h-6 rounded-md">
