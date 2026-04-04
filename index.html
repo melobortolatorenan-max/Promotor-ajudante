@@ -28,12 +28,117 @@
             <div class="flex items-center gap-3 mb-4">
                 <img src="https://raw.githubusercontent.com/melobortolatorenan-max/Promotor-ajudante/main/logo.png" class="w-10 h-10 rounded-lg">
                 <div>
-                    <h1 class="text-xs font-bold text-gray-500 uppercase tracking-widest leading-none italic">Promotor</h1>
+                    <h1 class="text-xs font-bold text-gray-500 uppercase tracking-widest leading-none">Promotor</h1>
                     <span class="text-lg font-black text-amber-500 uppercase italic leading-none">Ajudante</span>
                 </div>
             </div>
             <nav class="flex gap-1 bg-gray-900 p-1 rounded-xl">
                 <button onclick="aba('h')" id="n-h" class="nav-aba flex-1 py-2 rounded-lg text-[10px] font-black uppercase">Início</button>
+                <button onclick="aba('l')" id="n-l" class="nav-aba flex-1 py-2 rounded-lg text-[10px] font-black uppercase">Lojas</button>
+                <button onclick="aba('p')" id="n-p" class="nav-aba flex-1 py-2 rounded-lg text-[10px] font-black uppercase">Produtos</button>
+                <button onclick="aba('r')" id="n-r" class="nav-aba flex-1 py-2 rounded-lg text-[10px] font-black uppercase">Relat.</button>
+            </nav>
+        </header>
+        <main id="corpo" class="p-4 flex-1 overflow-y-auto pb-24"></main>
+    </section>
+
+    <script>
+        let lojas = JSON.parse(localStorage.getItem('db_promotor_v2')) || [];
+        let editando = { lojaIndex: -1, prodIndex: -1 };
+
+        function salvar() { localStorage.setItem('db_promotor_v2', JSON.stringify(lojas)); }
+
+        function aba(id, params = {}) {
+            document.querySelectorAll('.nav-aba').forEach(b => b.classList.remove('ativa'));
+            document.getElementById('n-' + id).classList.add('ativa');
+            const m = document.getElementById('corpo'); m.innerHTML = "";
+
+            if(id === 'h') {
+                let alertas = [];
+                const hoje = new Date();
+                hoje.setHours(0,0,0,0);
+                const limite = new Date(hoje);
+                limite.setDate(hoje.getDate() + 3);
+
+                lojas.forEach(loja => {
+                    if(loja.produtos) {
+                        loja.produtos.forEach(p => {
+                            const dProd = new Date(p.data + "T12:00:00");
+                            if(dProd <= limite) alertas.push({...p, loja: loja.nome});
+                        });
+                    }
+                });
+
+                alertas.sort((a,b) => new Date(a.data) - new Date(b.data));
+
+                m.innerHTML = `
+                    <div class="grid grid-cols-2 gap-3 mb-8">
+                        <div class="bg-gray-900 p-6 rounded-2xl border-b-4 border-amber-500 text-center">
+                            <div class="text-4xl font-black text-amber-500 italic">${lojas.length}</div>
+                            <div class="text-[10px] text-gray-400 font-bold uppercase italic">Lojas</div>
+                        </div>
+                        <div class="bg-gray-900 p-6 rounded-2xl border-b-4 border-red-500 text-center">
+                            <div class="text-4xl font-black text-red-500 italic">${alertas.length}</div>
+                            <div class="text-[10px] text-gray-400 font-bold uppercase italic">Alertas</div>
+                        </div>
+                    </div>
+                    <h3 class="text-xs font-black uppercase text-red-500 mb-4 italic flex items-center gap-2">
+                        <i data-lucide="alert-triangle" class="w-4 h-4"></i> VENCIMENTOS PRÓXIMOS
+                    </h3>
+                    ${alertas.length === 0 ? '<div class="text-center p-12 text-gray-800 font-bold uppercase text-[10px]">Sem alertas</div>' : 
+                    alertas.map(p => `
+                        <div class="vencimento-item border border-gray-800">
+                            <div>
+                                <span class="text-[10px] text-gray-500 font-bold uppercase block mb-1">${p.loja}</span>
+                                <span class="text-amber-500 font-black text-sm uppercase italic">${p.nome}</span>
+                                <span class="text-[11px] text-white font-bold block">Qtd: ${p.qtd}</span>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-red-500 font-black text-sm italic">${p.data.split('-').reverse().join('/')}</div>
+                            </div>
+                        </div>
+                    `).join('')}
+                `;
+            }
+
+            if(id === 'l') {
+                m.innerHTML = `<button onclick="addLoja()" class="btn-amarelo mb-6 w-full">+ Nova Unidade</button>`;
+                lojas.forEach((l, index) => {
+                    m.innerHTML += `
+                        <div class="bg-gray-900 p-4 rounded-xl mb-2 flex justify-between items-center border border-gray-800">
+                            <div class="flex gap-2 mr-3">
+                                <i onclick="moverLoja(${index}, -1)" data-lucide="chevron-up" class="w-5 h-5 text-gray-600"></i>
+                                <i onclick="moverLoja(${index}, 1)" data-lucide="chevron-down" class="w-5 h-5 text-gray-600"></i>
+                            </div>
+                            <span class="font-black uppercase italic text-sm flex-1 truncate" onclick="verLoja('${l.nome}')">${l.nome}</span>
+                            <div class="flex gap-4 ml-2">
+                                <i onclick="aba('p',{loja:'${l.nome}'})" data-lucide="plus-circle" class="w-5 h-5 text-green-500"></i>
+                                <i onclick="delLoja(${index})" data-lucide="trash-2" class="w-5 h-5 text-red-600"></i>
+                            </div>
+                        </div>`;
+                });
+            }
+
+            if(id === 'p') {
+                const p = params.prod || { nome: '', qtd: '', data: '' };
+                m.innerHTML = `
+                <h2 class="text-center font-black uppercase text-amber-500 italic mb-6">${params.prod ? 'EDITAR' : 'CADASTRAR'} PRODUTO</h2>
+                <input id="pn" placeholder="Nome do Produto" class="input-custom" value="${p.nome}">
+                <input id="pq" placeholder="Quantidade" type="number" class="input-custom" value="${p.qtd}">
+                <input id="pd" type="date" class="input-custom" value="${p.data}">
+                <select id="pl" class="input-custom">
+                    <option value="">Selecione a Loja</option>
+                    ${lojas.map(l => `<option value="${l.nome}" ${l.nome===(params.loja||'')?'selected':''}>${l.nome}</option>`).join('')}
+                </select>
+                <button onclick="salvarP()" class="btn-amarelo mt-4 w-full">SALVAR PRODUTO</button>`;
+                editando = params.editRef || { lojaIndex: -1, prodIndex: -1 };
+            }
+
+            if(id === 'r') {
+                m.innerHTML = `<h2 class="text-center font-black uppercase text-amber-500 italic mb-6">RELATÓRIO GERAL</h2>`;
+                lojas.forEach(loja => {
+                    if(loja.produtos && loja.produtos.length > 0) {
+                        m.innerHTML += `<div class="mb-4
                 <button onclick="aba('l')" id="n-l" class="nav-aba flex-1 py-2 rounded-lg text-[10px] font-black uppercase">Lojas</button>
                 <button onclick="aba('p')" id="n-p" class="nav-aba flex-1 py-2 rounded-lg text-[10px] font-black uppercase">Produtos</button>
                 <button onclick="aba('r')" id="n-r" class="nav-aba flex-1 py-2 rounded-lg text-[10px] font-black uppercase">Relat.</button>
