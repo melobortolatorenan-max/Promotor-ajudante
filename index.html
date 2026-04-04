@@ -9,6 +9,7 @@
     <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/melobortolatorenan-max/Promotor-ajudante/main/logo.png">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#030712">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -18,7 +19,7 @@
         .secao { display: none; height: 100vh; flex-direction: column; }
         .secao.ativa { display: flex !important; }
         .input-custom { width: 100%; background-color: #111827; border: 1px solid #1f2937; padding: 1rem; border-radius: 1rem; color: white; margin-bottom: 0.8rem; outline: none; }
-        .btn-amarelo { background-color: #f59e0b; color: #030712; font-weight: 900; padding: 1.2rem; border-radius: 1rem; text-transform: uppercase; width: 100%; border: none; cursor: pointer; transition: 0.2s; shadow: 0 10px 15px -3px rgba(245, 158, 11, 0.3); }
+        .btn-amarelo { background-color: #f59e0b; color: #030712; font-weight: 900; padding: 1.2rem; border-radius: 1rem; text-transform: uppercase; width: 100%; border: none; cursor: pointer; transition: 0.2s; }
         .btn-amarelo:active { transform: scale(0.98); }
         .nav-aba.ativa { background-color: #f59e0b !important; color: #030712 !important; }
         .card-dark { background-color: #111827; border: 1px solid #1f2937; border-radius: 1.5rem; }
@@ -34,6 +35,187 @@
             <div id="modal-body" class="mb-8 text-gray-300"></div>
             <div id="modal-footer" class="flex flex-col gap-3"></div>
         </div>
+    </div>
+
+    <section id="tela-app" class="secao ativa">
+        <header class="p-4 border-b border-gray-800 bg-gray-950">
+            <div class="flex items-center gap-3 mb-4">
+                <img src="https://raw.githubusercontent.com/melobortolatorenan-max/Promotor-ajudante/main/logo.png" class="w-10 h-10 rounded-lg border border-amber-500/30">
+                <div>
+                    <h1 class="text-xs font-bold text-gray-500 uppercase tracking-widest leading-none">Ajudante</h1>
+                    <span class="text-lg font-black text-amber-500 uppercase italic leading-none">Promotor</span>
+                </div>
+            </div>
+            <nav class="flex gap-1 bg-gray-900 p-1 rounded-xl">
+                <button onclick="aba('h')" id="n-h" class="nav-aba flex-1 py-2.5 rounded-lg text-[10px] font-black uppercase">Início</button>
+                <button onclick="aba('l')" id="n-l" class="nav-aba flex-1 py-2.5 rounded-lg text-[10px] font-black uppercase">Lojas</button>
+                <button onclick="aba('p')" id="n-p" class="nav-aba flex-1 py-2.5 rounded-lg text-[10px] font-black uppercase">Produtos</button>
+                <button onclick="aba('r')" id="n-r" class="nav-aba flex-1 py-2.5 rounded-lg text-[10px] font-black uppercase">Relat.</button>
+            </nav>
+        </header>
+        <main id="corpo" class="p-5 flex-1 overflow-y-auto pb-24"></main>
+    </section>
+
+    <script>
+        let lojas = JSON.parse(localStorage.getItem('db_promotor_v2')) || [];
+
+        // --- CORE: NOTIFICAÇÕES E DADOS ---
+        function salvar() { localStorage.setItem('db_promotor_v2', JSON.stringify(lojas)); }
+
+        async function enviarAviso(titulo, texto) {
+            const reg = await navigator.serviceWorker.getRegistration();
+            if (reg && Notification.permission === "granted") {
+                reg.showNotification(titulo, {
+                    body: texto,
+                    icon: 'https://raw.githubusercontent.com/melobortolatorenan-max/Promotor-ajudante/main/logo.png',
+                    tag: 'alerta-' + Date.now()
+                });
+            }
+        }
+
+        function verificarPrazos() {
+            const hoje = new Date(); hoje.setHours(0,0,0,0);
+            lojas.forEach(l => {
+                l.produtos.forEach(p => {
+                    const dv = new Date(p.data + 'T12:00:00'); dv.setHours(0,0,0,0);
+                    const diff = Math.ceil((dv - hoje) / 86400000);
+                    if (diff <= 3 && diff >= 0) enviarAviso("VENCIMENTO PRÓXIMO", `${p.nome} na ${l.nome} vence em ${diff} dias!`);
+                });
+            });
+        }
+
+        function moverLoja(index, direcao) {
+            const novaPosicao = index + direcao;
+            if (novaPosicao >= 0 && novaPosicao < lojas.length) {
+                const lojaMovida = lojas.splice(index, 1)[0];
+                lojas.splice(novaPosicao, 0, lojaMovida);
+                salvar();
+                aba('l');
+            }
+        }
+
+        // --- NAVEGAÇÃO ---
+        function aba(id, params = {}) {
+            document.querySelectorAll('.nav-aba').forEach(b => b.classList.remove('ativa'));
+            document.getElementById('n-' + id).classList.add('ativa');
+            const m = document.getElementById('corpo'); m.innerHTML = "";
+
+            if(id === 'h') {
+                if (Notification.permission === "default") Notification.requestPermission();
+                let v = []; lojas.forEach(l => l.produtos.forEach(p => {
+                    const d = Math.ceil((new Date(p.data + 'T12:00:00') - new Date()) / 86400000);
+                    if(d <= 3) v.push({...p, loja: l.nome, d});
+                }));
+                m.innerHTML = `<div class="flex gap-3 mb-8"><div class="card-dark flex-1 p-5 text-center border-b-4 border-b-amber-500"><div class="text-3xl font-black text-amber-500">${lojas.length}</div><div class="text-[9px] text-gray-500 font-black uppercase">Lojas</div></div><div class="card-dark flex-1 p-5 text-center border-b-4 border-b-red-600"><div class="text-3xl font-black text-red-500">${v.length}</div><div class="text-[9px] text-gray-500 font-black uppercase">Alertas</div></div></div><h2 class="text-xs font-black text-red-500 uppercase mb-4 italic flex items-center gap-2"><i data-lucide="alert-triangle" class="w-4 h-4"></i> Vencimentos</h2>${v.map(p => `<div class="card-dark p-4 mb-3 flex justify-between items-center bg-red-500/5 border-l-2 border-l-red-500"><div><div class="text-amber-500 font-black text-xs uppercase italic">${p.nome}</div><div class="text-[10px] text-gray-500 uppercase font-bold">${p.loja}</div></div><div class="text-right"><div class="text-red-500 font-black text-xs">${p.data.split('-').reverse().join('/')}</div><div class="text-[9px] font-bold text-gray-500 uppercase italic">${p.d <= 0 ? 'Vencido' : p.d + ' dias'}</div></div></div>`).join('')}`;
+            }
+
+            if(id === 'l') {
+                m.innerHTML = `<button onclick="addLoja()" class="btn-amarelo mb-6 shadow-lg shadow-amber-500/10">+ Nova Unidade</button>`;
+                lojas.forEach((l, i) => {
+                    m.innerHTML += `
+                        <div class="card-dark p-4 mb-3 flex items-center justify-between">
+                            <div class="flex flex-col gap-1 mr-3 border-r border-gray-800 pr-3">
+                                <i onclick="moverLoja(${i}, -1)" data-lucide="chevron-up" class="w-5 h-5 text-gray-500 cursor-pointer ${i === 0 ? 'opacity-20 pointer-events-none' : ''}"></i>
+                                <i onclick="moverLoja(${i}, 1)" data-lucide="chevron-down" class="w-5 h-5 text-gray-500 cursor-pointer ${i === lojas.length - 1 ? 'opacity-20 pointer-events-none' : ''}"></i>
+                            </div>
+                            <div class="flex items-center gap-3 flex-1">
+                                <i data-lucide="map-pin" class="w-4 h-4 text-amber-500"></i>
+                                <span class="font-black uppercase italic text-sm cursor-pointer" onclick="verLoja('${l.nome}')">${l.nome}</span>
+                                <i onclick="editLoja('${l.nome}')" data-lucide="pencil" class="w-4 h-4 text-blue-400 cursor-pointer"></i>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <i onclick="aba('p',{loja:'${l.nome}',origem:'l'})" data-lucide="plus-circle" class="w-6 h-6 text-green-500 cursor-pointer"></i>
+                                <i onclick="delLoja('${l.nome}')" data-lucide="trash-2" class="w-5 h-5 text-red-600 cursor-pointer"></i>
+                            </div>
+                        </div>`;
+                });
+            }
+
+            if(id === 'p') {
+                m.innerHTML = `<h2 class="text-lg font-black uppercase mb-6 text-amber-500 italic text-center underline underline-offset-8">Cadastrar Produto</h2><input id="pn" placeholder="Nome do Produto" class="input-custom"><input id="pq" placeholder="Quantidade" type="number" class="input-custom"><input id="pd" type="date" class="input-custom"><select id="pl" class="input-custom"><option value="">Selecione a Loja</option>${lojas.map(l => `<option value="${l.nome}" ${l.nome===(params.loja||'')?'selected':''}>${l.nome}</option>`).join('')}</select><button onclick="salvarP('${params.origem||'p'}')" class="btn-amarelo mt-4">Salvar Produto</button>`;
+            }
+
+            if(id === 'r') {
+                m.innerHTML = `<h2 class="text-lg font-black uppercase mb-6 text-amber-500 italic text-center">Relatório</h2>`;
+                lojas.forEach(l => {
+                    let h = `<div class="card-dark p-5 mb-6 border-l-4 border-l-amber-500"><h3 class="text-amber-500 font-black uppercase italic mb-4 border-b border-gray-800 pb-2">${l.nome}</h3>`;
+                    const ag = {}; l.produtos.forEach(p => { if(!ag[p.nome]) ag[p.nome] = []; ag[p.nome].push(p); });
+                    for(let n in ag) { h += `<div class="mb-4"><div class="text-[11px] font-black text-gray-300 uppercase mb-1">${n}</div>${ag[n].map(it => `<div class="flex justify-between text-[10px] text-gray-500 font-bold bg-gray-950/50 p-2 rounded-lg mb-1"><span>${it.data.split('-').reverse().join('/')}</span><span>${it.qtd} UN</span></div>`).join('')}</div>`; }
+                    m.innerHTML += h + `</div>`;
+                });
+            }
+            lucide.createIcons();
+        }
+
+        // CORREÇÃO: ÍCONE DE LÁPIS AO LADO DO TITULO NA TELA DE DETALHE DA LOJA
+        function verLoja(nome) {
+            const m = document.getElementById('corpo'); const loja = lojas.find(l => l.nome === nome);
+            m.innerHTML = `
+                <div class="flex items-center justify-between mb-8">
+                    <div class="flex items-center gap-3">
+                        <i onclick="aba('l')" data-lucide="arrow-left" class="text-amber-500 w-6 h-6 cursor-pointer"></i>
+                        <h2 class="text-2xl font-black uppercase italic">${nome}</h2>
+                        <i onclick="editLoja('${nome}')" data-lucide="pencil" class="w-5 h-5 text-blue-400 cursor-pointer"></i>
+                    </div>
+                    <button onclick="aba('p',{loja:'${nome}',origem:'loja-detalhe'})" class="bg-green-600 px-3 py-1.5 rounded-lg text-white font-black text-[10px] uppercase">+ NOVO</button>
+                </div>`;
+            const ag = {}; loja.produtos.forEach((p, i) => { if(!ag[p.nome]) ag[p.nome] = []; ag[p.nome].push({...p, i}); });
+            for(let n in ag) {
+                m.innerHTML += `<div class="card-dark p-4 mb-4 shadow-xl border-t border-t-gray-800"><div class="text-amber-500 font-black text-sm uppercase mb-3 flex items-center justify-between italic"><span><i data-lucide="package" class="w-4 h-4 inline-block mr-2"></i> ${n}</span><i onclick="delProduto('${nome}', '${n}')" data-lucide="trash-2" class="w-4 h-4 text-red-600 cursor-pointer"></i></div><div class="space-y-2">${ag[n].map(p => `<div class="flex justify-between items-center bg-gray-950 p-3 rounded-xl border border-gray-800/50"><div class="text-[11px] font-bold text-gray-400">${p.data.split('-').reverse().join('/')} — <span class="text-amber-500 font-black">${p.qtd} UN</span></div><div class="flex gap-3"><i onclick="editarP('${nome}', ${p.i})" data-lucide="pencil" class="w-4 h-4 text-blue-400 cursor-pointer"></i><i onclick="removerP('${nome}', ${p.i})" data-lucide="trash-2" class="w-4 h-4 text-red-500 cursor-pointer"></i></div></div>`).join('')}</div></div>`;
+            }
+            lucide.createIcons();
+        }
+
+        // FUNÇÕES DE SISTEMA
+        function abrirModal(tipo, msg, callback, placeholder = "") {
+            const container = document.getElementById('modal-container');
+            const body = document.getElementById('modal-body');
+            const footer = document.getElementById('modal-footer');
+            body.innerText = msg; footer.innerHTML = ""; container.style.display = "flex";
+            if (tipo === 'prompt') {
+                body.innerHTML += `<input id="modal-input" class="input-custom mt-6 text-center" placeholder="${placeholder}" autofocus>`;
+                footer.innerHTML = `<button id="m-btn" class="btn-amarelo w-full">Salvar</button><button onclick="fecharModal()" class="text-gray-500 font-bold uppercase text-[10px] py-2">Voltar</button>`;
+                document.getElementById('m-btn').onclick = () => { const v = document.getElementById('modal-input').value; if(v) callback(v); fecharModal(); };
+            } else if (tipo === 'alert') {
+                footer.innerHTML = `<button onclick="fecharModal()" class="btn-amarelo w-full italic">Ok</button>`;
+                if(callback) footer.querySelector('button').onclick = () => { fecharModal(); callback(); };
+            } else if (tipo === 'confirm') {
+                footer.innerHTML = `<button id="m-btn" class="btn-amarelo w-full">Confirmar</button><button onclick="fecharModal()" class="text-gray-500 font-bold uppercase text-[10px] py-2">Cancelar</button>`;
+                document.getElementById('m-btn').onclick = () => { callback(); fecharModal(); };
+            }
+        }
+        function fecharModal() { document.getElementById('modal-container').style.display = "none"; }
+        function addLoja() { abrirModal('prompt', 'Nome da Loja:', (n) => { lojas.push({nome: n, produtos: []}); salvar(); aba('l'); }); }
+        
+        // CORREÇÃO: NOVA FUNÇÃO PARA EDITAR NOME DA LOJA
+        function editLoja(nomeAtual) {
+            const lojaIndex = lojas.findIndex(l => l.nome === nomeAtual);
+            if(lojaIndex !== -1) {
+                abrirModal('prompt', `Editar nome de: ${nomeAtual}`, (novoNome) => {
+                    lojas[lojaIndex].nome = novoNome;
+                    salvar();
+                    aba('l'); // Recarrega a lista de lojas
+                }, nomeAtual);
+            }
+        }
+        
+        function salvarP(orig) {
+            const n = document.getElementById('pn').value, q = document.getElementById('pq').value, d = document.getElementById('pd').value, l = document.getElementById('pl').value;
+            if(!n || !d || !l) return abrirModal('alert', 'Erro: Preencha tudo!');
+            lojas.find(x => x.nome === l).produtos.push({nome: n, qtd: q, data: d});
+            salvar(); abrirModal('alert', 'Salvo!', () => { if(orig === 'loja-detalhe') verLoja(l); else aba('l'); });
+        }
+        function editarP(loja, idx) { const p = lojas.find(l => l.nome === loja).produtos[idx]; abrirModal('prompt', `Qtd:`, (q) => { p.qtd = q; salvar(); verLoja(loja); }, p.qtd); }
+        function delLoja(n) { abrirModal('confirm', `Excluir ${n}?`, () => { lojas = lojas.filter(x => x.nome !== n); salvar(); aba('l'); }); }
+        function removerP(l, i) { abrirModal('confirm', `Remover lote?`, () => { lojas.find(x => x.nome === l).produtos.splice(i, 1); salvar(); verLoja(l); }); }
+        function delProduto(nomeLoja, nomeProduto) { abrirModal('confirm', `Excluir "${nomeProduto}" e TODAS as suas validades desta loja?`, () => { const loja = lojas.find(l => l.nome === nomeLoja); loja.produtos = loja.produtos.filter(p => p.nome !== nomeProduto); salvar(); verLoja(nomeLoja); }); }
+
+        if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
+        window.addEventListener('load', () => setTimeout(verificarPrazos, 3000));
+        aba('h');
+    </script>
+</body>
+</html>
     </div>
 
     <section id="tela-app" class="secao ativa">
