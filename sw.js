@@ -1,39 +1,28 @@
-function verLoja(nome) {
-    const m = document.getElementById('corpo'); 
-    const loja = lojas.find(l => l.nome === nome);
-    
-    m.innerHTML = `
-        <div class="flex items-center justify-between mb-6">
-            <div class="flex items-center gap-2">
-                <i onclick="aba('l')" data-lucide="arrow-left" class="text-amber-500 w-6 h-6 cursor-pointer"></i>
-                <h2 class="text-xl font-black uppercase italic tracking-tighter">${nome}</h2>
-            </div>
-            <button onclick="aba('p',{loja:'${nome}'})" class="bg-green-600 px-3 py-1 rounded-lg text-[10px] font-black uppercase">+ NOVO</button>
-        </div>`;
-    
-    const agrupado = {};
-    loja.produtos.forEach((p, i) => { 
-        if(!agrupado[p.nome]) agrupado[p.nome] = []; 
-        agrupado[p.nome].push({...p, i}); 
-    });
+const CACHE_NAME = 'promotor-ajudante-v3'; // Mudamos a versão para forçar atualização
 
-    for(let n in agrupado) {
-        m.innerHTML += `
-        <div class="card-container">
-            <div class="flex justify-between items-center mb-3">
-                <span class="text-amber-500 font-black text-xs uppercase italic flex items-center gap-2">
-                    <i data-lucide="package" class="w-3 h-3"></i> ${n}
-                </span>
-                <i onclick="confirmarExclusaoTotal('${nome}', '${n}')" data-lucide="trash-2" class="w-4 h-4 text-red-800 cursor-pointer"></i>
-            </div>
-            ${agrupado[n].map(p => `
-                <div class="item-linha !bg-black/40 !mb-2">
-                    <span class="text-[10px] font-bold text-gray-400">${p.data.split('-').reverse().join('/')} — <span class="text-amber-500 font-black">${p.qtd} UN</span></span>
-                    <div class="flex gap-3">
-                        <i onclick="editarQtd('${nome}', ${p.i})" data-lucide="pencil" class="w-4 h-4 text-blue-400 cursor-pointer"></i>
-                        <i onclick="removerLote('${nome}', ${p.i})" data-lucide="trash-2" class="w-4 h-4 text-red-500 cursor-pointer"></i>
-                    </div>
-                </div>`).join('')}
+self.addEventListener('install', (e) => {
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cache) => {
+          if (cache !== CACHE_NAME) {
+            return caches.delete(cache);
+          }
+        })
+      );
+    })
+  );
+});
+
+self.addEventListener('fetch', (event) => {
+  event.respondWith(
+    fetch(event.request).catch(() => caches.match(event.request))
+  );
+});
         </div>`;
     }
     lucide.createIcons();
