@@ -1,17 +1,6 @@
-self.addEventListener('install', (event) => {
-    self.skipWaiting();
-});
-
-self.addEventListener('activate', (event) => {
-    event.waitUntil(clients.claim());
-});
-
-self.addEventListener('notificationclick', (event) => {
-    event.notification.close();
-    event.waitUntil(
-        clients.matchAll({ type: 'window' }).then((clientList) => {
-            if (clientList.length > 0) return clientList[0].focus();
-            return clients.openWindow('/');
-        })
-    );
+self.addEventListener('install', (e) => self.skipWaiting());
+self.addEventListener('activate', (e) => e.waitUntil(clients.claim()));
+self.addEventListener('notificationclick', (e) => {
+    e.notification.close();
+    e.waitUntil(clients.openWindow('/'));
 });
