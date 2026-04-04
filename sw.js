@@ -1,39 +1,10 @@
-self.addEventListener('install', (event) => {
-    self.skipWaiting();
+self.addEventListener('install', (e) => self.skipWaiting());
+self.addEventListener('activate', (e) => e.waitUntil(clients.claim()));
+
+self.addEventListener('notificationclick', (e) => {
+    e.notification.close();
+    e.waitUntil(clients.openWindow('/'));
 });
-
-self.addEventListener('activate', (event) => {
-    event.waitUntil(clients.claim());
-});
-
-self.addEventListener('message', (event) => {
-    if (event.data && event.data.type === 'NOTIFICAR') {
-        const options = {
-            body: event.data.body,
-            icon: 'https://raw.githubusercontent.com/melobortolatorenan-max/Promotor-ajudante/main/logo.png',
-            badge: 'https://raw.githubusercontent.com/melobortolatorenan-max/Promotor-ajudante/main/logo.png',
-            vibrate: [200, 100, 200],
-            data: { dateOfArrival: Date.now() }
-        };
-        self.registration.showNotification(event.data.title, options);
-    }
-});
-                const hoje = new Date();
-                hoje.setHours(0,0,0,0);
-                const dataVenc = new Date(p.data + 'T00:00:00');
-                const diffDias = Math.ceil((dataVenc - hoje) / 86400000);
-
-                // Notifica se estiver entre 0 e 3 dias para vencer
-                if (diffDias <= 3 && diffDias >= 0) {
-                    dispararNotificacao(p, l.nome);
-                }
-            });
-        });
-    }
-
-    // Verifica sempre que o app abre
-    window.addEventListener('load', () => {
-        setTimeout(verificarVencimentosGerais, 2000);
     });
 
     // Modificação na função salvarP para notificar imediatamente
