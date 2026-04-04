@@ -43,18 +43,15 @@
     </section>
 
     <script>
+        // Registrar e forçar atualização do SW
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js').then(reg => reg.update());
+            navigator.serviceWorker.register('sw.js').then(reg => {
+                reg.update();
+            });
         }
 
         let lojas = JSON.parse(localStorage.getItem('db_promotor_v2')) || [];
         function salvar() { localStorage.setItem('db_promotor_v2', JSON.stringify(lojas)); }
-
-        // Função crucial para comparar datas sem erro de fuso horário
-        function obterDataAjustada(stringData) {
-            const [ano, mes, dia] = stringData.split('-').map(Number);
-            return new Date(ano, mes - 1, dia).getTime();
-        }
 
         function aba(id, params = {}) {
             document.querySelectorAll('.nav-aba').forEach(b => b.classList.remove('ativa'));
@@ -63,29 +60,30 @@
 
             if(id === 'h') {
                 let proxVenc = [];
+                const hoje = new Date();
+                hoje.setHours(0,0,0,0);
                 
-                // Data de hoje zerada
-                const d = new Date();
-                const hojeMS = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-                
-                // Limite de 3 dias em milissegundos
-                const limiteMS = hojeMS + (3 * 24 * 60 * 60 * 1000);
+                // Define o limite de 3 dias
+                const limite = new Date(hoje);
+                limite.setDate(hoje.getDate() + 3);
 
                 lojas.forEach(loja => {
                     if(loja.produtos) {
                         loja.produtos.forEach(p => {
-                            const dataProdMS = obterDataAjustada(p.data);
+                            // Converte data do produto (AAAA-MM-DD) para Objeto Date
+                            const [ano, mes, dia] = p.data.split('-').map(Number);
+                            const dataP = new Date(ano, mes - 1, dia);
 
-                            // Notifica se vencer entre hoje e daqui a 3 dias (inclui vencidos)
-                            if(dataProdMS <= limiteMS) {
+                            // Se a data do produto for menor ou igual ao limite de 3 dias
+                            if(dataP <= limite) {
                                 proxVenc.push({...p, loja: loja.nome});
                             }
                         });
                     }
                 });
 
-                // Ordenar: mais antigos primeiro
-                proxVenc.sort((a,b) => obterDataAjustada(a.data) - obterDataAjustada(b.data));
+                // Ordena: mais vencidos primeiro
+                proxVenc.sort((a,b) => new Date(a.data) - new Date(b.data));
 
                 m.innerHTML = `
                     <div class="grid grid-cols-2 gap-3 mb-8">
@@ -100,10 +98,10 @@
                     </div>
                     
                     <h3 class="text-xs font-black uppercase text-red-500 mb-4 italic flex items-center gap-2">
-                        <i data-lucide="alert-triangle" class="w-4 h-4"></i> ATENÇÃO (VENCIMENTOS)
+                        <i data-lucide="alert-triangle" class="w-4 h-4"></i> ATENÇÃO (VENCIMENTO PRÓXIMO)
                     </h3>
 
-                    ${proxVenc.length === 0 ? '<div class="text-center p-12 text-gray-800 font-bold uppercase text-[10px]">Nenhum alerta para os próximos 3 dias</div>' : 
+                    ${proxVenc.length === 0 ? '<div class="text-center p-12 text-gray-800 font-bold uppercase text-[10px]">Tudo em dia</div>' : 
                     proxVenc.map(p => `
                         <div class="vencimento-item border border-gray-800">
                             <div>
@@ -150,16 +148,36 @@
                 lojas.forEach(loja => {
                     if(loja.produtos && loja.produtos.length > 0) {
                         m.innerHTML += `<div class="mb-6 bg-gray-900/50 p-4 rounded-2xl border border-gray-800">
-                            <h3 class="text-amber-500 font-black uppercase text-xs mb-3 border-b border-gray-800 pb-2 flex justify-between">
-                                <span>${loja.nome}</span>
-                                <span class="text-gray-600">${loja.produtos.length} itens</span>
-                            </h3>
+                            <h3 class="text-amber-500 font-black uppercase text-xs mb-3 border-b border-gray-800 pb-2">${loja.nome}</h3>
                             ${loja.produtos.map(p => `
                                 <div class="flex justify-between items-center text-[11px] mb-2">
                                     <span class="text-white font-bold uppercase">${p.nome} (${p.qtd})</span>
                                     <span class="text-gray-500">${p.data.split('-').reverse().join('/')}</span>
                                 </div>
                             `).join('')}
+                        </div>`;
+                    }
+                });
+            }
+            lucide.createIcons();
+        }
+
+        function salvarP() {
+            const n = document.getElementById('pn').value, q = document.getElementById('pq').value, d = document.getElementById('pd').value, l = document.getElementById('pl').value;
+            if(!n || !d || !l) return alert("Preencha tudo!");
+            lojas.find(x => x.nome === l).produtos.push({nome: n, qtd: q, data: d});
+            salvar(); aba('h');
+        }
+
+        function addLoja() { const n = prompt("Nome da Loja:"); if(n) { lojas.push({nome: n, produtos: []}); salvar(); aba('l'); } }
+        function delLoja(n) { if(confirm("Excluir loja?")) { lojas = lojas.filter(x => x.nome !== n); salvar(); aba('l'); } }
+        function verLoja(n) { aba('l'); }
+
+        aba('h');
+    </script>
+</body>
+</html>
+    `).join('')}
                         </div>`;
                     }
                 });
