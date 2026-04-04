@@ -21,6 +21,7 @@
         .btn-amarelo { background-color: #f59e0b; color: #030712; font-weight: 900; padding: 1rem; border-radius: 1rem; text-transform: uppercase; width: 100%; border: none; cursor: pointer; }
         .nav-aba.ativa { background-color: #f59e0b !important; color: #030712 !important; }
         
+        /* Esconde o banner se já estiver no modo App instalado */
         @media (display-mode: standalone) { #banner-instalar { display: none !important; } }
         
         .item-linha { background-color: #111827; border: 1px solid #1f2937; border-radius: 1rem; padding: 0.6rem 0.8rem; margin-bottom: 0.4rem; display: flex; align-items: center; justify-content: space-between; }
@@ -34,6 +35,217 @@
 
     <div id="modal-container">
         <div class="bg-gray-900 border border-gray-800 p-8 rounded-[2.5rem] w-full max-w-sm text-center">
+            <div id="modal-body" class="mb-8 text-gray-300 font-bold uppercase text-sm"></div>
+            <div id="modal-footer" class="flex flex-col gap-3"></div>
+        </div>
+    </div>
+
+    <section id="tela-app" class="secao ativa">
+        <header class="p-4 border-b border-gray-800 bg-gray-950">
+            <div class="flex items-center gap-3 mb-4">
+                <img src="https://raw.githubusercontent.com/melobortolatorenan-max/Promotor-ajudante/main/logo.png" class="w-10 h-10 rounded-lg border border-amber-500/20">
+                <div>
+                    <h1 class="text-xs font-bold text-gray-500 uppercase tracking-widest leading-none italic">Promotor</h1>
+                    <span class="text-lg font-black text-amber-500 uppercase italic leading-none">Ajudante</span>
+                </div>
+            </div>
+            <nav class="flex gap-1 bg-gray-900 p-1 rounded-xl">
+                <button onclick="aba('h')" id="n-h" class="nav-aba flex-1 py-2 rounded-lg text-[10px] font-black uppercase">Início</button>
+                <button onclick="aba('l')" id="n-l" class="nav-aba flex-1 py-2 rounded-lg text-[10px] font-black uppercase">Lojas</button>
+                <button onclick="aba('p')" id="n-p" class="nav-aba flex-1 py-2 rounded-lg text-[10px] font-black uppercase">Produtos</button>
+                <button onclick="aba('r')" id="n-r" class="nav-aba flex-1 py-2 rounded-lg text-[10px] font-black uppercase">Relat.</button>
+            </nav>
+        </header>
+        <main id="corpo" class="p-4 flex-1 overflow-y-auto pb-24"></main>
+    </section>
+
+    <script>
+        let lojas = JSON.parse(localStorage.getItem('db_promotor_v2')) || [];
+        let deferredPrompt;
+
+        // Lógica para capturar o evento de instalação do PWA
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+        });
+
+        function instalarApp() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then(() => { deferredPrompt = null; });
+            } else {
+                abrirModal('confirm', 'Para instalar:\n1. Clique nos 3 pontinhos do Chrome\n2. Selecione "Instalar Aplicativo" ou "Adicionar à tela inicial"', () => {});
+            }
+        }
+
+        function salvar() { localStorage.setItem('db_promotor_v2', JSON.stringify(lojas)); }
+
+        function aba(id, params = {}) {
+            document.querySelectorAll('.nav-aba').forEach(b => b.classList.remove('ativa'));
+            document.getElementById('n-' + id).classList.add('ativa');
+            const m = document.getElementById('corpo'); m.innerHTML = "";
+
+            if(id === 'h') {
+                let proxVenc = [];
+                // LÓGICA DE DATA CORRIGIDA
+                const hoje = new Date();
+                hoje.setHours(0, 0, 0, 0);
+                
+                const limite = new Date();
+                limite.setDate(hoje.getDate() + 3);
+                limite.setHours(23, 59, 59, 999);
+
+                lojas.forEach(loja => {
+                    loja.produtos.forEach(p => {
+                        const dataV = new Date(p.data + 'T12:00:00'); // T12:00 evita erros de fuso
+                        if(dataV <= limite) {
+                            proxVenc.push({...p, loja: loja.nome});
+                        }
+                    });
+                });
+
+                m.innerHTML = `
+                    <div id="banner-instalar" onclick="instalarApp()" class="bg-gray-900/50 p-4 rounded-2xl border border-gray-800 flex items-center justify-between mb-6 cursor-pointer">
+                        <div class="flex items-center gap-3">
+                            <div class="bg-amber-500/10 p-2.5 rounded-xl border border-amber-500/20">
+                                <i data-lucide="smartphone" class="w-6 h-6 text-amber-500"></i>
+                            </div>
+                            <span class="text-xs font-black uppercase italic tracking-wider text-amber-500">Instalar Aplicativo</span>
+                        </div>
+                        <i data-lucide="chevron-right" class="w-5 h-5 text-gray-600"></i>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3 mb-8">
+                        <div class="card-home border-b-4 border-amber-500">
+                            <div class="text-4xl font-black text-amber-500 italic mb-1">${lojas.length}</div>
+                            <div class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Lojas</div>
+                        </div>
+                        <div class="card-home border-b-4 border-red-500">
+                            <div class="text-4xl font-black text-red-500 italic mb-1">${proxVenc.length}</div>
+                            <div class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Alertas</div>
+                        </div>
+                    </div>
+                    
+                    <h3 class="text-xs font-black uppercase text-red-500 mb-5 tracking-wider italic flex items-center gap-2">
+                        <i data-lucide="alert-triangle" class="w-4 h-4"></i> ATENÇÃO (VENCIMENTO PRÓXIMO)
+                    </h3>
+
+                    ${proxVenc.length === 0 ? '<div class="text-center p-8 text-gray-800 font-bold uppercase text-[10px]">Tudo em dia</div>' : 
+                    proxVenc.map(p => `
+                        <div class="vencimento-item">
+                            <div class="flex flex-col">
+                                <span class="text-amber-500 font-black text-sm uppercase italic mb-0.5">${p.nome}</span>
+                                <span class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">${p.loja}</span>
+                            </div>
+                            <div class="text-right flex flex-col items-end">
+                                <span class="text-red-500 font-black text-sm italic mb-0.5">${p.data.split('-').reverse().join('/')}</span>
+                                <span class="text-[10px] text-gray-600 font-bold uppercase">ALERTA</span>
+                            </div>
+                        </div>
+                    `).join('')}
+                `;
+            }
+
+            if(id === 'l') {
+                m.innerHTML = `<button onclick="addLoja()" class="btn-amarelo mb-6">+ Nova Unidade</button>`;
+                lojas.forEach((l, i) => {
+                    m.innerHTML += `
+                        <div class="item-linha">
+                            <div class="flex flex-col items-center mr-3">
+                                <i onclick="moverLoja(${i}, -1)" data-lucide="chevron-up" class="w-4 h-4 text-gray-700 ${i === 0 ? 'opacity-10' : 'cursor-pointer'}"></i>
+                                <i onclick="moverLoja(${i}, 1)" data-lucide="chevron-down" class="w-4 h-4 text-gray-700 ${i === lojas.length-1 ? 'opacity-10' : 'cursor-pointer'}"></i>
+                            </div>
+                            <div class="flex items-center gap-3 cursor-pointer flex-1" onclick="verLoja('${l.nome}')">
+                                <i data-lucide="map-pin" class="w-4 h-4 text-amber-500"></i>
+                                <span class="font-black uppercase italic text-sm tracking-tighter">${l.nome}</span>
+                                <i data-lucide="pencil" class="w-3 h-3 text-blue-400 opacity-50" onclick="event.stopPropagation(); editLoja('${l.nome}')"></i>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <i onclick="aba('p',{loja:'${l.nome}'})" data-lucide="plus-circle" class="w-5 h-5 text-green-500 cursor-pointer"></i>
+                                <i onclick="delLoja('${l.nome}')" data-lucide="trash-2" class="w-5 h-5 text-red-600 cursor-pointer"></i>
+                            </div>
+                        </div>`;
+                });
+            }
+
+            if(id === 'p') {
+                // NOMES ALTERADOS CONFORME SOLICITADO
+                m.innerHTML = `<h2 class="text-center font-black uppercase text-amber-500 italic mb-6">CADASTRAR PRODUTO</h2>
+                <input id="pn" placeholder="Nome do Produto" class="input-custom">
+                <input id="pq" placeholder="Quantidade" type="number" class="input-custom">
+                <input id="pd" type="date" class="input-custom">
+                <select id="pl" class="input-custom"><option value="">Selecione a Loja</option>${lojas.map(l => `<option value="${l.nome}" ${l.nome===(params.loja||'')?'selected':''}>${l.nome}</option>`).join('')}</select>
+                <button onclick="salvarP()" class="btn-amarelo mt-4">SALVAR PRODUTO</button>`;
+            }
+            lucide.createIcons();
+        }
+
+        function verLoja(nome) {
+            const m = document.getElementById('corpo'); const loja = lojas.find(l => l.nome === nome);
+            m.innerHTML = `<div class="flex items-center justify-between mb-6">
+                <div class="flex items-center gap-2">
+                    <i onclick="aba('l')" data-lucide="arrow-left" class="text-amber-500 w-6 h-6 cursor-pointer"></i>
+                    <h2 class="text-xl font-black uppercase italic tracking-tighter">${nome}</h2>
+                </div>
+                <button onclick="aba('p',{loja:'${nome}'})" class="bg-green-600 px-3 py-1 rounded-lg text-[10px] font-black uppercase">+ NOVO</button>
+            </div>`;
+            const agrupado = {};
+            loja.produtos.forEach((p, i) => { if(!agrupado[p.nome]) agrupado[p.nome] = []; agrupado[p.nome].push({...p, i}); });
+            for(let n in agrupado) {
+                m.innerHTML += `
+                <div class="card-container">
+                    <div class="flex justify-between items-center mb-3">
+                        <span class="text-amber-500 font-black text-xs uppercase italic flex items-center gap-2"><i data-lucide="package" class="w-3 h-3"></i> ${n}</span>
+                        <i onclick="confirmarExclusaoTotal('${nome}', '${n}')" data-lucide="trash-2" class="w-4 h-4 text-red-800 cursor-pointer"></i>
+                    </div>
+                    ${agrupado[n].map(p => `<div class="item-linha !bg-black/40 !mb-2">
+                        <span class="text-[10px] font-bold text-gray-400">${p.data.split('-').reverse().join('/')} — <span class="text-amber-500 font-black">${p.qtd} UN</span></span>
+                        <div class="flex gap-3"><i onclick="editarQtd('${nome}', ${p.i})" data-lucide="pencil" class="w-4 h-4 text-blue-400 cursor-pointer"></i><i onclick="removerLote('${nome}', ${p.i})" data-lucide="trash-2" class="w-4 h-4 text-red-500 cursor-pointer"></i></div>
+                    </div>`).join('')}
+                </div>`;
+            }
+            lucide.createIcons();
+        }
+
+        function abrirModal(tipo, msg, callback, placeholder = "") {
+            const container = document.getElementById('modal-container');
+            const body = document.getElementById('modal-body');
+            const footer = document.getElementById('modal-footer');
+            body.innerText = msg; footer.innerHTML = ""; container.style.display = "flex";
+            if (tipo === 'prompt') {
+                body.innerHTML += `<input id="modal-input" class="input-custom mt-4 text-center font-black uppercase italic" value="${placeholder}" autofocus>`;
+                footer.innerHTML = `<button id="m-btn" class="btn-amarelo">Confirmar</button><button onclick="fecharModal()" class="text-gray-500 text-[10px] font-black uppercase mt-2">Voltar</button>`;
+                document.getElementById('m-btn').onclick = () => { const v = document.getElementById('modal-input').value; if(v) callback(v); fecharModal(); };
+            } else if (tipo === 'confirm') {
+                footer.innerHTML = `<button id="m-btn" class="btn-amarelo">OK</button><button onclick="fecharModal()" class="text-gray-500 text-[10px] font-black uppercase mt-2">CANCELAR</button>`;
+                document.getElementById('m-btn').onclick = () => { callback(); fecharModal(); };
+            }
+        }
+        function fecharModal() { document.getElementById('modal-container').style.display = "none"; }
+        function addLoja() { abrirModal('prompt', 'Nome da Loja:', (n) => { lojas.push({nome: n, produtos: []}); salvar(); aba('l'); }); }
+        function editLoja(n) { abrirModal('prompt', 'Novo nome:', (novo) => { const l = lojas.find(x => x.nome === n); l.nome = novo; salvar(); aba('l'); }, n); }
+        function delLoja(n) { abrirModal('confirm', `Excluir loja ${n}?`, () => { lojas = lojas.filter(x => x.nome !== n); salvar(); aba('l'); }); }
+        function salvarP() {
+            const n = document.getElementById('pn').value, q = document.getElementById('pq').value, d = document.getElementById('pd').value, l = document.getElementById('pl').value;
+            if(!n || !d || !l) return;
+            lojas.find(x => x.nome === l).produtos.push({nome: n, qtd: q, data: d});
+            salvar(); aba('h');
+        }
+        function editarQtd(l, i) { const p = lojas.find(x => x.nome === l).produtos[i]; abrirModal('prompt', 'Nova Quantidade:', (v) => { p.qtd = v; salvar(); verLoja(l); }, p.qtd); }
+        function removerLote(l, i) { lojas.find(x => x.nome === l).produtos.splice(i, 1); salvar(); verLoja(l); }
+        function confirmarExclusaoTotal(nomeLoja, nomeProduto) {
+            abrirModal('confirm', `ATENÇÃO: Excluir "${nomeProduto}" e todas as validades dele nesta loja?`, () => {
+                const lj = lojas.find(x => x.nome === nomeLoja);
+                lj.produtos = lj.produtos.filter(x => x.nome !== nomeProduto);
+                salvar(); verLoja(nomeLoja);
+            });
+        }
+        function moverLoja(i, d) { const np = i + d; if (np >= 0 && np < lojas.length) { const temp = lojas[i]; lojas[i] = lojas[np]; lojas[np] = temp; salvar(); aba('l'); } }
+
+        aba('h');
+    </script>
+</body>
+</html>
             <div id="modal-body" class="mb-8 text-gray-300 font-bold uppercase text-sm"></div>
             <div id="modal-footer" class="flex flex-col gap-3"></div>
         </div>
