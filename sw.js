@@ -1,5 +1,3 @@
-// ... (mantenha o restante do código anterior)
-
 function verLoja(nome) {
     const m = document.getElementById('corpo'); 
     const loja = lojas.find(l => l.nome === nome);
@@ -34,6 +32,12 @@ function verLoja(nome) {
                     <div class="flex gap-3">
                         <i onclick="editarQtd('${nome}', ${p.i})" data-lucide="pencil" class="w-4 h-4 text-blue-400 cursor-pointer"></i>
                         <i onclick="removerLote('${nome}', ${p.i})" data-lucide="trash-2" class="w-4 h-4 text-red-500 cursor-pointer"></i>
+                    </div>
+                </div>`).join('')}
+        </div>`;
+    }
+    lucide.createIcons();
+}
                     </div>
                 </div>`).join('')}
         </div>`;
