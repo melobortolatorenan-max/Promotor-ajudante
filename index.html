@@ -105,15 +105,23 @@
                             const dataP = new Date(p.data + "T12:00:00");
                             if(dataP <= limite) {
                                 totalAlertas++;
-                                const chave = `${loja.nome}|${p.nome.toUpperCase()}`;
-                                if(!agrupados[chave]) agrupados[chave] = [];
-                                agrupados[chave].push({ data: p.data, qtd: p.qtd });
+                                // Chave única por Loja e Nome do Produto (Normalizado)
+                                const nomeLimpo = p.nome.trim().toUpperCase();
+                                const chave = `${loja.nome.trim()}|${nomeLimpo}`;
+                                
+                                if(!agrupados[chave]) agrupados[chave] = { loja: loja.nome, produto: p.nome, validades: {} };
+                                
+                                // Se a data for igual para o mesmo produto, soma a quantidade
+                                if(!agrupados[chave].validades[p.data]) {
+                                    agrupados[chave].validades[p.data] = 0;
+                                }
+                                agrupados[chave].validades[p.data] += parseInt(p.qtd || 0);
                             }
                         });
                     }
                 });
 
-                const chaves = Object.keys(agrupados);
+                const listaAgrupada = Object.values(agrupados);
                 m.innerHTML = `
                     <div class="grid grid-cols-2 gap-3 mb-6 text-center">
                         <div class="bg-gray-900/50 p-5 rounded-2xl border border-gray-800">
@@ -125,19 +133,19 @@
                             <div class="text-[10px] text-gray-500 font-bold uppercase">Alertas</div>
                         </div>
                     </div>
-                    <h3 class="text-[11px] font-black uppercase text-red-500 mb-4 italic flex items-center gap-2 px-1"><i data-lucide="alert-triangle" class="icon-alert"></i> Vencimentos Próximos</h3>
-                    ${chaves.map(chave => {
-                        const [loja, prod] = chave.split('|');
-                        return `<div class="card-alerta">
-                            <span class="text-[10px] text-gray-400 font-bold uppercase block mb-0.5">${loja}</span>
-                            <div class="text-amber-500 font-black text-sm uppercase italic mb-2 border-b border-white/5 pb-1">${prod}</div>
-                            ${agrupados[chave].map(it => `
+                    <h3 class="text-[11px] font-black uppercase text-red-500 mb-4 italic flex items-center gap-2 px-1 font-bold"><i data-lucide="alert-triangle" class="icon-alert"></i> Vencimentos Próximos</h3>
+                    ${listaAgrupada.map(item => `
+                        <div class="card-alerta">
+                            <span class="text-[10px] text-gray-400 font-bold uppercase block mb-0.5">${item.loja}</span>
+                            <div class="text-amber-500 font-black text-sm uppercase italic mb-2 border-b border-white/5 pb-1">${item.produto}</div>
+                            ${Object.keys(item.validades).sort().map(data => `
                                 <div class="flex justify-between items-center mt-1">
-                                    <span class="text-white text-xs font-bold">${it.data.split('-').reverse().join('/')}</span>
-                                    <span class="text-red-500 font-black text-xs">${it.qtd} un</span>
-                                </div>`).join('')}
-                        </div>`;
-                    }).join('') || '<div class="text-center p-10 opacity-20 font-black text-xs uppercase">Sem alertas</div>'}
+                                    <span class="text-white text-xs font-bold">${data.split('-').reverse().join('/')}</span>
+                                    <span class="text-red-500 font-black text-xs">${item.validades[data]} un</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `).join('') || '<div class="text-center p-10 opacity-20 font-black text-xs uppercase">Sem alertas</div>'}
                 `;
             }
 
@@ -155,6 +163,97 @@
                                 <span class="text-[10px] text-gray-500 font-bold uppercase">${l.produtos.length} Produtos</span>
                             </div>
                             <div class="flex gap-4 ml-2">
+                                <i onclick="aba('p',{loja:'${l.nome}'})" data-lucide="plus-circle" class="w-5 h-5 text-green-500"></i>
+                                <i onclick="delLoja(${idx})" data-lucide="trash-2" class="w-5 h-5 text-red-600"></i>
+                            </div>
+                        </div>`;
+                });
+            }
+
+            if(id === 'p') {
+                const p = params.prod || { nome: '', qtd: '', data: '' };
+                m.innerHTML = `
+                <h2 class="text-center font-black uppercase text-amber-500 italic mb-6">${params.prod ? 'EDITAR ITEM' : 'CADASTRAR PRODUTO'}</h2>
+                <input id="pn" placeholder="Nome do Produto" class="input-custom" value="${p.nome}">
+                <input id="pq" placeholder="Quantidade" type="number" class="input-custom" value="${p.qtd}">
+                <input id="pd" type="date" class="input-custom" value="${p.data}">
+                <select id="pl" class="input-custom">
+                    <option value="">Selecione a Loja</option>
+                    ${lojas.map(l => `<option value="${l.nome}" ${l.nome===(params.loja||'')?'selected':''}>${l.nome}</option>`).join('')}
+                </select>
+                <button onclick="salvarP()" class="btn-amarelo mt-4 w-full">SALVAR</button>`;
+                editando = params.ref || { lojaIdx: -1, prodIdx: -1 };
+            }
+
+            if(id === 'r') {
+                m.innerHTML = `<h2 class="text-center font-black uppercase text-amber-500 italic mb-6">RELATÓRIO GERAL</h2>`;
+                lojas.forEach(loja => {
+                    if(loja.produtos.length > 0) {
+                        m.innerHTML += `<div class="mb-4 bg-gray-900 p-4 rounded-xl border border-gray-800">
+                            <h3 class="text-amber-500 font-black text-[10px] mb-2 border-b border-gray-800 pb-1 uppercase italic">${loja.nome}</h3>
+                            ${loja.produtos.map(p => `<div class="flex justify-between text-[11px] mb-1 font-bold"><span>${p.nome}</span><span>${p.data.split('-').reverse().join('/')} (${p.qtd}un)</span></div>`).join('')}
+                        </div>`;
+                    }
+                });
+            }
+            lucide.createIcons();
+        }
+
+        function verLoja(idx) {
+            const loja = lojas[idx];
+            const m = document.getElementById('corpo');
+            m.innerHTML = `
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center gap-2" onclick="aba('l')">
+                        <i data-lucide="chevron-left" class="w-5 h-5 text-amber-500"></i>
+                        <h2 class="font-black uppercase text-amber-500 italic text-lg">${loja.nome}</h2>
+                    </div>
+                    <i onclick="renomearLoja(${idx})" data-lucide="edit-2" class="w-5 h-5 text-gray-400"></i>
+                </div>
+                <button onclick="aba('p',{loja:'${loja.nome}'})" class="btn-amarelo mb-6 w-full text-xs">+ NOVO PRODUTO NESTA LOJA</button>
+                <div class="space-y-2">
+                    ${loja.produtos.map((p, pIdx) => `
+                        <div class="bg-gray-900 border border-gray-800 p-3 rounded-xl flex justify-between items-center">
+                            <div>
+                                <div class="text-amber-500 font-black uppercase italic text-xs">${p.nome}</div>
+                                <div class="text-white font-bold text-[10px] mt-1">${p.data.split('-').reverse().join('/')} | ${p.qtd} un</div>
+                            </div>
+                            <div class="flex gap-4">
+                                <i onclick="aba('p',{loja:'${loja.nome}', prod: ${JSON.stringify(p).replace(/"/g, '&quot;')}, ref: {lojaIdx: ${idx}, prodIdx: ${pIdx}}})" data-lucide="edit-3" class="w-4 h-4 text-blue-400"></i>
+                                <i onclick="delProd(${idx}, ${pIdx})" data-lucide="x-circle" class="w-4 h-4 text-red-500"></i>
+                            </div>
+                        </div>
+                    `).join('') || '<div class="text-center p-10 opacity-20 font-black text-xs uppercase">Nenhum produto cadastrado</div>'}
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        function salvarP() {
+            const n = document.getElementById('pn').value, q = document.getElementById('pq').value, d = document.getElementById('pd').value, l = document.getElementById('pl').value;
+            if(!n || !d || !l) return exibirModal("Atenção: Todos os campos são obrigatórios para salvar o produto.", null, () => {}, true);
+            
+            if(editando.prodIdx > -1) {
+                lojas[editando.lojaIdx].produtos[editando.prodIdx] = { nome: n, qtd: q, data: d };
+            } else {
+                const loja = lojas.find(x => x.nome === l);
+                if(loja) loja.produtos.push({ nome: n, qtd: q, data: d });
+            }
+            salvar(); editando = { lojaIdx: -1, prodIdx: -1 }; 
+            const idx = lojas.findIndex(x => x.nome === l);
+            verLoja(idx);
+        }
+
+        function addLoja() { exibirModal("Digite o nome da nova loja abaixo:", "", (n) => { lojas.push({nome: n, produtos: []}); salvar(); aba('l'); }); }
+        function renomearLoja(idx) { exibirModal("Altere o nome da loja abaixo:", lojas[idx].nome, (novoNome) => { lojas[idx].nome = novoNome; salvar(); verLoja(idx); }); }
+        function delLoja(idx) { exibirModal("Deseja realmente excluir esta loja e todos os produtos cadastrados nela?", null, (confirmado) => { if(confirmado) { lojas.splice(idx, 1); salvar(); aba('l'); } }, true); }
+        function delProd(lIdx, pIdx) { exibirModal("Deseja remover este produto da lista?", null, (confirmado) => { if(confirmado) { lojas[lIdx].produtos.splice(pIdx, 1); salvar(); verLoja(lIdx); } }, true); }
+
+        aba('h');
+    </script>
+</body>
+</html>
+  <div class="flex gap-4 ml-2">
                                 <i onclick="aba('p',{loja:'${l.nome}'})" data-lucide="plus-circle" class="w-5 h-5 text-green-500"></i>
                                 <i onclick="delLoja(${idx})" data-lucide="trash-2" class="w-5 h-5 text-red-600"></i>
                             </div>
