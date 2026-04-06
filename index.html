@@ -40,8 +40,7 @@
 
     <script>
         let lojas = JSON.parse(localStorage.getItem('db_promotor_v2')) || [];
-        let editando = { lojaIdx: -1, prodIdx: -1 };
-
+        
         function salvar() { localStorage.setItem('db_promotor_v2', JSON.stringify(lojas)); }
 
         function aba(id, params = {}) {
@@ -53,18 +52,22 @@
                 const hoje = new Date(); hoje.setHours(0,0,0,0);
                 const limite = new Date(hoje); limite.setDate(hoje.getDate() + 3);
                 
-                let alertas = [];
+                let agrupados = {}; // Chave: "NomeLoja|NomeProduto"
 
                 lojas.forEach(loja => {
                     if(loja.produtos) {
                         loja.produtos.forEach(p => {
                             const dataP = new Date(p.data + "T12:00:00");
                             if(dataP <= limite) {
-                                alertas.push({...p, loja: loja.nome});
+                                const chave = `${loja.nome}|${p.nome}`;
+                                if(!agrupados[chave]) agrupados[chave] = [];
+                                agrupados[chave].push({ data: p.data, qtd: p.qtd });
                             }
                         });
                     }
                 });
+
+                const chaves = Object.keys(agrupados);
 
                 m.innerHTML = `
                     <div class="grid grid-cols-2 gap-3 mb-6">
@@ -73,7 +76,7 @@
                             <div class="text-[10px] text-gray-500 font-bold uppercase">Lojas</div>
                         </div>
                         <div class="bg-gray-900/50 p-5 rounded-2xl border border-gray-800 text-center">
-                            <div class="text-3xl font-black text-red-500 italic">${alertas.length}</div>
+                            <div class="text-3xl font-black text-red-500 italic">${chaves.length}</div>
                             <div class="text-[10px] text-gray-500 font-bold uppercase">Alertas</div>
                         </div>
                     </div>
@@ -82,21 +85,25 @@
                         <i data-lucide="alert-triangle" class="w-3 h-3"></i> Vencimentos Próximos (3 dias)
                     </h3>
 
-                    ${alertas.length === 0 ? '<div class="text-center p-12 text-gray-800 font-bold uppercase text-[10px]">Tudo em dia</div>' : 
-                    alertas.map(p => `
-                        <div class="card-alerta">
-                            <span class="text-[10px] text-gray-500 font-bold uppercase block mb-0.5">${p.loja}</span>
-                            <div class="text-amber-500 font-black text-sm uppercase italic mb-1">${p.nome}</div>
-                            <div class="flex items-center gap-2">
-                                <span class="bg-red-500/10 text-red-500 text-[10px] font-black px-2 py-0.5 rounded border border-red-500/20 uppercase italic">
-                                    Qtd: ${p.qtd || 0}
-                                </span>
-                                <span class="text-red-500 font-black text-xs italic">
-                                    ${p.data.split('-').reverse().join('/')}
-                                </span>
+                    ${chaves.length === 0 ? '<div class="text-center p-12 text-gray-800 font-bold uppercase text-[10px]">Tudo em dia</div>' : 
+                    chaves.map(chave => {
+                        const [lojaNome, produtoNome] = chave.split('|');
+                        const itens = agrupados[chave];
+                        return `
+                            <div class="card-alerta">
+                                <span class="text-[10px] text-gray-500 font-bold uppercase block mb-0.5">${lojaNome}</span>
+                                <div class="text-amber-500 font-black text-sm uppercase italic mb-2 border-b border-white/5 pb-1">${produtoNome}</div>
+                                <div class="space-y-1">
+                                    ${itens.map(it => `
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-gray-400 text-[11px] font-bold uppercase italic">Validade: ${it.data.split('-').reverse().join('/')}</span>
+                                            <span class="text-red-500 font-black text-xs italic">${it.qtd} un</span>
+                                        </div>
+                                    `).join('')}
+                                </div>
                             </div>
-                        </div>
-                    `).join('')}
+                        `;
+                    }).join('')}
                 `;
             }
 
@@ -117,7 +124,7 @@
             if(id === 'p') {
                 const p = params.prod || { nome: '', qtd: '', data: '' };
                 m.innerHTML = `
-                <h2 class="text-center font-black uppercase text-amber-500 italic mb-6">${params.prod ? 'EDITAR PRODUTO' : 'CADASTRAR PRODUTO'}</h2>
+                <h2 class="text-center font-black uppercase text-amber-500 italic mb-6">${params.prod ? 'EDITAR' : 'CADASTRAR'}</h2>
                 <input id="pn" placeholder="Nome do Produto" class="input-custom" value="${p.nome}">
                 <input id="pq" placeholder="Quantidade" type="number" class="input-custom" value="${p.qtd}">
                 <input id="pd" type="date" class="input-custom" value="${p.data}">
@@ -125,8 +132,7 @@
                     <option value="">Selecione a Loja</option>
                     ${lojas.map(l => `<option value="${l.nome}" ${l.nome===(params.loja||'')?'selected':''}>${l.nome}</option>`).join('')}
                 </select>
-                <button onclick="salvarP()" class="btn-amarelo mt-4 w-full">SALVAR PRODUTO</button>`;
-                editando = params.ref || { lojaIdx: -1, prodIdx: -1 };
+                <button onclick="salvarP()" class="btn-amarelo mt-4 w-full">SALVAR</button>`;
             }
 
             if(id === 'r') {
@@ -134,8 +140,8 @@
                 lojas.forEach(loja => {
                     if(loja.produtos && loja.produtos.length > 0) {
                         m.innerHTML += `<div class="mb-4 bg-gray-900 p-4 rounded-xl border border-gray-800">
-                            <h3 class="text-amber-500 font-black text-xs mb-2 border-b border-gray-800 pb-1 uppercase italic">${loja.nome}</h3>
-                            ${loja.produtos.map(p => `<div class="flex justify-between text-[11px] mb-1 font-bold"><span>${p.nome} (${p.qtd})</span><span>${p.data.split('-').reverse().join('/')}</span></div>`).join('')}
+                            <h3 class="text-amber-500 font-black text-[10px] mb-2 border-b border-gray-800 pb-1 uppercase italic">${loja.nome}</h3>
+                            ${loja.produtos.map(p => `<div class="flex justify-between text-[11px] mb-1 font-bold"><span>${p.nome}</span><span>${p.data.split('-').reverse().join('/')} (${p.qtd}un)</span></div>`).join('')}
                         </div>`;
                     }
                 });
@@ -146,13 +152,11 @@
         function salvarP() {
             const n = document.getElementById('pn').value, q = document.getElementById('pq').value, d = document.getElementById('pd').value, l = document.getElementById('pl').value;
             if(!n || !d || !l) return alert("Preencha todos os campos!");
-            if(editando.prodIdx > -1) {
-                lojas[editando.lojaIdx].produtos[editando.prodIdx] = { nome: n, qtd: q, data: d };
-            } else {
-                const loja = lojas.find(x => x.nome === l);
-                if(loja) loja.produtos.push({ nome: n, qtd: q, data: d });
+            const loja = lojas.find(x => x.nome === l);
+            if(loja) {
+                loja.produtos.push({ nome: n, qtd: q, data: d });
+                salvar(); aba('h');
             }
-            salvar(); editando = { lojaIdx: -1, prodIdx: -1 }; aba('h');
         }
 
         function addLoja() { const n = prompt("Nome da Loja:"); if(n) { lojas.push({nome: n, produtos: []}); salvar(); aba('l'); } }
@@ -163,8 +167,7 @@
     </script>
 </body>
 </html>
-        </header>
-        <main id="corpo" class="p-4 flex-1 overflow-y-auto pb-24"></main>
+uto pb-24"></main>
     </section>
 
     <script>
