@@ -3,157 +3,206 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Promotor Ajudante</title>
-    <link rel="manifest" href="manifest.json">
-    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/melobortolatorenan-max/Promotor-ajudante/main/logo.png">
-    <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/melobortolatorenan-max/Promotor-ajudante/main/logo.png">
-    <meta name="theme-color" content="#030712">
+    <title>Ajuda Promotor</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #030712; color: white; margin: 0; overflow: hidden; touch-action: manipulation; }
-        .secao { display: none; height: 100vh; flex-direction: column; }
-        .secao.ativa { display: flex !important; }
-        .input-custom { width: 100%; background-color: #0f172a; border: 1px solid #1e293b; padding: 0.8rem; border-radius: 0.8rem; color: white; margin-bottom: 0.6rem; outline: none; }
-        .btn-amarelo { background-color: #f59e0b; color: #030712; font-weight: 900; padding: 1rem; border-radius: 1rem; text-transform: uppercase; width: 100%; border: none; cursor: pointer; }
+        body { font-family: 'Inter', sans-serif; background-color: #030712; color: white; margin: 0; }
         .nav-aba.ativa { background-color: #f59e0b !important; color: #030712 !important; }
         .card-dark { background-color: #111827; border: 1px solid #1f2937; border-radius: 1.2rem; }
+        .input-custom { width: 100%; background-color: #0f172a; border: 1px solid #1e293b; padding: 0.8rem; border-radius: 0.8rem; color: white; outline: none; }
     </style>
 </head>
 <body>
 
-    <section id="tela-app" class="secao ativa">
+    <section id="app" class="flex flex-col h-screen">
         <header class="p-4 border-b border-gray-800 bg-gray-950">
             <div class="flex items-center gap-3 mb-4">
-                <img src="https://raw.githubusercontent.com/melobortolatorenan-max/Promotor-ajudante/main/logo.png" class="w-10 h-10 rounded-lg">
+                <div class="w-10 h-10 bg-amber-500 rounded-lg flex items-center justify-center">
+                    <i data-lucide="clipboard-check" class="text-gray-950"></i>
+                </div>
                 <div>
                     <h1 class="text-xs font-bold text-gray-500 uppercase tracking-widest leading-none">Promotor</h1>
                     <span class="text-lg font-black text-amber-500 uppercase italic leading-none tracking-tight">Ajudante</span>
                 </div>
             </div>
             <nav class="flex gap-1 bg-gray-900 p-1 rounded-xl">
-                <button onclick="aba('h')" id="n-h" class="nav-aba flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-tight">Início</button>
-                <button onclick="aba('l')" id="n-l" class="nav-aba flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-tight">Lojas</button>
-                <button onclick="aba('p')" id="n-p" class="nav-aba flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-tight">Produtos</button>
-                <button onclick="aba('r')" id="n-r" class="nav-aba flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-tight">Relat.</button>
+                <button onclick="navegar('inicio')" id="btn-inicio" class="nav-aba flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-tight">Início</button>
+                <button onclick="navegar('lojas')" id="btn-lojas" class="nav-aba flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-tight">Lojas</button>
+                <button onclick="navegar('produtos')" id="btn-produtos" class="nav-aba flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-tight">Produtos</button>
+                <button onclick="navegar('relat')" id="btn-relat" class="nav-aba flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-tight">Relat.</button>
             </nav>
         </header>
-        <main id="corpo" class="p-4 flex-1 overflow-y-auto pb-24"></main>
+
+        <main id="conteudo" class="p-4 flex-1 overflow-y-auto pb-24"></main>
     </section>
 
     <script>
-        let lojas = JSON.parse(localStorage.getItem('db_promotor_v2')) || [];
-        let editando = { lojaIdx: -1, prodIdx: -1 };
+        let dados = JSON.parse(localStorage.getItem('ajuda_promotor_db')) || [];
 
-        function salvar() { localStorage.setItem('db_promotor_v2', JSON.stringify(lojas)); }
+        function salvar() { localStorage.setItem('ajuda_promotor_db', JSON.stringify(dados)); }
 
-        function aba(id, params = {}) {
+        function navegar(tela, id = null) {
+            const m = document.getElementById('conteudo');
             document.querySelectorAll('.nav-aba').forEach(b => b.classList.remove('ativa'));
-            document.getElementById('n-' + id).classList.add('ativa');
-            const m = document.getElementById('corpo'); m.innerHTML = "";
+            const btn = document.getElementById('btn-' + tela);
+            if(btn) btn.classList.add('ativa');
+            
+            m.innerHTML = "";
 
-            if(id === 'h') {
-                let alertas = [];
-                const hoje = new Date();
-                hoje.setHours(0,0,0,0);
-                const limite = new Date(hoje);
-                limite.setDate(hoje.getDate() + 3);
-
-                lojas.forEach(loja => {
-                    if(loja.produtos) {
-                        loja.produtos.forEach(p => {
-                            const dataP = new Date(p.data + "T12:00:00");
-                            if(dataP <= limite) alertas.push({...p, loja: loja.nome});
-                        });
-                    }
+            if(tela === 'inicio') {
+                const alertas = [];
+                dados.forEach(loja => {
+                    loja.produtos.forEach(p => alertas.push({...p, lojaNome: loja.nome}));
                 });
 
                 m.innerHTML = `
-                    <div class="grid grid-cols-2 gap-3 mb-8">
-                        <div class="card-dark p-6 border-b-4 border-amber-500 text-center">
-                            <div class="text-4xl font-black text-amber-500 italic leading-none">${lojas.length}</div>
-                            <div class="text-[10px] text-gray-400 font-bold uppercase tracking-tight">Lojas</div>
+                    <div class="grid grid-cols-2 gap-3 mb-6">
+                        <div class="card-dark p-6 text-center border-b-4 border-amber-500">
+                            <div class="text-3xl font-black text-amber-500">${dados.length}</div>
+                            <div class="text-[10px] text-gray-400 font-bold uppercase">Lojas</div>
                         </div>
-                        <div class="card-dark p-6 border-b-4 border-red-500 text-center">
-                            <div class="text-4xl font-black text-red-500 italic leading-none">${alertas.length}</div>
-                            <div class="text-[10px] text-gray-400 font-bold uppercase tracking-tight">Alertas</div>
+                        <div class="card-dark p-6 text-center border-b-4 border-red-500">
+                            <div class="text-3xl font-black text-red-500">${alertas.length}</div>
+                            <div class="text-[10px] text-gray-400 font-bold uppercase">Alertas</div>
                         </div>
                     </div>
-                    <h3 class="text-xs font-black uppercase text-red-500 mb-4 italic flex items-center gap-2 px-1 leading-none tracking-tight">
-                        <i data-lucide="alert-triangle" class="w-4 h-4"></i> VENCIMENTOS PRÓXIMOS (3 dias)
+                    <h3 class="text-xs font-black uppercase text-red-500 mb-4 italic flex items-center gap-2">
+                        <i data-lucide="alert-triangle" class="w-4 h-4"></i> Vencimentos Próximos
                     </h3>
                 `;
 
-                if(alertas.length === 0) {
-                     m.innerHTML += `<div class="text-center p-12 text-gray-800 font-bold uppercase text-[10px]">Tudo em dia</div>`;
-                } else {
-                    // --- ALTERAÇÃO 2: LÓGICA DE AGRUPAMENTO ---
-                    const agrupados = {};
-                    alertas.forEach(p => {
-                        const chave = `${p.loja.toUpperCase()}|${p.nome.toUpperCase()}`;
-                        if (!agrupados[chave]) {
-                            agrupados[chave] = { loja: p.loja, nome: p.nome, validades: [] };
-                        }
-                        agrupados[chave].validades.push({ data: p.data, qtd: p.qtd });
-                    });
+                // --- LÓGICA DE AGRUPAMENTO (FOTO 2) ---
+                const grupos = {};
+                alertas.forEach(p => {
+                    const chave = `${p.lojaNome}-${p.nome}`;
+                    if(!grupos[chave]) grupos[chave] = { loja: p.lojaNome, nome: p.nome, itens: [] };
+                    grupos[chave].itens.push(p);
+                });
 
-                    Object.values(agrupados).forEach(grupo => {
-                        let htmlDatas = "";
-                        // Ordena as datas mais próximas primeiro
-                        grupo.validades.sort((a,b) => new Date(a.data) - new Date(b.data));
-                        
-                        grupo.validades.forEach(item => {
-                            htmlDatas += `
-                                <div class="flex justify-between items-center py-1 mt-1 border-b border-gray-900/40 last:border-0 leading-none">
-                                    <span class="text-white text-xs font-semibold tracking-tight">${item.data.split('-').reverse().join('/')}</span>
-                                    <span class="bg-gray-900 px-2 py-0.5 rounded text-red-500 font-black text-[10px] italic tracking-tight">${item.qtd} un</span>
-                                </div>`;
-                        });
-
-                        m.innerHTML += `
-                            <div class="card-alerta card-dark p-4 mb-3 border-l-4 border-red-500 relative">
-                                <span class="text-[10px] text-gray-400 font-bold uppercase block tracking-tight leading-none">${grupo.loja}</span>
-                                <div class="text-amber-500 font-black text-sm uppercase italic mb-2 tracking-tight leading-none">${grupo.nome}</div>
-                                <div class="space-y-1">
-                                    ${htmlDatas}
-                                </div>
-                            </div>`;
-                    });
-                }
-            }
-
-            if(id === 'l') {
-                m.innerHTML = `<button onclick="addLoja()" class="btn-amarelo mb-6 w-full text-xs">+ Adicionar Loja</button>`;
-                lojas.forEach((l, idx) => {
+                Object.values(grupos).forEach(g => {
                     m.innerHTML += `
-                        <div class="card-dark p-4 mb-2 flex justify-between items-center relative">
-                            <div class="flex-1 truncate pr-16" onclick="verLoja(${idx})">
-                                <span class="font-black uppercase italic text-sm block tracking-tight leading-none">${l.nome}</span>
-                                <span class="text-[10px] text-amber-500 font-black uppercase tracking-tight leading-none mt-1 inline-block">
-                                    ${l.produtos ? l.produtos.length : 0} Produtos
-                                </span>
+                        <div class="card-dark p-4 mb-3 border-l-4 border-red-500">
+                            <span class="text-[10px] text-gray-400 font-bold uppercase">${g.loja}</span>
+                            <div class="text-amber-500 font-black text-sm uppercase italic mb-2">${g.nome}</div>
+                            <div class="space-y-1">
+                                ${g.itens.map(i => `
+                                    <div class="flex justify-between text-xs border-b border-gray-800 pb-1 last:border-0">
+                                        <span class="font-semibold">${i.data.split('-').reverse().join('/')}</span>
+                                        <span class="text-red-500 font-black">${i.qtd} un</span>
+                                    </div>
+                                `).join('')}
                             </div>
-                            <div class="flex gap-4 items-center absolute right-4">
-                                <i onclick="aba('p',{loja:'${l.nome}'})" data-lucide="plus-circle" class="w-5 h-5 text-green-500 cursor-pointer"></i>
-                                <i onclick="delLoja(${idx})" data-lucide="trash-2" class="w-5 h-5 text-red-600 cursor-pointer"></i>
-                            </div>
-                        </div>`;
+                        </div>
+                    `;
                 });
             }
 
-            if(id === 'p') {
-                const p = params.prod || { nome: '', qtd: '', data: '' };
+            if(tela === 'lojas') {
+                m.innerHTML = `<button onclick="addLoja()" class="w-full bg-amber-500 text-gray-950 font-black py-3 rounded-xl uppercase text-xs mb-6">+ Adicionar Loja</button>`;
+                dados.forEach((l, idx) => {
+                    m.innerHTML += `
+                        <div class="card-dark p-4 mb-2 flex justify-between items-center">
+                            <div onclick="verLoja(${idx})" class="cursor-pointer">
+                                <div class="font-black uppercase italic text-sm">${l.nome}</div>
+                                <div class="text-[10px] text-amber-500 font-black uppercase">${l.produtos.length} Produtos</div>
+                            </div>
+                            <i onclick="delLoja(${idx})" data-lucide="trash-2" class="w-5 h-5 text-red-500 cursor-pointer"></i>
+                        </div>
+                    `;
+                });
+            }
+
+            if(tela === 'produtos') {
                 m.innerHTML = `
-                <h2 class="text-center font-black uppercase text-amber-500 italic mb-6 leading-none tracking-tight">${params.prod ? 'EDITAR ITEM' : 'CADASTRAR PRODUTO'}</h2>
-                <input id="pn" placeholder="Nome do Produto" class="input-custom text-sm" value="${p.nome}">
-                <input id="pq" placeholder="Quantidade" type="number" class="input-custom text-sm" value="${p.qtd}">
-                <input id="pd" type="date" class="input-custom text-sm" value="${p.data}">
-                <select id="pl" class="input-custom text-sm text-gray-400">
-                    <option value="">Selecione a Loja</option>
-                    ${lojas.map(l => `<option value="${l.nome}" ${l.nome===(params.loja||'')?'selected':''}>${l.nome}</option>`).join('')}
-                </select>
-                <button onclick="salvarP()" class="btn-amarelo mt-4 w-full text-sm">SALVAR</button>`;
+                    <h2 class="text-center font-black uppercase text-amber-500 italic mb-6">Cadastrar Produto</h2>
+                    <input id="p-nome" placeholder="Nome do Produto" class="input-custom mb-3">
+                    <input id="p-qtd" placeholder="Quantidade" type="number" class="input-custom mb-3">
+                    <input id="p-data" type="date" class="input-custom mb-3">
+                    <select id="p-loja" class="input-custom mb-6">
+                        <option value="">Selecione a Loja</option>
+                        ${dados.map(l => `<option value="${l.nome}">${l.nome}</option>`).join('')}
+                    </select>
+                    <button onclick="salvarProduto()" class="w-full bg-amber-500 text-gray-950 font-black py-4 rounded-xl uppercase">Salvar</button>
+                `;
+            }
+
+            if(tela === 'relat') {
+                m.innerHTML = `<h2 class="text-center font-black uppercase text-amber-500 italic mb-6 tracking-tight">RELATÓRIO GERAL</h2>`;
+                dados.forEach(loja => {
+                    if(loja.produtos.length > 0) {
+                        m.innerHTML += `
+                            <div class="mb-4 card-dark p-4">
+                                <h3 class="text-amber-500 font-black text-xs mb-2 border-b border-gray-800 pb-1 uppercase">${loja.nome}</h3>
+                                ${loja.produtos.map(p => `
+                                    <div class="flex justify-between text-[11px] mb-1 font-semibold">
+                                        <span>${p.nome}</span>
+                                        <span class="text-gray-400">${p.data.split('-').reverse().join('/')} (${p.qtd}un)</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        `;
+                    }
+                });
+            }
+            lucide.createIcons();
+        }
+
+        function verLoja(idx) {
+            const l = dados[idx];
+            const m = document.getElementById('conteudo');
+            // ADIÇÃO DO ÍCONE DE RETORNO (FOTO 3)
+            m.innerHTML = `
+                <div class="flex items-center gap-3 mb-6">
+                    <i onclick="navegar('lojas')" data-lucide="chevron-left" class="w-6 h-6 text-amber-500 cursor-pointer"></i>
+                    <h2 class="text-lg font-black uppercase italic text-amber-500">${l.nome}</h2>
+                </div>
+                <button onclick="navegar('produtos')" class="w-full bg-amber-500 text-gray-950 font-black py-3 rounded-xl uppercase text-xs mb-6">+ Novo Produto nesta Loja</button>
+            `;
+            l.produtos.forEach((p, pIdx) => {
+                m.innerHTML += `
+                    <div class="card-dark p-4 mb-2 flex justify-between items-center">
+                        <div>
+                            <div class="font-black uppercase italic text-amber-500 text-sm">${p.nome}</div>
+                            <div class="text-[10px] text-gray-400 font-semibold">${p.data.split('-').reverse().join('/')} | ${p.qtd} un</div>
+                        </div>
+                        <i onclick="delProd(${idx}, ${pIdx})" data-lucide="x-circle" class="w-5 h-5 text-red-600 cursor-pointer"></i>
+                    </div>
+                `;
+            });
+            lucide.createIcons();
+        }
+
+        function addLoja() {
+            const n = prompt("Nome da Loja:");
+            if(n) { dados.push({nome: n, produtos: []}); salvar(); navegar('lojas'); }
+        }
+
+        function delLoja(idx) {
+            if(confirm("Excluir loja e todos os seus produtos?")) { dados.splice(idx, 1); salvar(); navegar('lojas'); }
+        }
+
+        function salvarProduto() {
+            const n = document.getElementById('p-nome').value;
+            const q = document.getElementById('p-qtd').value;
+            const d = document.getElementById('p-data').value;
+            const lName = document.getElementById('p-loja').value;
+            if(!n || !q || !d || !lName) return alert("Preencha tudo!");
+            const loja = dados.find(x => x.nome === lName);
+            loja.produtos.push({nome: n, qtd: q, data: d});
+            salvar(); navegar('inicio');
+        }
+
+        function delProd(lIdx, pIdx) {
+            if(confirm("Remover produto?")) { dados[lIdx].produtos.splice(pIdx, 1); salvar(); verLoja(lIdx); }
+        }
+
+        navegar('inicio');
+    </script>
+</body>
+</html>
+class="btn-amarelo mt-4 w-full text-sm">SALVAR</button>`;
                 editando = params.ref || { lojaIdx: -1, prodIdx: -1 };
             }
 
