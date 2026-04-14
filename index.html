@@ -12,23 +12,7 @@
         .secao { display: none; height: 100vh; flex-direction: column; }
         .secao.ativa { display: flex !important; }
         .card-alerta { background-color: #111827; border: 1px solid #1f2937; border-left: 4px solid #ef4444; border-radius: 1.2rem; margin-bottom: 0.6rem; padding: 0.8rem 1.2rem; cursor: pointer; transition: background 0.2s; }
-        
-        /* CARD VENCIDO - FORÇADO */
-        .card-vencido { 
-            background-color: white !important; 
-            border: 4px solid #ef4444 !important; 
-            border-radius: 1.2rem; 
-            margin: 1rem 0.6rem !important; 
-            padding: 1.2rem !important; 
-            transform: scale(1.05); 
-            box-shadow: 0 20px 25px -5px rgba(239, 68, 68, 0.4);
-            z-index: 50;
-            position: relative;
-        }
-        .text-vencido-titulo { color: #dc2626 !important; font-weight: 900 !important; font-size: 11px !important; font-style: italic; text-transform: uppercase; display: block; }
-        .text-vencido-corpo { color: black !important; font-weight: 900 !important; font-size: 16px !important; text-transform: uppercase; margin-top: 4px; display: block; }
-        .text-vencido-data { color: #4b5563 !important; font-weight: 800 !important; font-size: 10px !important; text-transform: uppercase; }
-
+        .card-alerta:active { background-color: #1f2937; }
         .nav-aba.ativa { background-color: #f59e0b !important; color: #030712 !important; }
         .icon-alert { width: 14px; height: 14px; stroke-width: 3px; }
         .input-custom { width: 100%; background-color: #0f172a; border: 1px solid #1e293b; padding: 0.8rem; border-radius: 0.8rem; color: white; margin-bottom: 0.6rem; outline: none; }
@@ -36,19 +20,22 @@
         
         #modal-container { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); align-items: center; justify-content: center; z-index: 100; padding: 2rem; }
         #modal-content { background: #111827; border: 1px solid #1f2937; border-radius: 1.5rem; width: 100%; max-width: 320px; padding: 1.5rem; }
+        
+        /* Estilo específico para o texto do aviso de vencimento no modal */
+        .texto-vencido-modal { color: white !important; font-weight: 900 !important; text-transform: uppercase !important; line-height: 1.4; }
     </style>
 </head>
 <body>
 
     <div id="modal-container">
         <div id="modal-content">
-            <h2 class="text-amber-500 font-black text-sm uppercase italic tracking-tighter mb-1">PROMOTOR AJUDANTE AVISA:</h2>
-            <p id="modal-subtext" class="text-white text-[11px] mb-4 font-medium opacity-90"></p>
+            <h2 id="modal-title" class="text-amber-500 font-black text-sm uppercase italic tracking-tighter mb-1">PROMOTOR AJUDANTE AVISA:</h2>
+            <p id="modal-subtext" class="text-[11px] mb-4 font-medium opacity-90"></p>
             <div id="modal-input-area">
                 <input id="modal-input" class="input-custom border-amber-500/30 focus:border-amber-500" type="text">
             </div>
             <div class="flex gap-2 mt-2">
-                <button onclick="fecharModal()" class="flex-1 py-3 text-[10px] font-black uppercase text-gray-500">Cancelar</button>
+                <button id="modal-cancel" onclick="fecharModal()" class="flex-1 py-3 text-[10px] font-black uppercase text-gray-500">Cancelar</button>
                 <button id="modal-confirm" class="flex-1 bg-amber-500 text-gray-950 py-3 rounded-xl text-[10px] font-black uppercase">Confirmar</button>
             </div>
         </div>
@@ -80,18 +67,54 @@
         function salvar() { localStorage.setItem('db_promotor_v3', JSON.stringify(lojas)); }
         function fecharModal() { document.getElementById('modal-container').style.display = 'none'; }
 
-        function exibirModal(mensagem, valorInicial, callback, apenasConfirmar = false) {
-            document.getElementById('modal-subtext').innerText = mensagem;
+        function exibirModal(mensagem, valorInicial, callback, apenasConfirmar = false, isErroVencido = false) {
+            const subtext = document.getElementById('modal-subtext');
+            subtext.innerText = mensagem;
+            
+            // Aplica ou remove estilo de erro vencido
+            if(isErroVencido) {
+                subtext.classList.add('texto-vencido-modal');
+                document.getElementById('modal-cancel').style.display = 'none';
+            } else {
+                subtext.classList.remove('texto-vencido-modal');
+                document.getElementById('modal-cancel').style.display = 'block';
+            }
+
             const input = document.getElementById('modal-input');
             const inputArea = document.getElementById('modal-input-area');
             inputArea.style.display = apenasConfirmar ? 'none' : 'block';
             if (!apenasConfirmar) input.value = valorInicial || "";
             document.getElementById('modal-container').style.display = 'flex';
             if (!apenasConfirmar) input.focus();
+            
             document.getElementById('modal-confirm').onclick = () => {
                 const resultado = apenasConfirmar ? true : input.value.trim();
                 if (resultado) { callback(resultado); fecharModal(); }
             };
+        }
+
+        // FUNÇÃO QUE VERIFICA VENCIDOS AO INICIAR
+        function verificarVencidosGeral() {
+            const hoje = new Date();
+            hoje.setHours(0,0,0,0);
+            let listaVencidos = [];
+
+            lojas.forEach(loja => {
+                if(loja.produtos) {
+                    loja.produtos.forEach(p => {
+                        const [ano, mes, dia] = p.data.split('-');
+                        const dataP = new Date(ano, mes - 1, dia);
+                        if(dataP < hoje) {
+                            listaVencidos.push(`${p.nome} (${loja.nome})`);
+                        }
+                    });
+                }
+            });
+
+            if(listaVencidos.length > 0) {
+                const msg = `⚠️AVISO PRODUTO VENCIDO RETIRE IMEDIATAMENTE:⚠️\n\n${listaVencidos.join('\n')}`;
+                exibirModal(msg, null, () => {}, true, true);
+            }
         }
 
         function aba(id, params = {}) {
@@ -101,47 +124,26 @@
             const m = document.getElementById('corpo'); m.innerHTML = "";
 
             if(id === 'h') {
-                const hoje = new Date(); 
-                hoje.setHours(0,0,0,0);
-                
-                const limite = new Date(hoje); 
-                limite.setDate(hoje.getDate() + 3);
-                
-                let agrupadosProximos = {}; 
-                let listaVencidos = [];
-                let totalAlertas = 0;
+                const hoje = new Date(); hoje.setHours(0,0,0,0);
+                const limite = new Date(hoje); limite.setDate(hoje.getDate() + 3);
+                let agrupados = {}; let totalAlertas = 0;
 
                 lojas.forEach((loja, lIdx) => {
                     if(loja.produtos) {
                         loja.produtos.forEach(p => {
-                            // Criar data ignorando fuso horário para comparação precisa
                             const [ano, mes, dia] = p.data.split('-');
                             const dataP = new Date(ano, mes - 1, dia);
-
-                            if(dataP < hoje) {
-                                totalAlertas++;
-                                listaVencidos.push({ loja: loja.nome, lIdx: lIdx, produto: p.nome, data: p.data, qtd: p.qtd });
-                            } else if(dataP <= limite) {
+                            
+                            if(dataP <= limite) {
                                 totalAlertas++;
                                 const chave = `${loja.nome.trim().toUpperCase()}|${p.nome.trim().toUpperCase()}`;
-                                if(!agrupadosProximos[chave]) agrupadosProximos[chave] = { loja: loja.nome, lIdx: lIdx, produto: p.nome, validades: {} };
-                                if(!agrupadosProximos[chave].validades[p.data]) agrupadosProximos[chave].validades[p.data] = 0;
-                                agrupadosProximos[chave].validades[p.data] += parseInt(p.qtd || 0);
+                                if(!agrupados[chave]) agrupados[chave] = { loja: loja.nome, lIdx: lIdx, produto: p.nome, validades: {} };
+                                if(!agrupados[chave].validades[p.data]) agrupados[chave].validades[p.data] = 0;
+                                agrupados[chave].validades[p.data] += parseInt(p.qtd || 0);
                             }
                         });
                     }
                 });
-
-                let htmlVencidos = listaVencidos.map(v => `
-                    <div class="card-vencido" onclick="verLoja(${v.lIdx})">
-                        <span class="text-vencido-titulo">⚠️AVISO PRODUTO VENCIDO RETIRE IMEDIATAMENTE:⚠️</span>
-                        <span class="text-vencido-corpo">${v.produto}, ${v.loja}</span>
-                        <div class="flex justify-between items-center mt-3 pt-2 border-t border-gray-200">
-                            <span class="text-vencido-data">VENCIDO EM: ${v.data.split('-').reverse().join('/')}</span>
-                            <i onclick="event.stopPropagation(); delProdDireto(${v.lIdx}, '${v.produto}', '${v.data}')" data-lucide="trash-2" class="w-6 h-6 text-red-600"></i>
-                        </div>
-                    </div>
-                `).join('');
 
                 m.innerHTML = `
                     <div class="grid grid-cols-2 gap-3 mb-6 text-center">
@@ -154,11 +156,149 @@
                             <div class="text-[10px] text-gray-500 font-bold uppercase">Alertas</div>
                         </div>
                     </div>
+                    <h3 class="text-[11px] font-black uppercase text-red-500 mb-4 italic flex items-center gap-2 px-1"><i data-lucide="alert-triangle" class="icon-alert"></i> Vencimentos Próximos</h3>
+                    ${Object.values(agrupados).map(item => `
+                        <div class="card-alerta" onclick="verLoja(${item.lIdx})">
+                            <span class="text-[10px] text-gray-400 font-bold uppercase block mb-0.5">${item.loja}</span>
+                            <div class="text-amber-500 font-black text-sm uppercase italic mb-2 border-b border-white/5 pb-1">${item.produto}</div>
+                            ${Object.keys(item.validades).sort().map(data => `
+                                <div class="flex justify-between items-center mt-1">
+                                    <span class="text-white text-xs font-bold">${data.split('-').reverse().join('/')}</span>
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-red-500 font-black text-xs">${item.validades[data]} un</span>
+                                        <i onclick="event.stopPropagation(); delProdDireto(${item.lIdx}, '${item.produto}', '${data}')" data-lucide="trash-2" class="w-3.5 h-3.5 text-red-800 active:text-red-500"></i>
+                                    </div>
+                                </div>`).join('')}
+                        </div>`).join('') || '<div class="text-center p-10 opacity-20 font-black text-xs uppercase">Sem alertas</div>'}`;
+            }
 
-                    ${htmlVencidos}
+            if(id === 'l') {
+                m.innerHTML = `<button onclick="addLoja()" class="btn-amarelo mb-6 w-full">+ ADICIONAR LOJA</button>`;
+                lojas.forEach((l, idx) => {
+                    m.innerHTML += `
+                        <div class="bg-gray-900 border border-gray-800 p-4 rounded-xl mb-2 flex justify-between items-center shadow-lg">
+                            <div class="flex flex-col gap-1 mr-3">
+                                <i onclick="moverLoja(${idx}, -1)" data-lucide="chevron-up" class="w-4 h-4 text-gray-600 ${idx === 0 ? 'opacity-0 pointer-events-none' : ''}"></i>
+                                <i onclick="moverLoja(${idx}, 1)" data-lucide="chevron-down" class="w-4 h-4 text-gray-600 ${idx === lojas.length - 1 ? 'opacity-0 pointer-events-none' : ''}"></i>
+                            </div>
+                            <div class="flex-1 truncate" onclick="verLoja(${idx})">
+                                <span class="font-black uppercase italic text-sm truncate block">${l.nome}</span>
+                                <span class="text-[10px] text-amber-500 font-black uppercase italic">${l.produtos.length} Produtos</span>
+                            </div>
+                            <div class="flex gap-4 ml-2">
+                                <i onclick="aba('p',{loja:'${l.nome}'})" data-lucide="plus-circle" class="w-5 h-5 text-green-500"></i>
+                                <i onclick="delLoja(${idx})" data-lucide="trash-2" class="w-5 h-5 text-red-600"></i>
+                            </div>
+                        </div>`;
+                });
+            }
 
-                    <h3 class="text-[11px] font-black uppercase text-red-500 mb-4 italic flex items-center gap-2 px-1 mt-4"><i data-lucide="alert-triangle" class="icon-alert"></i> Vencimentos Próximos</h3>
-                    
+            if(id === 'p') {
+                const p = params.prod || { nome: '', qtd: '', data: '' };
+                const voltarAcao = params.loja ? `verLoja(lojas.findIndex(x => x.nome === '${params.loja}'))` : `aba('l')`;
+                m.innerHTML = `
+                <div class="flex items-center mb-6 relative">
+                    <button onclick="${voltarAcao}" class="absolute left-0"><i data-lucide="chevron-left" class="w-6 h-6 text-amber-500"></i></button>
+                    <h2 class="w-full text-center font-black uppercase text-amber-500 italic text-sm">${params.prod ? 'EDITAR ITEM' : 'CADASTRAR PRODUTO'}</h2>
+                </div>
+                <input id="pn" placeholder="Nome do Produto" class="input-custom" value="${p.nome}">
+                <input id="pq" placeholder="Quantidade" type="number" class="input-custom" value="${p.qtd}">
+                <input id="pd" type="date" class="input-custom" value="${p.data}">
+                <select id="pl" class="input-custom">
+                    <option value="">Selecione a Loja</option>
+                    ${lojas.map(l => `<option value="${l.nome}" ${l.nome===(params.loja||'')?'selected':''}>${l.nome}</option>`).join('')}
+                </select>
+                <button onclick="salvarP()" class="btn-amarelo mt-4 w-full">SALVAR</button>`;
+                editando = params.ref || { lojaIdx: -1, prodIdx: -1 };
+            }
+
+            if(id === 'r') {
+                m.innerHTML = `<h2 class="text-center font-black uppercase text-amber-500 italic mb-6">RELATÓRIO GERAL</h2>`;
+                lojas.forEach(loja => {
+                    if(loja.produtos.length > 0) {
+                        let agrupados = {};
+                        loja.produtos.forEach(p => {
+                            const nomeCap = p.nome.trim().toUpperCase();
+                            if(!agrupados[nomeCap]) agrupados[nomeCap] = [];
+                            agrupados[nomeCap].push({ data: p.data.split('-').reverse().join('/'), qtd: p.qtd });
+                        });
+                        let htmlLoja = `<div class="mb-4 bg-gray-900 p-4 rounded-xl border border-gray-800">
+                            <h3 class="text-amber-500 font-black text-[10px] mb-2 border-b border-gray-800 pb-1 uppercase italic">${loja.nome}</h3>`;
+                        Object.keys(agrupados).forEach(nomeProd => {
+                            htmlLoja += `<div class="mb-3"><div class="text-white font-black text-[11px] uppercase">${nomeProd}</div>
+                                ${agrupados[nomeProd].map(info => `<div class="flex justify-between text-[10px] font-bold text-gray-400 pl-2"><span>${info.data}</span><span>${info.qtd} UN</span></div>`).join('')}
+                                <div class="border-b border-white/5 mt-1"></div></div>`;
+                        });
+                        m.innerHTML += htmlLoja + `</div>`;
+                    }
+                });
+            }
+            lucide.createIcons();
+        }
+
+        function verLoja(idx) {
+            document.querySelectorAll('.nav-aba').forEach(b => b.classList.remove('ativa'));
+            document.getElementById('n-l').classList.add('ativa');
+            const loja = lojas[idx]; const m = document.getElementById('corpo');
+            let agrupados = [];
+            loja.produtos.forEach((p, pIdx) => {
+                let grupo = agrupados.find(g => g.nome.trim().toUpperCase() === p.nome.trim().toUpperCase());
+                if(!grupo) { grupo = { nome: p.nome, itens: [] }; agrupados.push(grupo); }
+                grupo.itens.push({ ...p, originalIdx: pIdx });
+            });
+
+            m.innerHTML = `
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center gap-2" onclick="aba('l')"><i data-lucide="chevron-left" class="w-5 h-5 text-amber-500"></i>
+                        <h2 class="font-black uppercase text-amber-500 italic text-lg">${loja.nome}</h2></div>
+                    <i onclick="renomearLoja(${idx})" data-lucide="edit-2" class="w-5 h-5 text-gray-400"></i>
+                </div>
+                <button onclick="aba('p',{loja:'${loja.nome}'})" class="btn-amarelo mb-6 w-full text-xs">+ NOVO PRODUTO NESTA LOJA</button>
+                <div class="space-y-2">
+                    ${agrupados.map((g, gIdx) => `
+                        <div class="bg-gray-900 border border-gray-800 p-3 rounded-xl flex items-start gap-3">
+                            <div class="flex flex-col gap-1 mt-1">
+                                <i onclick="moverGrupo(${idx}, ${gIdx}, -1)" data-lucide="chevron-up" class="w-4 h-4 text-gray-600 ${gIdx === 0 ? 'opacity-0 pointer-events-none' : ''}"></i>
+                                <i onclick="moverGrupo(${idx}, ${gIdx}, 1)" data-lucide="chevron-down" class="w-4 h-4 text-gray-600 ${gIdx === agrupados.length - 1 ? 'opacity-0 pointer-events-none' : ''}"></i>
+                            </div>
+                            <div class="flex-1">
+                                <div class="text-amber-500 font-black uppercase italic text-xs mb-2 border-b border-white/5 pb-1">${g.nome}</div>
+                                ${g.itens.map(p => `
+                                    <div class="flex justify-between items-center py-1">
+                                        <div class="text-white font-bold text-[10px]">${p.data.split('-').reverse().join('/')} | ${p.qtd} un</div>
+                                        <div class="flex gap-4">
+                                            <i onclick="aba('p',{loja:'${loja.nome}', prod: ${JSON.stringify(p).replace(/"/g, '&quot;')}, ref: {lojaIdx: ${idx}, prodIdx: ${p.originalIdx}}})" data-lucide="edit-3" class="w-4 h-4 text-blue-400"></i>
+                                            <i onclick="delProd(${idx}, ${p.originalIdx})" data-lucide="x-circle" class="w-4 h-4 text-red-500"></i>
+                                        </div>
+                                    </div>`).join('')}
+                            </div>
+                        </div>`).join('') || '<div class="text-center p-10 opacity-20 font-black text-xs uppercase">Sem produtos</div>'}
+                </div>`;
+            lucide.createIcons();
+        }
+
+        function moverGrupo(lojaIdx, gIdx, dir) {
+            const loja = lojas[lojaIdx];
+            let agrupados = [];
+            loja.produtos.forEach(p => {
+                let grupo = agrupados.find(g => g.nome.trim().toUpperCase() === p.nome.trim().toUpperCase());
+                if(!grupo) { grupo = { nome: p.nome, itens: [] }; agrupados.push(grupo); }
+                grupo.itens.push(p);
+            });
+            const nIdx = gIdx + dir;
+            if(nIdx >= 0 && nIdx < agrupados.length) {
+                [agrupados[gIdx], agrupados[nIdx]] = [agrupados[nIdx], agrupados[gIdx]];
+                loja.produtos = agrupados.flatMap(g => g.itens);
+                salvar(); verLoja(lojaIdx);
+            }
+        }
+
+        function salvarP() {
+            const n = document.getElementById('pn').value, q = document.getElementById('pq').value, d = document.getElementById('pd').value, l = document.getElementById('pl').value;
+            if(!n || !d || !l) return exibirModal("Campos obrigatórios!", null, () => {}, true);
+            if(editando.prodIdx > -1) lojas[editando.lojaIdx].produtos[editando.prodIdx] = { nome: n, qtd: q, data: d };
+            else { const loja = lojas.find(x => x.nome === l); if(loja) loja.produtos.push({ nome: n, qtd: q, data: d }); }
+            salvar(); editando = { lojaIdx: -1, prodIdx: -1 }; verLoja(lojas.find  
                     ${Object.values(agrupadosProximos).map(item => `
                         <div class="card-alerta" onclick="verLoja(${item.lIdx})">
                             <span class="text-[10px] text-gray-400 font-bold uppercase block mb-0.5">${item.loja}</span>
