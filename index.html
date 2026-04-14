@@ -1,40 +1,171 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Promotor Ajudante</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Promotor Ajudante</title>
 
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
 
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+<style>
+body {
+    font-family: Arial;
+    background-color: #030712;
+    color: white;
+    margin: 0;
+}
 
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #030712;
-            color: white;
-            margin: 0;
-            min-height: 100vh;
-        }
+/* NAV */
+.nav-aba.ativa {
+    background-color: #f59e0b !important;
+    color: #030712 !important;
+}
 
-        .secao { display: none; min-height: 100vh; flex-direction: column; }
-        .secao.ativa { display: flex !important; }
+/* INPUT */
+.input-custom {
+    width: 100%;
+    background-color: #0f172a;
+    border: 1px solid #1e293b;
+    padding: 0.8rem;
+    border-radius: 0.8rem;
+    color: white;
+    margin-bottom: 0.6rem;
+}
 
-        .nav-aba.ativa {
-            background-color: #f59e0b !important;
-            color: #030712 !important;
-        }
+/* BOTÃO */
+.btn-amarelo {
+    background-color: #f59e0b;
+    color: #030712;
+    font-weight: 900;
+    padding: 1rem;
+    border-radius: 1rem;
+    text-transform: uppercase;
+    width: 100%;
+    border: none;
+}
 
-        .input-custom {
-            width: 100%;
-            background-color: #0f172a;
-            border: 1px solid #1e293b;
-            padding: 0.8rem;
-            border-radius: 0.8rem;
-            color: white;
-            margin-bottom: 0.6rem;
+/* CARD */
+.card {
+    background: #111827;
+    border: 1px solid #1f2937;
+    padding: 1rem;
+    border-radius: 1rem;
+    margin-bottom: 0.5rem;
+}
+</style>
+</head>
+
+<body>
+
+<header class="p-4 border-b border-gray-800 bg-gray-950">
+    <h1 class="text-lg font-black text-amber-500">PROMOTOR AJUDANTE</h1>
+
+    <nav class="flex gap-1 bg-gray-900 p-1 rounded-xl mt-3">
+        <button onclick="aba('h')" id="n-h" class="nav-aba flex-1 py-2 rounded-lg text-[10px] font-black uppercase">Início</button>
+        <button onclick="aba('l')" id="n-l" class="nav-aba flex-1 py-2 rounded-lg text-[10px] font-black uppercase">Lojas</button>
+        <button onclick="aba('p')" id="n-p" class="nav-aba flex-1 py-2 rounded-lg text-[10px] font-black uppercase">Produtos</button>
+        <button onclick="aba('r')" id="n-r" class="nav-aba flex-1 py-2 rounded-lg text-[10px] font-black uppercase">Relat.</button>
+    </nav>
+</header>
+
+<main id="corpo" class="p-4"></main>
+
+<script>
+
+let lojas = JSON.parse(localStorage.getItem('db_promotor')) || [];
+
+function salvar() {
+    localStorage.setItem('db_promotor', JSON.stringify(lojas));
+}
+
+function aba(id) {
+
+    document.querySelectorAll('.nav-aba').forEach(b => b.classList.remove('ativa'));
+    document.getElementById('n-' + id).classList.add('ativa');
+
+    const m = document.getElementById('corpo');
+    m.innerHTML = "";
+
+    if(id === 'h') {
+
+        m.innerHTML = `<div class="text-center opacity-50 mt-10">Sem alertas</div>`;
+
+    } else if(id === 'l') {
+
+        m.innerHTML = `<button onclick="addLoja()" class="btn-amarelo mb-4">+ Adicionar Loja</button>`;
+
+        lojas.forEach((l, i) => {
+            m.innerHTML += `
+            <div class="card flex justify-between">
+                <span>${l.nome}</span>
+                <button onclick="delLoja(${i})" class="text-red-500">X</button>
+            </div>`;
+        });
+
+    } else if(id === 'p') {
+
+        m.innerHTML = `
+        <input id="nome" placeholder="Produto" class="input-custom">
+        <input id="qtd" placeholder="Quantidade" class="input-custom">
+        <input id="data" type="date" class="input-custom">
+
+        <select id="loja" class="input-custom">
+            ${lojas.map(l => `<option>${l.nome}</option>`).join('')}
+        </select>
+
+        <button onclick="salvarProduto()" class="btn-amarelo">Salvar</button>
+        `;
+
+    } else if(id === 'r') {
+
+        m.innerHTML = `<div class="text-center opacity-50 mt-10">Relatório vazio</div>`;
+    }
+
+    lucide.createIcons();
+}
+
+function addLoja() {
+    const nome = prompt("Nome da loja:");
+    if(!nome) return;
+
+    lojas.push({ nome, produtos: [] });
+    salvar();
+    aba('l');
+}
+
+function delLoja(i) {
+    lojas.splice(i, 1);
+    salvar();
+    aba('l');
+}
+
+function salvarProduto() {
+    const nome = document.getElementById('nome').value;
+    const qtd = document.getElementById('qtd').value;
+    const data = document.getElementById('data').value;
+    const lojaNome = document.getElementById('loja').value;
+
+    if(!nome || !qtd || !data) {
+        alert("Preencha tudo!");
+        return;
+    }
+
+    const loja = lojas.find(l => l.nome === lojaNome);
+    loja.produtos.push({ nome, qtd, data });
+
+    salvar();
+    aba('l');
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    aba('h');
+});
+
+</script>
+
+</body>
+</html>            margin-bottom: 0.6rem;
         }
 
         .btn-amarelo {
