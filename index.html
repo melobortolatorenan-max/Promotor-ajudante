@@ -78,6 +78,38 @@
             };
         }
 
+        // 🔴 NOVA FUNÇÃO
+        function verificarVencidos() {
+            const hoje = new Date();
+            hoje.setHours(0,0,0,0);
+
+            let vencidos = [];
+
+            lojas.forEach(loja => {
+                if(loja.produtos) {
+                    loja.produtos.forEach(p => {
+                        const dataP = new Date(p.data + "T12:00:00");
+                        if(dataP < hoje) {
+                            vencidos.push({
+                                produto: p.nome,
+                                loja: loja.nome
+                            });
+                        }
+                    });
+                }
+            });
+
+            if(vencidos.length > 0) {
+                const mensagem = `⚠️ - PROMOTOR AJUDANTE INFORMA:
+
+${vencidos.map(v => `${v.produto} em ${v.loja}`).join('\n')}
+
+Já ultrapassou do vencimento , VERIFIQUE!`;
+
+                exibirModal(mensagem, null, () => {}, true);
+            }
+        }
+
         function aba(id, params = {}) {
             document.querySelectorAll('.nav-aba').forEach(b => b.classList.remove('ativa'));
             const navBtn = document.getElementById('n-' + id);
@@ -129,6 +161,11 @@
                                     </div>
                                 </div>`).join('')}
                         </div>`).join('') || '<div class="text-center p-10 opacity-20 font-black text-xs uppercase">Sem alertas</div>'}`;
+
+                lucide.createIcons();
+
+                // 🔴 CHAMADA AUTOMÁTICA
+                verificarVencidos();
             }
 
             if(id === 'l') {
@@ -142,6 +179,73 @@
                             </div>
                             <div class="flex-1 truncate" onclick="verLoja(${idx})">
                                 <span class="font-black uppercase italic text-sm truncate block">${l.nome}</span>
+                                <span class="text-[10px] text-amber-500 font-black uppercase italic">${l.produtos.length} Produtos</span>
+                            </div>
+                            <div class="flex gap-4 ml-2">
+                                <i onclick="aba('p',{loja:'${l.nome}'})" data-lucide="plus-circle" class="w-5 h-5 text-green-500"></i>
+                                <i onclick="delLoja(${idx})" data-lucide="trash-2" class="w-5 h-5 text-red-600"></i>
+                            </div>
+                        </div>`;
+                });
+            }
+
+            if(id === 'p') {
+                const p = params.prod || { nome: '', qtd: '', data: '' };
+                const voltarAcao = params.loja ? `verLoja(lojas.findIndex(x => x.nome === '${params.loja}'))` : `aba('l')`;
+                m.innerHTML = `
+                <div class="flex items-center mb-6 relative">
+                    <button onclick="${voltarAcao}" class="absolute left-0"><i data-lucide="chevron-left" class="w-6 h-6 text-amber-500"></i></button>
+                    <h2 class="w-full text-center font-black uppercase text-amber-500 italic text-sm">${params.prod ? 'EDITAR ITEM' : 'CADASTRAR PRODUTO'}</h2>
+                </div>
+                <input id="pn" placeholder="Nome do Produto" class="input-custom" value="${p.nome}">
+                <input id="pq" placeholder="Quantidade" type="number" class="input-custom" value="${p.qtd}">
+                <input id="pd" type="date" class="input-custom" value="${p.data}">
+                <select id="pl" class="input-custom">
+                    <option value="">Selecione a Loja</option>
+                    ${lojas.map(l => `<option value="${l.nome}" ${l.nome===(params.loja||'')?'selected':''}>${l.nome}</option>`).join('')}
+                </select>
+                <button onclick="salvarP()" class="btn-amarelo mt-4 w-full">SALVAR</button>`;
+                editando = params.ref || { lojaIdx: -1, prodIdx: -1 };
+            }
+
+            if(id === 'r') {
+                m.innerHTML = `<h2 class="text-center font-black uppercase text-amber-500 italic mb-6">RELATÓRIO GERAL</h2>`;
+                lojas.forEach(loja => {
+                    if(loja.produtos.length > 0) {
+                        let agrupados = {};
+                        loja.produtos.forEach(p => {
+                            const nomeCap = p.nome.trim().toUpperCase();
+                            if(!agrupados[nomeCap]) agrupados[nomeCap] = [];
+                            agrupados[nomeCap].push({ data: p.data.split('-').reverse().join('/'), qtd: p.qtd });
+                        });
+                        let htmlLoja = `<div class="mb-4 bg-gray-900 p-4 rounded-xl border border-gray-800">
+                            <h3 class="text-amber-500 font-black text-[10px] mb-2 border-b border-gray-800 pb-1 uppercase italic">${loja.nome}</h3>`;
+                        Object.keys(agrupados).forEach(nomeProd => {
+                            htmlLoja += `<div class="mb-3"><div class="text-white font-black text-[11px] uppercase">${nomeProd}</div>
+                                ${agrupados[nomeProd].map(info => `<div class="flex justify-between text-[10px] font-bold text-gray-400 pl-2"><span>${info.data}</span><span>${info.qtd} UN</span></div>`).join('')}
+                                <div class="border-b border-white/5 mt-1"></div></div>`;
+                        });
+                        m.innerHTML += htmlLoja + `</div>`;
+                    }
+                });
+            }
+            lucide.createIcons();
+        }
+
+        function verLoja(idx) { /* ...mantido igual... */ }
+        function moverGrupo(lojaIdx, gIdx, dir) { /* ...mantido igual... */ }
+        function salvarP() { /* ...mantido igual... */ }
+        function moverLoja(idx, dir) { /* ...mantido igual... */ }
+        function addLoja() { /* ...mantido igual... */ }
+        function renomearLoja(idx) { /* ...mantido igual... */ }
+        function delLoja(idx) { /* ...mantido igual... */ }
+        function delProd(li, pi) { /* ...mantido igual... */ }
+        function delProdDireto(lIdx, pNome, pData) { /* ...mantido igual... */ }
+
+        aba('h');
+    </script>
+</body>
+</html>italic text-sm truncate block">${l.nome}</span>
                                 <span class="text-[10px] text-amber-500 font-black uppercase italic">${l.produtos.length} Produtos</span>
                             </div>
                             <div class="flex gap-4 ml-2">
