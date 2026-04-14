@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Promotor Ajudante</title>
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
 
@@ -21,20 +22,166 @@
         .secao { display: none; min-height: 100vh; flex-direction: column; }
         .secao.ativa { display: flex !important; }
 
-        .card-alerta {
-            background-color: #111827;
-            border: 1px solid #1f2937;
-            border-left: 4px solid #ef4444;
-            border-radius: 1.2rem;
-            margin-bottom: 0.6rem;
-            padding: 0.8rem 1.2rem;
-            cursor: pointer;
-        }
-
         .nav-aba.ativa {
             background-color: #f59e0b !important;
             color: #030712 !important;
         }
+
+        .input-custom {
+            width: 100%;
+            background-color: #0f172a;
+            border: 1px solid #1e293b;
+            padding: 0.8rem;
+            border-radius: 0.8rem;
+            color: white;
+            margin-bottom: 0.6rem;
+        }
+
+        .btn-amarelo {
+            background-color: #f59e0b;
+            color: #030712;
+            font-weight: 900;
+            padding: 1rem;
+            border-radius: 1rem;
+            text-transform: uppercase;
+            width: 100%;
+            border: none;
+        }
+    </style>
+</head>
+
+<body>
+
+<section id="tela-app" class="secao ativa">
+
+<header class="p-4 border-b border-gray-800 bg-gray-950 sticky top-0 z-10">
+    <div class="flex items-center gap-3 mb-4">
+        <img src="https://raw.githubusercontent.com/melobortolatorenan-max/Promotor-ajudante/main/logo.png" class="w-10 h-10 rounded-lg">
+        <div>
+            <h1 class="text-xs font-bold text-gray-500 uppercase">Promotor</h1>
+            <span class="text-lg font-black text-amber-500 uppercase italic">Ajudante</span>
+        </div>
+    </div>
+
+    <nav class="flex gap-1 bg-gray-900 p-1 rounded-xl">
+        <button onclick="aba('h')" id="n-h" class="nav-aba flex-1 py-2 rounded-lg text-[10px] font-black uppercase">Início</button>
+        <button onclick="aba('l')" id="n-l" class="nav-aba flex-1 py-2 rounded-lg text-[10px] font-black uppercase">Lojas</button>
+        <button onclick="aba('p')" id="n-p" class="nav-aba flex-1 py-2 rounded-lg text-[10px] font-black uppercase">Produtos</button>
+        <button onclick="aba('r')" id="n-r" class="nav-aba flex-1 py-2 rounded-lg text-[10px] font-black uppercase">Relat.</button>
+    </nav>
+</header>
+
+<main id="corpo" class="p-4 flex-1 pb-24"></main>
+
+</section>
+
+<script>
+
+/* 🔥 BLOQUEIO GLOBAL */
+if (!window.APP_INICIADO) {
+window.APP_INICIADO = true;
+
+let lojas = JSON.parse(localStorage.getItem('db_promotor_v3')) || [];
+
+function salvar() {
+    localStorage.setItem('db_promotor_v3', JSON.stringify(lojas));
+}
+
+function aba(id) {
+
+    document.querySelectorAll('.nav-aba').forEach(b => b.classList.remove('ativa'));
+    document.getElementById('n-' + id)?.classList.add('ativa');
+
+    const m = document.getElementById('corpo');
+    m.innerHTML = "";
+
+    if(id === 'h') {
+
+        m.innerHTML = `<div class="text-center opacity-40 mt-10">Sem alertas</div>`;
+
+    } else if(id === 'l') {
+
+        m.innerHTML = `<button onclick="addLoja()" class="btn-amarelo mb-6">+ ADICIONAR LOJA</button>`;
+
+        lojas.forEach((l, i) => {
+            m.innerHTML += `
+            <div class="bg-gray-900 p-4 rounded-xl mb-2 flex justify-between items-center">
+                <div>
+                    <span class="font-black uppercase">${l.nome}</span>
+                    <span class="text-xs text-amber-500 block">${l.produtos.length} produtos</span>
+                </div>
+                <button onclick="delLoja(${i})" class="text-red-500 text-xs">Excluir</button>
+            </div>`;
+        });
+
+    } else if(id === 'p') {
+
+        m.innerHTML = `
+        <input id="pn" placeholder="Nome" class="input-custom">
+        <input id="pq" placeholder="Qtd" class="input-custom">
+        <input id="pd" type="date" class="input-custom">
+
+        <select id="pl" class="input-custom">
+            ${lojas.map(l => `<option>${l.nome}</option>`).join('')}
+        </select>
+
+        <button onclick="salvarP()" class="btn-amarelo">Salvar</button>
+        `;
+
+    } else if(id === 'r') {
+
+        m.innerHTML = `<div class="text-center opacity-40 mt-10">Relatório vazio</div>`;
+    }
+}
+
+function addLoja() {
+    const nome = prompt("Nome da loja:");
+    if(!nome) return;
+
+    lojas.push({ nome, produtos: [] });
+    salvar();
+    aba('l');
+}
+
+function delLoja(i) {
+    lojas.splice(i, 1);
+    salvar();
+    aba('l');
+}
+
+function salvarP() {
+    const nome = pn.value;
+    const qtd = pq.value;
+    const data = pd.value;
+    const lojaNome = pl.value;
+
+    const loja = lojas.find(l => l.nome === lojaNome);
+    loja.produtos.push({ nome, qtd, data });
+
+    salvar();
+    aba('l');
+}
+
+/* 🔥 CORREÇÃO DEFINITIVA DE DUPLICAÇÃO */
+document.addEventListener("DOMContentLoaded", () => {
+
+    const telas = document.querySelectorAll("#tela-app");
+
+    if (telas.length > 1) {
+        telas.forEach((el, i) => {
+            if (i > 0) el.remove();
+        });
+    }
+
+    aba('h');
+});
+
+}
+
+</script>
+
+</body>
+</html>        }
 
         .input-custom {
             width: 100%;
