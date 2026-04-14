@@ -1,40 +1,201 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Promotor Ajudante</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #030712; color: white; margin: 0; overflow: hidden; }
-        .secao { display: none; height: 100vh; flex-direction: column; }
-        .secao.ativa { display: flex !important; }
-        .card-alerta { background-color: #111827; border: 1px solid #1f2937; border-left: 4px solid #ef4444; border-radius: 1.2rem; margin-bottom: 0.6rem; padding: 0.8rem 1.2rem; cursor: pointer; transition: background 0.2s; }
-        .card-alerta:active { background-color: #1f2937; }
-        .nav-aba.ativa { background-color: #f59e0b !important; color: #030712 !important; }
-        .icon-alert { width: 14px; height: 14px; stroke-width: 3px; }
-        .input-custom { width: 100%; background-color: #0f172a; border: 1px solid #1e293b; padding: 0.8rem; border-radius: 0.8rem; color: white; margin-bottom: 0.6rem; outline: none; }
-        .btn-amarelo { background-color: #f59e0b; color: #030712; font-weight: 900; padding: 1rem; border-radius: 1rem; text-transform: uppercase; width: 100%; border: none; }
-        
-        #modal-container { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); align-items: center; justify-content: center; z-index: 100; padding: 2rem; }
-        #modal-content { background: #111827; border: 1px solid #1f2937; border-radius: 1.5rem; width: 100%; max-width: 320px; padding: 1.5rem; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Promotor Ajudante</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+
+body { font-family: 'Inter', sans-serif; background-color: #030712; color: white; margin: 0; overflow: hidden; }
+
+.secao { display: none; height: 100vh; flex-direction: column; }
+.secao.ativa { display: flex !important; }
+
+.card-alerta {
+    background-color: #111827;
+    border: 1px solid #1f2937;
+    border-left: 4px solid #ef4444;
+    border-radius: 1.2rem;
+    margin-bottom: 0.6rem;
+    padding: 0.8rem 1.2rem;
+}
+
+.nav-aba.ativa {
+    background-color: #f59e0b !important;
+    color: #030712 !important;
+}
+
+.input-custom {
+    width: 100%;
+    background-color: #0f172a;
+    border: 1px solid #1e293b;
+    padding: 0.8rem;
+    border-radius: 0.8rem;
+    color: white;
+    margin-bottom: 0.6rem;
+    outline: none;
+}
+
+.btn-amarelo {
+    background-color: #f59e0b;
+    color: #030712;
+    font-weight: 900;
+    padding: 1rem;
+    border-radius: 1rem;
+    width: 100%;
+}
+
+#modal-container {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 2rem;
+}
+
+#modal-content {
+    background: #111827;
+    border-radius: 1.5rem;
+    width: 100%;
+    max-width: 320px;
+    padding: 1.5rem;
+}
+</style>
 </head>
+
 <body>
 
-    <div id="modal-container">
-        <div id="modal-content">
-            <h2 class="text-amber-500 font-black text-sm uppercase italic tracking-tighter mb-1">PROMOTOR AJUDANTE AVISA:</h2>
-            <p id="modal-subtext" class="text-white text-[11px] mb-4 font-medium opacity-90"></p>
-            <div id="modal-input-area">
-                <input id="modal-input" class="input-custom border-amber-500/30 focus:border-amber-500" type="text">
-            </div>
-            <div class="flex gap-2 mt-2">
-                <button onclick="fecharModal()" class="flex-1 py-3 text-[10px] font-black uppercase text-gray-500">Cancelar</button>
-                <button id="modal-confirm" class="flex-1 bg-amber-500 text-gray-950 py-3 rounded-xl text-[10px] font-black uppercase">Confirmar</button>
-            </div>
+<div id="modal-container">
+    <div id="modal-content">
+        <h2 class="text-amber-500 font-black text-sm uppercase italic mb-1">PROMOTOR AJUDANTE AVISA:</h2>
+        <p id="modal-subtext" class="text-white text-[11px] mb-4"></p>
+
+        <div id="modal-input-area">
+            <input id="modal-input" class="input-custom" type="text">
+        </div>
+
+        <div class="flex gap-2 mt-2">
+            <button onclick="fecharModal()" class="flex-1 py-3 text-[10px] font-black text-gray-500">Cancelar</button>
+            <button id="modal-confirm" class="flex-1 bg-amber-500 text-gray-950 py-3 rounded-xl text-[10px] font-black">Confirmar</button>
+        </div>
+    </div>
+</div>
+
+<section id="tela-app" class="secao ativa">
+
+<header class="p-4 border-b border-gray-800 bg-gray-950">
+    <nav class="flex gap-1 bg-gray-900 p-1 rounded-xl">
+        <button onclick="aba('h')" id="n-h" class="nav-aba flex-1 py-2 rounded-lg text-[10px] font-black uppercase">Início</button>
+        <button onclick="aba('l')" id="n-l" class="nav-aba flex-1 py-2 rounded-lg text-[10px] font-black uppercase">Lojas</button>
+        <button onclick="aba('p')" id="n-p" class="nav-aba flex-1 py-2 rounded-lg text-[10px] font-black uppercase">Produtos</button>
+    </nav>
+</header>
+
+<main id="corpo" class="p-4 flex-1 overflow-y-auto"></main>
+
+</section>
+
+<script>
+
+let lojas = JSON.parse(localStorage.getItem('db_promotor_v3')) || [];
+
+function salvar() {
+    localStorage.setItem('db_promotor_v3', JSON.stringify(lojas));
+}
+
+function fecharModal() {
+    document.getElementById('modal-container').style.display = 'none';
+}
+
+function exibirModal(msg, val, cb, only=false){
+    document.getElementById('modal-subtext').innerText = msg;
+    document.getElementById('modal-input-area').style.display = only ? 'none':'block';
+    document.getElementById('modal-container').style.display='flex';
+
+    document.getElementById('modal-confirm').onclick=()=>{
+        cb(true);
+        fecharModal();
+    }
+}
+
+function aba(id){
+
+    const m = document.getElementById('corpo');
+    m.innerHTML='';
+
+    if(id==='h'){
+
+        const hoje = new Date();
+        hoje.setHours(0,0,0,0);
+
+        lojas.forEach((loja, lIdx)=>{
+            loja.produtos.forEach(p=>{
+
+                const dataP = new Date(p.data+"T12:00:00");
+
+                if(dataP<=hoje){
+
+                    m.innerHTML+=`
+                    <div class="card-alerta">
+
+                        <div class="text-gray-400 text-xs">${loja.nome}</div>
+                        <div class="text-amber-500 font-black">${p.nome}</div>
+
+                        <div class="flex justify-between mt-2">
+                            <span>${p.data}</span>
+
+                            <div class="flex gap-3 items-center">
+                                <span class="text-red-500">${p.qtd} un</span>
+
+                                <i onclick="delProdDireto(${lIdx}, ${encodeURIComponent(p.nome)}, '${p.data}')" 
+                                data-lucide="trash-2" 
+                                class="w-4 h-4 text-red-500"></i>
+                            </div>
+                        </div>
+
+                    </div>`;
+                }
+            });
+        });
+    }
+
+    lucide.createIcons();
+}
+
+// 🔥 CORREÇÃO AQUI
+function delProdDireto(lIdx, nomeCodificado, data){
+
+    const nome = decodeURIComponent(nomeCodificado);
+
+    exibirModal("Remover este vencimento?", null, (c)=>{
+
+        if(c){
+
+            lojas[lIdx].produtos = lojas[lIdx].produtos.filter(p =>
+                !(p.nome === nome && p.data === data)
+            );
+
+            salvar();
+            aba('h');
+        }
+
+    }, true);
+}
+
+aba('h');
+
+</script>
+
+</body>
+</html>            </div>
         </div>
     </div>
 
