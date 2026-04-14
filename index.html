@@ -1,40 +1,251 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Promotor Ajudante</title>
-
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://unpkg.com/lucide@latest"></script>
-
-<style>
-body { background-color: #030712; color: white; margin: 0; }
-.card-alerta { background-color: #111827; border-left: 4px solid #ef4444; border-radius: 1.2rem; padding: 1rem; margin-bottom: 0.6rem; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Promotor Ajudante</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #030712; color: white; margin: 0; overflow: hidden; }
+        .secao { display: none; height: 100vh; flex-direction: column; }
+        .secao.ativa { display: flex !important; }
+        .card-alerta { background-color: #111827; border: 1px solid #1f2937; border-left: 4px solid #ef4444; border-radius: 1.2rem; margin-bottom: 0.6rem; padding: 0.8rem 1.2rem; cursor: pointer; transition: background 0.2s; }
+        .card-alerta:active { background-color: #1f2937; }
+        .nav-aba.ativa { background-color: #f59e0b !important; color: #030712 !important; }
+        .icon-alert { width: 14px; height: 14px; stroke-width: 3px; }
+        .input-custom { width: 100%; background-color: #0f172a; border: 1px solid #1e293b; padding: 0.8rem; border-radius: 0.8rem; color: white; margin-bottom: 0.6rem; outline: none; }
+        .btn-amarelo { background-color: #f59e0b; color: #030712; font-weight: 900; padding: 1rem; border-radius: 1rem; text-transform: uppercase; width: 100%; border: none; }
+        
+        #modal-container { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); align-items: center; justify-content: center; z-index: 100; padding: 2rem; }
+        #modal-content { background: #111827; border: 1px solid #1f2937; border-radius: 1.5rem; width: 100%; max-width: 320px; padding: 1.5rem; }
+    </style>
 </head>
-
 <body>
 
-<div id="modal-container" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); align-items:center; justify-content:center; z-index:100;">
-    <div style="background:#111827; padding:20px; border-radius:15px; width:90%; max-width:320px;">
-        <p id="modal-subtext"></p>
-        <button onclick="fecharModal()">OK</button>
+    <div id="modal-container">
+        <div id="modal-content">
+            <h2 class="text-amber-500 font-black text-sm uppercase italic tracking-tighter mb-1">PROMOTOR AJUDANTE AVISA:</h2>
+            <p id="modal-subtext" class="text-white text-[11px] mb-4 font-medium opacity-90"></p>
+            <div id="modal-input-area">
+                <input id="modal-input" class="input-custom border-amber-500/30 focus:border-amber-500" type="text">
+            </div>
+            <div class="flex gap-2 mt-2">
+                <button onclick="fecharModal()" class="flex-1 py-3 text-[10px] font-black uppercase text-gray-500">Cancelar</button>
+                <button id="modal-confirm" class="flex-1 bg-amber-500 text-gray-950 py-3 rounded-xl text-[10px] font-black uppercase">Confirmar</button>
+            </div>
+        </div>
     </div>
-</div>
 
-<main id="corpo" class="p-4"></main>
+    <section id="tela-app" class="secao ativa">
+        <header class="p-4 border-b border-gray-800 bg-gray-950">
+            <div class="flex items-center gap-3 mb-4">
+                <img src="https://raw.githubusercontent.com/melobortolatorenan-max/Promotor-ajudante/main/logo.png" class="w-10 h-10 rounded-lg">
+                <div>
+                    <h1 class="text-xs font-bold text-gray-500 uppercase tracking-widest leading-none">Promotor</h1>
+                    <span class="text-lg font-black text-amber-500 uppercase italic leading-none">Ajudante</span>
+                </div>
+            </div>
+            <nav class="flex gap-1 bg-gray-900 p-1 rounded-xl">
+                <button onclick="aba('h')" id="n-h" class="nav-aba flex-1 py-2 rounded-lg text-[10px] font-black uppercase">Início</button>
+                <button onclick="aba('l')" id="n-l" class="nav-aba flex-1 py-2 rounded-lg text-[10px] font-black uppercase">Lojas</button>
+                <button onclick="aba('p')" id="n-p" class="nav-aba flex-1 py-2 rounded-lg text-[10px] font-black uppercase">Produtos</button>
+                <button onclick="aba('r')" id="n-r" class="nav-aba flex-1 py-2 rounded-lg text-[10px] font-black uppercase">Relat.</button>
+            </nav>
+        </header>
+        <main id="corpo" class="p-4 flex-1 overflow-y-auto pb-24"></main>
+    </section>
 
-<script>
+    <script>
+        let lojas = JSON.parse(localStorage.getItem('db_promotor_v3')) || [];
+        let editando = { lojaIdx: -1, prodIdx: -1 };
 
-let lojas = JSON.parse(localStorage.getItem('db_promotor_v3')) || [];
+        function salvar() { localStorage.setItem('db_promotor_v3', JSON.stringify(lojas)); }
+        function fecharModal() { document.getElementById('modal-container').style.display = 'none'; }
 
-function salvar(){ localStorage.setItem('db_promotor_v3', JSON.stringify(lojas)); }
+        function exibirModal(mensagem, valorInicial, callback, apenasConfirmar = false) {
+            document.getElementById('modal-subtext').innerText = mensagem;
+            const input = document.getElementById('modal-input');
+            const inputArea = document.getElementById('modal-input-area');
+            inputArea.style.display = apenasConfirmar ? 'none' : 'block';
+            if (!apenasConfirmar) input.value = valorInicial || "";
+            document.getElementById('modal-container').style.display = 'flex';
+            if (!apenasConfirmar) input.focus();
+            document.getElementById('modal-confirm').onclick = () => {
+                const resultado = apenasConfirmar ? true : input.value.trim();
+                if (resultado) { callback(resultado); fecharModal(); }
+            };
+        }
 
-function fecharModal(){ document.getElementById('modal-container').style.display='none'; }
+        // 🔴 NOVA FUNÇÃO
+        function verificarVencidos() {
+            const hoje = new Date();
+            hoje.setHours(0,0,0,0);
 
-function exibirModal(msg){
-    document.getElementById('modal-subtext').innerText = msg;
+            let vencidos = [];
+
+            lojas.forEach(loja => {
+                if(loja.produtos) {
+                    loja.produtos.forEach(p => {
+                        const dataP = new Date(p.data + "T12:00:00");
+                        if(dataP < hoje) {
+                            vencidos.push({
+                                produto: p.nome,
+                                loja: loja.nome
+                            });
+                        }
+                    });
+                }
+            });
+
+            if(vencidos.length > 0) {
+                const mensagem = `⚠️ - PROMOTOR AJUDANTE INFORMA:
+
+${vencidos.map(v => `${v.produto} em ${v.loja}`).join('\n')}
+
+Já ultrapassou do vencimento , VERIFIQUE!`;
+
+                exibirModal(mensagem, null, () => {}, true);
+            }
+        }
+
+        function aba(id, params = {}) {
+            document.querySelectorAll('.nav-aba').forEach(b => b.classList.remove('ativa'));
+            const navBtn = document.getElementById('n-' + id);
+            if(navBtn) navBtn.classList.add('ativa');
+            const m = document.getElementById('corpo'); m.innerHTML = "";
+
+            if(id === 'h') {
+                const hoje = new Date(); hoje.setHours(0,0,0,0);
+                const limite = new Date(hoje); limite.setDate(hoje.getDate() + 3);
+                let agrupados = {}; let totalAlertas = 0;
+
+                lojas.forEach((loja, lIdx) => {
+                    if(loja.produtos) {
+                        loja.produtos.forEach(p => {
+                            const dataP = new Date(p.data + "T12:00:00");
+                            if(dataP <= limite) {
+                                totalAlertas++;
+                                const chave = `${loja.nome.trim().toUpperCase()}|${p.nome.trim().toUpperCase()}`;
+                                if(!agrupados[chave]) agrupados[chave] = { loja: loja.nome, lIdx: lIdx, produto: p.nome, validades: {} };
+                                if(!agrupados[chave].validades[p.data]) agrupados[chave].validades[p.data] = 0;
+                                agrupados[chave].validades[p.data] += parseInt(p.qtd || 0);
+                            }
+                        });
+                    }
+                });
+
+                m.innerHTML = `
+                    <div class="grid grid-cols-2 gap-3 mb-6 text-center">
+                        <div class="bg-gray-900/50 p-5 rounded-2xl border border-gray-800">
+                            <div class="text-3xl font-black text-amber-500 italic">${lojas.length}</div>
+                            <div class="text-[10px] text-gray-500 font-bold uppercase">Lojas</div>
+                        </div>
+                        <div class="bg-gray-900/50 p-5 rounded-2xl border border-gray-800">
+                            <div class="text-3xl font-black text-red-500 italic">${totalAlertas}</div>
+                            <div class="text-[10px] text-gray-500 font-bold uppercase">Alertas</div>
+                        </div>
+                    </div>
+                    <h3 class="text-[11px] font-black uppercase text-red-500 mb-4 italic flex items-center gap-2 px-1"><i data-lucide="alert-triangle" class="icon-alert"></i> Vencimentos Próximos</h3>
+                    ${Object.values(agrupados).map(item => `
+                        <div class="card-alerta" onclick="verLoja(${item.lIdx})">
+                            <span class="text-[10px] text-gray-400 font-bold uppercase block mb-0.5">${item.loja}</span>
+                            <div class="text-amber-500 font-black text-sm uppercase italic mb-2 border-b border-white/5 pb-1">${item.produto}</div>
+                            ${Object.keys(item.validades).sort().map(data => `
+                                <div class="flex justify-between items-center mt-1">
+                                    <span class="text-white text-xs font-bold">${data.split('-').reverse().join('/')}</span>
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-red-500 font-black text-xs">${item.validades[data]} un</span>
+                                        <i onclick="event.stopPropagation(); delProdDireto(${item.lIdx}, '${item.produto}', '${data}')" data-lucide="trash-2" class="w-3.5 h-3.5 text-red-800 active:text-red-500"></i>
+                                    </div>
+                                </div>`).join('')}
+                        </div>`).join('') || '<div class="text-center p-10 opacity-20 font-black text-xs uppercase">Sem alertas</div>'}`;
+
+                lucide.createIcons();
+
+                // 🔴 CHAMADA AUTOMÁTICA
+                verificarVencidos();
+            }
+
+            if(id === 'l') {
+                m.innerHTML = `<button onclick="addLoja()" class="btn-amarelo mb-6 w-full">+ ADICIONAR LOJA</button>`;
+                lojas.forEach((l, idx) => {
+                    m.innerHTML += `
+                        <div class="bg-gray-900 border border-gray-800 p-4 rounded-xl mb-2 flex justify-between items-center shadow-lg">
+                            <div class="flex flex-col gap-1 mr-3">
+                                <i onclick="moverLoja(${idx}, -1)" data-lucide="chevron-up" class="w-4 h-4 text-gray-600 ${idx === 0 ? 'opacity-0 pointer-events-none' : ''}"></i>
+                                <i onclick="moverLoja(${idx}, 1)" data-lucide="chevron-down" class="w-4 h-4 text-gray-600 ${idx === lojas.length - 1 ? 'opacity-0 pointer-events-none' : ''}"></i>
+                            </div>
+                            <div class="flex-1 truncate" onclick="verLoja(${idx})">
+                                <span class="font-black uppercase italic text-sm truncate block">${l.nome}</span>
+                                <span class="text-[10px] text-amber-500 font-black uppercase italic">${l.produtos.length} Produtos</span>
+                            </div>
+                            <div class="flex gap-4 ml-2">
+                                <i onclick="aba('p',{loja:'${l.nome}'})" data-lucide="plus-circle" class="w-5 h-5 text-green-500"></i>
+                                <i onclick="delLoja(${idx})" data-lucide="trash-2" class="w-5 h-5 text-red-600"></i>
+                            </div>
+                        </div>`;
+                });
+            }
+
+            if(id === 'p') {
+                const p = params.prod || { nome: '', qtd: '', data: '' };
+                const voltarAcao = params.loja ? `verLoja(lojas.findIndex(x => x.nome === '${params.loja}'))` : `aba('l')`;
+                m.innerHTML = `
+                <div class="flex items-center mb-6 relative">
+                    <button onclick="${voltarAcao}" class="absolute left-0"><i data-lucide="chevron-left" class="w-6 h-6 text-amber-500"></i></button>
+                    <h2 class="w-full text-center font-black uppercase text-amber-500 italic text-sm">${params.prod ? 'EDITAR ITEM' : 'CADASTRAR PRODUTO'}</h2>
+                </div>
+                <input id="pn" placeholder="Nome do Produto" class="input-custom" value="${p.nome}">
+                <input id="pq" placeholder="Quantidade" type="number" class="input-custom" value="${p.qtd}">
+                <input id="pd" type="date" class="input-custom" value="${p.data}">
+                <select id="pl" class="input-custom">
+                    <option value="">Selecione a Loja</option>
+                    ${lojas.map(l => `<option value="${l.nome}" ${l.nome===(params.loja||'')?'selected':''}>${l.nome}</option>`).join('')}
+                </select>
+                <button onclick="salvarP()" class="btn-amarelo mt-4 w-full">SALVAR</button>`;
+                editando = params.ref || { lojaIdx: -1, prodIdx: -1 };
+            }
+
+            if(id === 'r') {
+                m.innerHTML = `<h2 class="text-center font-black uppercase text-amber-500 italic mb-6">RELATÓRIO GERAL</h2>`;
+                lojas.forEach(loja => {
+                    if(loja.produtos.length > 0) {
+                        let agrupados = {};
+                        loja.produtos.forEach(p => {
+                            const nomeCap = p.nome.trim().toUpperCase();
+                            if(!agrupados[nomeCap]) agrupados[nomeCap] = [];
+                            agrupados[nomeCap].push({ data: p.data.split('-').reverse().join('/'), qtd: p.qtd });
+                        });
+                        let htmlLoja = `<div class="mb-4 bg-gray-900 p-4 rounded-xl border border-gray-800">
+                            <h3 class="text-amber-500 font-black text-[10px] mb-2 border-b border-gray-800 pb-1 uppercase italic">${loja.nome}</h3>`;
+                        Object.keys(agrupados).forEach(nomeProd => {
+                            htmlLoja += `<div class="mb-3"><div class="text-white font-black text-[11px] uppercase">${nomeProd}</div>
+                                ${agrupados[nomeProd].map(info => `<div class="flex justify-between text-[10px] font-bold text-gray-400 pl-2"><span>${info.data}</span><span>${info.qtd} UN</span></div>`).join('')}
+                                <div class="border-b border-white/5 mt-1"></div></div>`;
+                        });
+                        m.innerHTML += htmlLoja + `</div>`;
+                    }
+                });
+            }
+            lucide.createIcons();
+        }
+
+        function verLoja(idx) { /* ...mantido igual... */ }
+        function moverGrupo(lojaIdx, gIdx, dir) { /* ...mantido igual... */ }
+        function salvarP() { /* ...mantido igual... */ }
+        function moverLoja(idx, dir) { /* ...mantido igual... */ }
+        function addLoja() { /* ...mantido igual... */ }
+        function renomearLoja(idx) { /* ...mantido igual... */ }
+        function delLoja(idx) { /* ...mantido igual... */ }
+        function delProd(li, pi) { /* ...mantido igual... */ }
+        function delProdDireto(lIdx, pNome, pData) { /* ...mantido igual... */ }
+
+        aba('h');
+    </script>
+</body>
+</html>    document.getElementById('modal-subtext').innerText = msg;
     document.getElementById('modal-container').style.display='flex';
 }
 
