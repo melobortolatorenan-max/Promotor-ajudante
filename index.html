@@ -13,27 +13,28 @@
         .secao.ativa { display: flex !important; }
         .nav-aba.ativa { background-color: #f59e0b !important; color: #030712 !important; }
         
-        .card-loja { background-color: #111827; border: 1px solid #1f2937; border-radius: 1rem; margin-bottom: 0.8rem; display: flex; align-items: stretch; overflow: hidden; }
-        .area-clique-loja { flex: 1; padding: 1.2rem; cursor: pointer; }
+        /* Card da Loja com separação clara de clique */
+        .card-loja { background-color: #111827; border: 1px solid #1f2937; border-radius: 1rem; margin-bottom: 0.8rem; display: flex; align-items: stretch; position: relative; z-index: 10; }
+        .area-clique-loja { flex: 1; padding: 1.2rem; cursor: pointer; z-index: 20; }
         .area-clique-loja:active { background-color: #1f2937; }
         
-        .btn-excluir-loja { padding: 0 1.2rem; display: flex; align-items: center; background-color: rgba(239, 68, 68, 0.05); color: #7f1d1d; }
-        .btn-excluir-loja:active { color: #ef4444; background-color: rgba(239, 68, 68, 0.1); }
+        .btn-excluir-loja { padding: 0 1.2rem; display: flex; align-items: center; justify-content: center; color: #7f1d1d; cursor: pointer; z-index: 30; }
+        .btn-excluir-loja:active { color: #ef4444; }
 
         .input-custom { width: 100%; background-color: #0f172a; border: 1px solid #1e293b; padding: 0.8rem; border-radius: 0.8rem; color: white; margin-bottom: 0.6rem; outline: none; }
-        .btn-amarelo { background-color: #f59e0b; color: #030712; font-weight: 900; padding: 1rem; border-radius: 1rem; text-transform: uppercase; width: 100%; border: none; }
+        .btn-amarelo { background-color: #f59e0b; color: #030712; font-weight: 900; padding: 1rem; border-radius: 1rem; text-transform: uppercase; width: 100%; border: none; cursor: pointer; }
         
-        #modal-container { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); align-items: center; justify-content: center; z-index: 100; padding: 2rem; }
+        #modal-container { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); align-items: center; justify-content: center; z-index: 9999; padding: 2rem; }
     </style>
 </head>
 <body>
 
     <div id="modal-container">
-        <div id="modal-content" class="bg-gray-900 border border-gray-800 p-6 rounded-2xl w-full max-w-xs text-center">
+        <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl w-full max-w-xs text-center">
             <h2 id="modal-titulo" class="text-amber-500 font-black text-xs uppercase mb-2">Aviso</h2>
             <p id="modal-subtext" class="text-white text-xs mb-6 opacity-80"></p>
             <div id="modal-input-area" class="hidden">
-                <input id="modal-input" class="input-custom" type="text">
+                <input id="modal-input" class="input-custom" type="text" placeholder="Digite aqui...">
             </div>
             <div class="flex gap-2">
                 <button onclick="fecharModal()" class="flex-1 py-3 text-[10px] font-black uppercase text-gray-500">Cancelar</button>
@@ -83,13 +84,17 @@
         }
 
         function aba(id, params = {}) {
+            // Resetar estados
+            fecharModal();
             document.querySelectorAll('.nav-aba').forEach(b => b.classList.remove('ativa'));
             const navBtn = document.getElementById('n-' + id);
             if(navBtn) navBtn.classList.add('ativa');
-            const m = document.getElementById('corpo'); m.innerHTML = "";
+            
+            const m = document.getElementById('corpo'); 
+            m.innerHTML = "";
 
             if(id === 'h') {
-                m.innerHTML = `<div class="text-center py-20 opacity-20 font-black italic uppercase">Início em Breve</div>`;
+                m.innerHTML = `<div class="text-center py-20 opacity-20 font-black italic uppercase">Módulo Início</div>`;
             }
 
             if(id === 'l') {
@@ -127,36 +132,80 @@
 
         function verLoja(idx) {
             const loja = lojas[idx];
+            if (!loja) return;
+
             const m = document.getElementById('corpo');
+            m.innerHTML = ""; // Limpa a tela antes de abrir
             
-            // Agrupamento por nome de produto
+            // Agrupar itens por nome
             let agrupados = {};
             loja.produtos.forEach((p, pIdx) => {
                 if (!agrupados[p.nome]) agrupados[p.nome] = [];
                 agrupados[p.nome].push({ ...p, originalIdx: pIdx });
             });
 
-            m.innerHTML = `
-                <div class="flex items-center gap-2 mb-6" onclick="aba('l')">
+            let htmlInterno = `
+                <div class="flex items-center gap-2 mb-6" onclick="aba('l')" style="cursor:pointer">
                     <i data-lucide="chevron-left" class="w-6 h-6 text-amber-500"></i>
                     <h2 class="font-black uppercase text-amber-500 italic text-lg truncate">${loja.nome}</h2>
                 </div>
-                <div class="space-y-4">
-                    ${Object.keys(agrupados).map(nomeProd => `
-                        <div class="bg-gray-900/50 border border-gray-800 rounded-xl overflow-hidden">
-                            <div class="bg-gray-800/50 px-4 py-2 text-amber-500 font-black uppercase italic text-xs border-b border-gray-800">
-                                ${nomeProd}
+                <div class="space-y-4">`;
+
+            Object.keys(agrupados).forEach(nomeProd => {
+                htmlInterno += `
+                    <div class="bg-gray-900/50 border border-gray-800 rounded-xl overflow-hidden">
+                        <div class="bg-gray-800 px-4 py-2 text-amber-500 font-black uppercase italic text-xs border-b border-gray-800">
+                            ${nomeProd}
+                        </div>`;
+                
+                agrupados[nomeProd].forEach(p => {
+                    htmlInterno += `
+                        <div class="px-4 py-3 flex justify-between items-center border-b border-gray-800/30 last:border-0">
+                            <div class="text-[11px] font-bold">
+                                <span class="text-white">${p.data.split('-').reverse().join('/')}</span>
+                                <span class="text-gray-500 mx-2">|</span>
+                                <span class="text-amber-500">${p.qtd} UN</span>
                             </div>
-                            ${agrupados[nomeProd].map(p => `
-                                <div class="px-4 py-3 flex justify-between items-center border-b border-gray-800/50 last:border-0">
-                                    <div class="text-[11px] font-bold">
-                                        <span class="text-white">${p.data.split('-').reverse().join('/')}</span>
-                                        <span class="text-gray-500 mx-2">|</span>
-                                        <span class="text-amber-500">${p.qtd} UN</span>
-                                    </div>
-                                    <div class="flex gap-4">
-                                        <i onclick="aba('p',{loja:'${loja.nome}', prod: ${JSON.stringify(p).replace(/"/g, '&quot;')}, ref: {lojaIdx: ${idx}, prodIdx: ${p.originalIdx}}})" data-lucide="edit-3" class="w-4 h-4 text-blue-500"></i>
-                                        <i onclick="delProd(${idx}, ${p.originalIdx})" data-lucide="trash-2" class="w-4 h-4 text-red-800"></i>
+                            <div class="flex gap-4">
+                                <i onclick="aba('p',{loja:'${loja.nome}', prod: ${JSON.stringify(p).replace(/"/g, '&quot;')}, ref: {lojaIdx: ${idx}, prodIdx: ${p.originalIdx}}})" data-lucide="edit-3" class="w-4 h-4 text-blue-500"></i>
+                                <i onclick="delProd(${idx}, ${p.originalIdx})" data-lucide="trash-2" class="w-4 h-4 text-red-800"></i>
+                            </div>
+                        </div>`;
+                });
+                htmlInterno += `</div>`;
+            });
+
+            if (Object.keys(agrupados).length === 0) {
+                htmlInterno += `<div class="text-center py-20 opacity-20 font-black uppercase">Loja Vazia</div>`;
+            }
+
+            m.innerHTML = htmlInterno + `</div>`;
+            lucide.createIcons();
+        }
+
+        function salvarP() {
+            const n = document.getElementById('pn').value, q = document.getElementById('pq').value, d = document.getElementById('pd').value, l = document.getElementById('pl').value;
+            if(!n || !d || !l) return;
+            
+            if(editando.prodIdx > -1) {
+                lojas[editando.lojaIdx].produtos[editando.prodIdx] = { nome: n, qtd: q, data: d };
+            } else {
+                const loja = lojas.find(x => x.nome === l);
+                if(loja) loja.produtos.push({ nome: n, qtd: q, data: d });
+            }
+            salvar(); 
+            verLoja(lojas.findIndex(x => x.nome === l));
+        }
+
+        function addLoja() { exibirModal("NOVA LOJA", "Nome da loja:", "", (n) => { if(n){lojas.push({nome: n, produtos: []}); salvar(); aba('l');} }); }
+        function delLoja(idx) { exibirModal("EXCLUIR", "Apagar esta loja?", null, (c) => { if(c){lojas.splice(idx, 1); salvar(); aba('l');} }, true); }
+        function delProd(li, pi) { exibirModal("REMOVER", "Remover este item?", null, (c) => { if(c){lojas[li].produtos.splice(pi, 1); salvar(); verLoja(li);} }, true); }
+
+        window.onload = () => aba('l');
+    </script>
+</body>
+</html>
+"></i>
                                     </div>
                                 </div>
                             `).join('')}
