@@ -3,37 +3,390 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Promotor Ajudante</title>
+    <title>Promotor Ajudante Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #030712; color: white; margin: 0; overflow: hidden; }
+        
+        :root {
+            --bg-dark: #030712;
+            --amber-primary: #f59e0b;
+            --card-bg: #111827;
+        }
+
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: var(--bg-dark); 
+            color: white; 
+            margin: 0; 
+            overflow: hidden; 
+            -webkit-tap-highlight-color: transparent;
+        }
+
         .secao { display: none; height: 100vh; flex-direction: column; }
         .secao.ativa { display: flex !important; }
-        .card-alerta { background-color: #111827; border: 1px solid #1f2937; border-left: 4px solid #ef4444; border-radius: 1.2rem; margin-bottom: 0.6rem; padding: 0.8rem 1.2rem; cursor: pointer; transition: background 0.2s; }
-        .card-alerta:active { background-color: #1f2937; }
-        .nav-aba.ativa { background-color: #f59e0b !important; color: #030712 !important; }
-        .icon-alert { width: 14px; height: 14px; stroke-width: 3px; }
-        .input-custom { width: 100%; background-color: #0f172a; border: 1px solid #1e293b; padding: 0.8rem; border-radius: 0.8rem; color: white; margin-bottom: 0.6rem; outline: none; }
-        .btn-amarelo { background-color: #f59e0b; color: #030712; font-weight: 900; padding: 1rem; border-radius: 1rem; text-transform: uppercase; width: 100%; border: none; }
         
-        #modal-container { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); align-items: center; justify-content: center; z-index: 100; padding: 2rem; }
-        #modal-content { background: #111827; border: 1px solid #1f2937; border-radius: 1.5rem; width: 100%; max-width: 320px; padding: 1.5rem; }
+        .nav-aba.ativa { 
+            background-color: var(--amber-primary) !important; 
+            color: #030712 !important; 
+        }
+
+        .card-custom {
+            background-color: var(--card-bg);
+            border: 1px solid #1f2937;
+            border-radius: 1.2rem;
+            transition: transform 0.1s;
+        }
+
+        .card-custom:active { transform: scale(0.98); }
+
+        .input-custom { 
+            width: 100%; 
+            background-color: #0f172a; 
+            border: 1px solid #1e293b; 
+            padding: 0.8rem; 
+            border-radius: 0.8rem; 
+            color: white; 
+            outline: none; 
+        }
+
+        .input-custom:focus { border-color: var(--amber-primary); }
+
+        .btn-amarelo { 
+            background-color: var(--amber-primary); 
+            color: #030712; 
+            font-weight: 900; 
+            padding: 1rem; 
+            border-radius: 1rem; 
+            text-transform: uppercase; 
+            width: 100%; 
+            transition: opacity 0.2s;
+        }
+
+        #modal-container { 
+            display: none; 
+            position: fixed; 
+            inset: 0; 
+            background: rgba(0,0,0,0.9); 
+            align-items: center; 
+            justify-content: center; 
+            z-index: 100; 
+            padding: 1.5rem; 
+        }
+
+        /* Esconder scrollbar */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
 <body>
 
     <div id="modal-container">
-        <div id="modal-content">
-            <h2 class="text-amber-500 font-black text-sm uppercase italic tracking-tighter mb-1">PROMOTOR AJUDANTE AVISA:</h2>
-            <p id="modal-subtext" class="text-white text-[11px] mb-4 font-medium opacity-90"></p>
-            <div id="modal-input-area">
-                <input id="modal-input" class="input-custom border-amber-500/30 focus:border-amber-500" type="text">
+        <div id="modal-content" class="bg-gray-900 border border-gray-800 rounded-[2rem] w-full max-w-xs p-6 shadow-2xl">
+            <h2 id="modal-title" class="text-amber-500 font-black text-xs uppercase italic tracking-tighter mb-2">AVISO</h2>
+            <p id="modal-subtext" class="text-white text-xs mb-4 opacity-80 font-medium"></p>
+            <div id="modal-input-area" class="mb-4">
+                <input id="modal-input" class="input-custom" type="text">
             </div>
-            <div class="flex gap-2 mt-2">
+            <div class="flex gap-3">
                 <button onclick="fecharModal()" class="flex-1 py-3 text-[10px] font-black uppercase text-gray-500">Cancelar</button>
                 <button id="modal-confirm" class="flex-1 bg-amber-500 text-gray-950 py-3 rounded-xl text-[10px] font-black uppercase">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <section id="tela-app" class="secao ativa">
+        <header class="p-4 border-b border-gray-800 bg-gray-950/50 backdrop-blur-md sticky top-0 z-50">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-10 h-10 bg-amber-500 rounded-lg flex items-center justify-center overflow-hidden">
+                    <img src="https://raw.githubusercontent.com/melobortolatorenan-max/Promotor-ajudante/main/logo.png" class="w-full h-full object-cover" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1048/1048953.png'">
+                </div>
+                <div>
+                    <h1 class="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] leading-none">Promotor</h1>
+                    <span class="text-xl font-black text-amber-500 uppercase italic leading-none">Ajudante</span>
+                </div>
+            </div>
+            
+            <nav class="flex gap-1 bg-gray-900/80 p-1 rounded-2xl border border-gray-800">
+                <button onclick="aba('h')" id="n-h" class="nav-aba flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all">Início</button>
+                <button onclick="aba('l')" id="n-l" class="nav-aba flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all">Lojas</button>
+                <button onclick="aba('p')" id="n-p" class="nav-aba flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all">Produtos</button>
+                <button onclick="aba('r')" id="n-r" class="nav-aba flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all">Relat.</button>
+            </nav>
+        </header>
+
+        <main id="corpo" class="p-4 flex-1 overflow-y-auto no-scrollbar pb-28"></main>
+    </section>
+
+    <script>
+        // ESTADO GLOBAL
+        let lojas = JSON.parse(localStorage.getItem('db_promotor_v3')) || [];
+        let editContext = { lojaIdx: -1, prodIdx: -1 };
+
+        // UTILITÁRIOS
+        const formatData = (d) => d.split('-').reverse().join('/');
+        function salvar() { localStorage.setItem('db_promotor_v3', JSON.stringify(lojas)); }
+        
+        function fecharModal() { document.getElementById('modal-container').style.display = 'none'; }
+        
+        function exibirModal(titulo, msg, valor, callback, apenasConfirmar = false) {
+            document.getElementById('modal-title').innerText = titulo;
+            document.getElementById('modal-subtext').innerText = msg;
+            const area = document.getElementById('modal-input-area');
+            const input = document.getElementById('modal-input');
+            
+            area.style.display = apenasConfirmar ? 'none' : 'block';
+            input.value = valor || "";
+            document.getElementById('modal-container').style.display = 'flex';
+            
+            document.getElementById('modal-confirm').onclick = () => {
+                const res = apenasConfirmar ? true : input.value.trim();
+                if (res) { callback(res); fecharModal(); }
+            };
+        }
+
+        // NAVEGAÇÃO ENTRE ABAS
+        function aba(id, params = {}) {
+            document.querySelectorAll('.nav-aba').forEach(b => b.classList.remove('ativa'));
+            if(document.getElementById('n-' + id)) document.getElementById('n-' + id).classList.add('ativa');
+            
+            const corpo = document.getElementById('corpo');
+            corpo.innerHTML = "";
+            window.scrollTo(0,0);
+
+            switch(id) {
+                case 'h': renderHome(corpo); break;
+                case 'l': renderLojas(corpo); break;
+                case 'p': renderFormProduto(corpo, params); break;
+                case 'r': renderRelatorio(corpo); break;
+            }
+            lucide.createIcons();
+        }
+
+        // --- ABA INÍCIO ---
+        function renderHome(container) {
+            const hoje = new Date(); hoje.setHours(0,0,0,0);
+            const limite = new Date(hoje); limite.setDate(hoje.getDate() + 3);
+            let alertas = [];
+
+            lojas.forEach((l, lIdx) => {
+                l.produtos.forEach((p, pIdx) => {
+                    const dt = new Date(p.data + "T12:00:00");
+                    if(dt <= limite) alertas.push({ ...p, loja: l.nome, lIdx, pIdx });
+                });
+            });
+
+            container.innerHTML = `
+                <div class="grid grid-cols-2 gap-3 mb-6">
+                    <div class="bg-gray-900/50 p-4 rounded-2xl border border-gray-800 text-center">
+                        <div class="text-2xl font-black text-amber-500">${lojas.length}</div>
+                        <div class="text-[9px] text-gray-500 font-bold uppercase tracking-widest">Lojas</div>
+                    </div>
+                    <div class="bg-gray-900/50 p-4 rounded-2xl border border-gray-800 text-center">
+                        <div class="text-2xl font-black text-red-500">${alertas.length}</div>
+                        <div class="text-[9px] text-gray-500 font-bold uppercase tracking-widest">Alertas</div>
+                    </div>
+                </div>
+                <h3 class="text-[11px] font-black uppercase text-red-500 mb-4 italic flex items-center gap-2">
+                    <i data-lucide="alert-circle" class="w-4 h-4"></i> Vencimentos Próximos
+                </h3>
+                <div class="space-y-3">
+                    ${alertas.map(a => `
+                        <div class="card-custom border-l-4 border-l-red-500 p-4" onclick="verLoja(${a.lIdx})">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <span class="text-[9px] text-gray-500 font-bold uppercase">${a.loja}</span>
+                                    <h4 class="text-amber-500 font-black italic uppercase text-sm">${a.nome}</h4>
+                                </div>
+                                <div class="text-right">
+                                    <span class="block text-white font-black text-xs">${formatData(a.data)}</span>
+                                    <span class="text-red-500 font-bold text-[10px]">${a.qtd} UN</span>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('') || '<p class="text-center opacity-30 py-10 text-xs font-bold uppercase">Tudo em dia por aqui!</p>'}
+                </div>
+            `;
+        }
+
+        // --- ABA LOJAS ---
+        function renderLojas(container) {
+            container.innerHTML = `<button onclick="novaLoja()" class="btn-amarelo mb-6 shadow-lg shadow-amber-500/10">+ Adicionar Nova Loja</button>`;
+            
+            lojas.forEach((l, idx) => {
+                container.innerHTML += `
+                    <div class="card-custom p-4 mb-3 flex items-center gap-4">
+                        <div class="flex-1 truncate" onclick="verLoja(${idx})">
+                            <h4 class="font-black uppercase italic text-sm truncate">${l.nome}</h4>
+                            <span class="text-[9px] text-amber-500 font-bold uppercase">${l.produtos.length} itens cadastrados</span>
+                        </div>
+                        <div class="flex gap-4 border-l border-gray-800 pl-4">
+                            <i onclick="aba('p',{lojaNome:'${l.nome}'})" data-lucide="plus" class="w-5 h-5 text-green-500"></i>
+                            <i onclick="deletarLoja(${idx})" data-lucide="trash-2" class="w-5 h-5 text-red-600"></i>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        // --- ABA PRODUTO (FORMULÁRIO) ---
+        function renderFormProduto(container, params) {
+            const p = params.prod || { nome: '', qtd: '', data: '' };
+            const isEdit = !!params.prod;
+
+            container.innerHTML = `
+                <div class="flex items-center mb-8">
+                    <button onclick="aba('l')" class="p-2 bg-gray-900 rounded-full"><i data-lucide="arrow-left" class="w-5 h-5 text-amber-500"></i></button>
+                    <h2 class="flex-1 text-center font-black uppercase text-amber-500 italic">${isEdit ? 'Editar Produto' : 'Novo Produto'}</h2>
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-[10px] font-black text-gray-500 uppercase ml-2 mb-1 block">Nome do Produto</label>
+                        <input id="f-nome" class="input-custom" value="${p.nome}" placeholder="Ex: Iogurte Grego">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-[10px] font-black text-gray-500 uppercase ml-2 mb-1 block">Qtd</label>
+                            <input id="f-qtd" type="number" class="input-custom" value="${p.qtd}" placeholder="0">
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-black text-gray-500 uppercase ml-2 mb-1 block">Vencimento</label>
+                            <input id="f-data" type="date" class="input-custom" value="${p.data}">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black text-gray-500 uppercase ml-2 mb-1 block">Loja Destino</label>
+                        <select id="f-loja" class="input-custom appearance-none">
+                            <option value="">Selecione...</option>
+                            ${lojas.map(l => `<option value="${l.nome}" ${l.nome === params.lojaNome ? 'selected' : ''}>${l.nome}</option>`).join('')}
+                        </select>
+                    </div>
+                    <button onclick="salvarProduto()" class="btn-amarelo mt-6">Confirmar e Salvar</button>
+                </div>
+            `;
+            editContext = params.ref || { lojaIdx: -1, prodIdx: -1 };
+        }
+
+        // --- ABA RELATÓRIO ---
+        function renderRelatorio(container) {
+            container.innerHTML = `<h2 class="text-center font-black uppercase text-amber-500 italic mb-6">Relatório de Estoque</h2>`;
+            
+            lojas.forEach(loja => {
+                if(loja.produtos.length === 0) return;
+                
+                let htmlLoja = `
+                    <div class="mb-6 bg-gray-900/30 rounded-2xl border border-gray-800 overflow-hidden">
+                        <div class="bg-gray-800/50 p-3 border-b border-gray-700">
+                            <h3 class="text-amber-500 font-black text-xs uppercase italic">${loja.nome}</h3>
+                        </div>
+                        <div class="p-3 space-y-3">`;
+                
+                loja.produtos.forEach(p => {
+                    htmlLoja += `
+                        <div class="flex justify-between items-center border-b border-white/5 pb-2 last:border-0">
+                            <div>
+                                <div class="text-[11px] font-black uppercase text-white">${p.nome}</div>
+                                <div class="text-[9px] text-gray-500 font-bold">${formatData(p.data)}</div>
+                            </div>
+                            <div class="text-amber-500 font-black text-xs">${p.qtd} UN</div>
+                        </div>`;
+                });
+                
+                container.innerHTML += htmlLoja + `</div></div>`;
+            });
+        }
+
+        // --- LOGICA DE DADOS ---
+        function verLoja(idx) {
+            aba('l'); // Mantém o estado visual da aba lojas
+            const loja = lojas[idx];
+            const corpo = document.getElementById('corpo');
+            
+            corpo.innerHTML = `
+                <div class="flex items-center justify-between mb-6">
+                    <button onclick="aba('l')" class="flex items-center gap-2 text-amber-500">
+                        <i data-lucide="chevron-left" class="w-6 h-6"></i>
+                        <span class="font-black uppercase italic text-lg">${loja.nome}</span>
+                    </button>
+                    <i onclick="renomearLoja(${idx})" data-lucide="settings-2" class="w-5 h-5 text-gray-500"></i>
+                </div>
+                <div class="space-y-3">
+                    ${loja.produtos.map((p, pIdx) => `
+                        <div class="card-custom p-4 flex items-center justify-between">
+                            <div class="flex-1">
+                                <h4 class="text-white font-black uppercase text-[11px]">${p.nome}</h4>
+                                <div class="flex gap-3 mt-1">
+                                    <span class="text-[10px] text-gray-400 font-bold italic">${formatData(p.data)}</span>
+                                    <span class="text-[10px] text-amber-500 font-black">${p.qtd} UN</span>
+                                </div>
+                            </div>
+                            <div class="flex gap-4 ml-4">
+                                <i onclick="aba('p',{prod: ${JSON.stringify(p).replace(/"/g, '&quot;')}, ref:{lojaIdx:${idx}, prodIdx:${pIdx}}, lojaNome:'${loja.nome}'})" data-lucide="edit-3" class="w-4 h-4 text-blue-400"></i>
+                                <i onclick="deletarProduto(${idx}, ${pIdx})" data-lucide="x" class="w-4 h-4 text-red-500"></i>
+                            </div>
+                        </div>
+                    `).join('') || '<p class="text-center opacity-20 py-10 font-black uppercase text-xs">Vazio</p>'}
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        function novaLoja() {
+            exibirModal("Nova Loja", "Digite o nome da unidade:", "", (nome) => {
+                lojas.push({ nome, produtos: [] });
+                salvar(); aba('l');
+            });
+        }
+
+        function deletarLoja(idx) {
+            exibirModal("Excluir?", `Deseja apagar a loja ${lojas[idx].nome}?`, null, () => {
+                lojas.splice(idx, 1);
+                salvar(); aba('l');
+            }, true);
+        }
+
+        function renomearLoja(idx) {
+            exibirModal("Configuração", "Novo nome da loja:", lojas[idx].nome, (novo) => {
+                lojas[idx].nome = novo;
+                salvar(); verLoja(idx);
+            });
+        }
+
+        function salvarProduto() {
+            const n = document.getElementById('f-nome').value,
+                  q = document.getElementById('f-qtd').value,
+                  d = document.getElementById('f-data').value,
+                  l = document.getElementById('f-loja').value;
+
+            if(!n || !d || !l) return alert("Preencha Nome, Data e Loja!");
+
+            const payload = { nome: n, qtd: q, data: d };
+
+            if(editContext.prodIdx > -1) {
+                lojas[editContext.lojaIdx].produtos[editContext.prodIdx] = payload;
+            } else {
+                const target = lojas.find(x => x.nome === l);
+                if(target) target.produtos.push(payload);
+            }
+            
+            salvar();
+            const lIdx = lojas.findIndex(x => x.nome === l);
+            verLoja(lIdx);
+        }
+
+        function deletarProduto(lIdx, pIdx) {
+            exibirModal("Remover?", "Excluir este item?", null, () => {
+                lojas[lIdx].produtos.splice(pIdx, 1);
+                salvar(); verLoja(lIdx);
+            }, true);
+        }
+
+        // INICIALIZAÇÃO
+        aba('h');
+    </script>
+</body>
+</html>
             </div>
         </div>
     </div>
