@@ -49,7 +49,6 @@
             text-transform: uppercase; 
             width: 100%; 
             font-size: 0.75rem; 
-            letter-spacing: 0.05em;
             border: none;
         }
 
@@ -73,14 +72,16 @@
 
     <div id="modal-container">
         <div class="bg-[#111827] border border-gray-800 rounded-[2rem] w-full max-w-xs p-8 shadow-2xl">
-            <h2 id="modal-titulo" class="text-amber-500 font-black text-[10px] uppercase italic tracking-widest mb-2">SISTEMA</h2>
-            <p id="modal-subtext" class="text-white text-sm mb-6 font-medium leading-relaxed"></p>
-            <div id="modal-input-area" class="mb-4">
+            <h2 id="modal-titulo" class="text-amber-500 font-black text-[12px] uppercase italic tracking-widest mb-4">SISTEMA</h2>
+            <p id="modal-subtext" class="text-white text-sm mb-8 font-bold leading-tight uppercase"></p>
+            
+            <div id="modal-input-area" class="mb-4" style="display:none">
                 <input id="modal-input" class="input-custom border-amber-500/20" type="text">
             </div>
-            <div class="flex gap-3">
-                <button id="btn-cancelar" onclick="fecharModal()" class="flex-1 py-3 text-[10px] font-black uppercase text-gray-500">Cancelar</button>
-                <button id="modal-confirm" class="flex-1 bg-amber-500 text-gray-950 py-4 rounded-2xl text-[10px] font-black uppercase shadow-lg shadow-amber-500/20">Confirmar</button>
+
+            <div class="flex gap-4">
+                <button id="btn-cancelar" onclick="fecharModal()" class="flex-1 py-3 text-[10px] font-black uppercase text-gray-500">CANCELAR</button>
+                <button id="modal-confirm" class="flex-1 bg-amber-500 text-gray-950 py-4 rounded-2xl text-[10px] font-black uppercase shadow-lg shadow-amber-500/20">CONFIRMAR</button>
             </div>
         </div>
     </div>
@@ -115,99 +116,138 @@
             const container = document.getElementById('modal-container');
             document.getElementById('modal-titulo').innerText = titulo;
             document.getElementById('modal-subtext').innerHTML = msg;
-            
-            const areaInput = document.getElementById('modal-input-area');
-            const input = document.getElementById('modal-input');
-            const btnCancel = document.getElementById('btn-cancelar');
-            
-            areaInput.style.display = placeholder !== null ? 'block' : 'none';
-            btnCancel.style.display = apenasConfirmar ? 'none' : 'block';
-            
-            if(placeholder !== null) input.value = placeholder;
-            
+            document.getElementById('modal-input-area').style.display = placeholder !== null ? 'block' : 'none';
+            document.getElementById('btn-cancelar').style.display = apenasConfirmar ? 'none' : 'block';
+            if(placeholder !== null) document.getElementById('modal-input').value = placeholder;
             container.style.display = 'flex';
-            
             document.getElementById('modal-confirm').onclick = () => {
-                const val = placeholder !== null ? input.value.trim() : true;
+                const val = placeholder !== null ? document.getElementById('modal-input').value.trim() : true;
                 fecharModal();
                 if(callback) callback(val);
             };
         }
 
+        // VERIFICAÇÃO AUTOMÁTICA DE VENCIDOS
         function verificarVencidosUrgente() {
-            const agora = new Date();
-            const hojeTS = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate()).getTime();
-            let itensVencidos = [];
+            const hoje = new Date();
+            hoje.setHours(0,0,0,0);
+            const hojeTS = hoje.getTime();
 
-            lojas.forEach(loja => {
-                loja.produtos.forEach(prod => {
-                    const p = prod.data.split('-');
-                    const dataProdTS = new Date(p[0], p[1]-1, p[2]).getTime();
-                    
-                    if(dataProdTS <= hojeTS) {
-                        itensVencidos.push(`• ${prod.nome} - ${loja.nome}`);
+            for (let i = 0; i < lojas.length; i++) {
+                for (let j = 0; j < lojas[i].produtos.length; j++) {
+                    const prod = lojas[i].produtos[j];
+                    const partes = prod.data.split('-');
+                    const dataTS = new Date(partes[0], partes[1]-1, partes[2]).getTime();
+
+                    if (dataTS <= hojeTS) {
+                        const mensagem = `${prod.nome} - ${lojas[i].nome}<br><br>Gostaria de remover o produto?!`;
+                        aviso(mensagem, (confirmou) => {
+                            if(confirmou) {
+                                lojas[i].produtos.splice(j, 1);
+                                salvar();
+                                aba('h');
+                                setTimeout(verificarVencidosUrgente, 400);
+                            }
+                        }, null, false, "PROMOTOR AJUDANTE:"); 
+                        return; 
                     }
-                });
-            });
-
-            if(itensVencidos.length > 0) {
-                // Formatação exata solicitada
-                const listaFormatada = itensVencidos.join('<br>');
-                const mensagemFinal = `
-                    <div class="text-left font-medium">
-                        ${listaFormatada}
-                        <br><br>
-                        Está <span class="text-red-600 font-black">VENCIDO</span>, verifique ⚠️
-                    </div>
-                `;
-                
-                aviso(mensagemFinal, null, null, true, "⚠️ ATENÇÃO PROMOTOR AJUDANTE INFORMA:");
+                }
             }
         }
 
-        // Funções de Navegação e Loja (Mantidas as mesmas do seu sistema atual)
         function aba(id, params = {}) {
             document.querySelectorAll('.nav-aba').forEach(b => b.classList.remove('ativa'));
             if(document.getElementById('n-'+id)) document.getElementById('n-'+id).classList.add('ativa');
             const m = document.getElementById('corpo'); m.innerHTML = "";
 
             if(id === 'h') {
-                const hoje = new Date(); hoje.setHours(0,0,0,0);
-                const hojeTS = hoje.getTime();
-                const limiteTS = hojeTS + (3 * 24 * 60 * 60 * 1000);
-                
-                let alertas = [];
-                lojas.forEach((l, lIdx) => l.produtos.forEach((p, pIdx) => {
-                    const partes = p.data.split('-');
-                    const dTS = new Date(partes[0], partes[1]-1, partes[2]).getTime();
-                    if(dTS <= limiteTS) alertas.push({...p, loja: l.nome, lIdx, pIdx, timestamp: dTS});
-                }));
+                m.innerHTML = `<div class="opacity-20 text-center py-20 uppercase font-black text-xs italic tracking-widest">Painel Operacional</div>`;
+            }
 
-                alertas.sort((a, b) => a.timestamp - b.timestamp);
-                const gruposData = {};
-                alertas.forEach(a => {
-                    if(!gruposData[a.data]) gruposData[a.data] = [];
-                    gruposData[a.data].push(a);
+            if(id === 'l') {
+                m.innerHTML = `<button onclick="addLoja()" class="btn-amarelo mb-4 shadow-lg shadow-amber-500/10 text-[10px]">+ NOVA LOJA</button>`;
+                lojas.forEach((l, idx) => {
+                    m.innerHTML += `
+                        <div class="card-app p-3 mb-2 flex justify-between items-center">
+                            <div class="flex items-center gap-3 overflow-hidden" onclick="verLoja(${idx})">
+                                <div class="truncate">
+                                    <div class="font-black uppercase italic text-[13px] text-white truncate">${l.nome}</div>
+                                    <div class="text-[8px] text-amber-500 font-bold uppercase">${l.produtos.length} PRODUTOS</div>
+                                </div>
+                            </div>
+                            <i onclick="delLoja(${idx})" data-lucide="trash-2" class="w-5 h-5 text-red-600"></i>
+                        </div>`;
                 });
+            }
 
+            if(id === 'p') {
+                const p = params.prod || { nome: '', qtd: '', data: '' };
                 m.innerHTML = `
-                    <div class="grid grid-cols-2 gap-3 mb-6">
-                        <div class="bg-gray-900/50 p-3 rounded-2xl border border-gray-800 text-center">
-                            <div class="text-xl font-black text-amber-500">${lojas.length}</div>
-                            <div class="text-[8px] text-gray-500 font-bold uppercase">Lojas</div>
-                        </div>
-                        <div class="bg-gray-900/50 p-3 rounded-2xl border border-gray-800 text-center">
-                            <div class="text-xl font-black text-red-500">${alertas.length}</div>
-                            <div class="text-[8px] text-gray-500 font-bold uppercase">Alertas</div>
-                        </div>
+                <h2 class="font-black uppercase text-amber-500 italic text-lg mb-6">Cadastro de Itens</h2>
+                <div class="space-y-4">
+                    <input id="pn" placeholder="Nome do Produto" class="input-custom" value="${p.nome}">
+                    <div class="grid grid-cols-2 gap-3">
+                        <input id="pq" placeholder="Qtd" type="number" class="input-custom" value="${p.qtd}">
+                        <input id="pd" type="date" class="input-custom" value="${p.data}">
                     </div>
-                    ${Object.keys(gruposData).sort().map(data => {
-                        const p = data.split('-');
-                        const vencido = new Date(p[0], p[1]-1, p[2]).getTime() <= hojeTS;
-                        return `
-                        <div class="mb-6">
-                            <h3 class="text-[10px] font-black uppercase ${vencido ? 'text-red-500 animate-pulse' : 'text-amber-500'} mb-2 italic flex items-center gap-2">
-                                <i data-lucide="calendar" class="w-3 h-3"></i> ${vencido ? 'VENCIDO / HOJE' : 'PRÓXIMO'}: ${data.split('-').reverse().join('/')}
+                    <select id="pl" class="input-custom">
+                        <option value="">Selecione a Loja...</option>
+                        ${lojas.map(l => `<option value="${l.nome}" ${l.nome===params.loja?'selected':''}>${l.nome}</option>`).join('')}
+                    </select>
+                    <button onclick="salvarP()" class="btn-amarelo mt-4">SALVAR PRODUTO</button>
+                </div>`;
+                contextEdit = params.ref || { lIdx: -1, pIdx: -1 };
+            }
+
+            if(id === 'r') {
+                m.innerHTML = `<h2 class="text-center font-black uppercase text-amber-500 italic mb-6 tracking-tighter">Relatório Geral de Estoque</h2>`;
+                if (lojas.length === 0) m.innerHTML += `<div class="opacity-20 text-center py-10 uppercase font-black text-xs">Sem dados</div>`;
+                lojas.forEach(l => {
+                    if(l.produtos.length > 0) {
+                        let htmlLoja = `<div class="mb-6 bg-gray-900/50 p-4 rounded-2xl border border-gray-800"><h3 class="text-amber-500 font-black text-[12px] mb-4 uppercase italic border-b border-gray-800 pb-2 flex justify-between"><span>${l.nome}</span><span class="text-gray-500 text-[9px]">${l.produtos.length} ITENS</span></h3><div class="space-y-3">`;
+                        l.produtos.forEach(p => {
+                            const d = p.data.split('-').reverse().join('/');
+                            htmlLoja += `<div class="flex justify-between items-center border-b border-white/5 pb-2 last:border-0"><div><span class="text-white font-bold text-[11px] uppercase italic block leading-tight">${p.nome}</span><span class="text-gray-500 text-[9px] italic">Vence: ${d}</span></div><div class="bg-amber-500/10 px-2 py-1 rounded-md"><span class="text-amber-500 font-black text-[10px]">${p.qtd} UN</span></div></div>`;
+                        });
+                        htmlLoja += `</div></div>`;
+                        m.innerHTML += htmlLoja;
+                    }
+                });
+            }
+            lucide.createIcons();
+        }
+
+        function verLoja(idx) {
+            const l = lojas[idx];
+            const m = document.getElementById('corpo');
+            m.innerHTML = `<div class="flex items-center gap-2 mb-6" onclick="aba('l')"><i data-lucide="chevron-left" class="text-amber-500"></i><h2 class="font-black uppercase text-amber-500 italic text-lg">${l.nome}</h2></div><div class="space-y-3">${l.produtos.map((p, pi) => `<div class="card-app p-3 flex justify-between items-center"><div><div class="text-white font-black italic uppercase text-xs">${p.nome}</div><div class="text-[9px] text-gray-500">${p.data.split('-').reverse().join('/')} | ${p.qtd} UN</div></div><i onclick="delProd(${idx}, ${pi})" data-lucide="x-circle" class="w-4 h-4 text-red-500"></i></div>`).join('') || '<div class="opacity-20 py-10 text-center font-black text-xs uppercase">Vazio</div>'}</div>`;
+            lucide.createIcons();
+        }
+
+        function addLoja() { aviso("NOME DA NOVA LOJA:", n => { if(n){ lojas.push({nome: n, produtos: []}); salvar(); aba('l'); } }, ""); }
+        function delLoja(idx) { aviso(`EXCLUIR ${lojas[idx].nome}?`, c => { if(c){ lojas.splice(idx, 1); salvar(); aba('l'); } }); }
+        function delProd(li, pi) { lojas[li].produtos.splice(pi, 1); salvar(); verLoja(li); }
+
+        function salvarP() {
+            const n = document.getElementById('pn').value, q = document.getElementById('pq').value, d = document.getElementById('pd').value, lNome = document.getElementById('pl').value;
+            if(!n || !d || !lNome) return aviso("PREENCHA TUDO!", null, null, true);
+            let targetLIdx = lojas.findIndex(x => x.nome === lNome);
+            if(contextEdit.pIdx > -1) { lojas[contextEdit.lIdx].produtos[contextEdit.pIdx] = {nome: n, qtd: q, data: d}; } 
+            else { if(targetLIdx > -1) lojas[targetLIdx].produtos.push({nome: n, qtd: q, data: d}); }
+            salvar();
+            aba('r');
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            aba('h');
+            setTimeout(verificarVencidosUrgente, 1200);
+        });
+
+        window.onfocus = () => { verificarVencidosUrgente(); };
+    </script>
+</body>
+</html>
+split('-').reverse().join('/')}
                             </h3>
                             <div class="space-y-2">
                                 ${gruposData[data].map(a => `
