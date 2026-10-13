@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#030712">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="logo.png">
+    <title>Promotor Ajudante Pro</title>
+    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+    <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #030712;
+            color: white;
+            margin: 0;
+            overflow: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .secao { display: none; height: 100vh; height: 100dvh; flex-direction: column; }
+        .secao.ativa { display: flex !important; }
+
+        .card-app {
+            background-color: #111827;
+            border: 1px solid #1f2937;
+            border-radius: 0.8rem;
+        }
+
+        .nav-aba.ativa { background-color: #f59e0b !important; color: #030712 !important; }
+
+        .input-custom {
+            width: 100%;
+            background-color: #0f172a;
+            border: 1px solid #1e293b;
+            padding: 0.8rem;
+            border-radius: 0.8rem;
+            color: white;
+            outline: none;
+            font-size: 16px; /* evita zoom automático no iPhone */
+        }
+        .input-custom:focus { border-color: #f59e0b; }
+
+        .btn-amarelo {
+            background-color: #f59e0b;
+            color: #030712;
+            font-weight: 900;
+            padding: 1rem;
+            border-radius: 0.8rem;
+            text-transform: uppercase;
+            width: 100%;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+            border: none;
+        }
+        .btn-amarelo:disabled { opacity: .5; }
+
+        #modal-container {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.92);
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            padding: 1.5rem;
+            backdrop-filter: blur(6px);
+        }
+
+        button { cursor: pointer; }
+        button:focus-visible, [data-act]:focus-visible { outline: 2px solid #f59e0b; outline-offset: 2px; }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body>
+
+    <!-- MODAL -->
+    <div id="modal-container" role="dialog" aria-modal="true">
+        <div class="bg-[#111827] border border-gray-800 rounded-[2rem] w-full max-w-xs p-8 shadow-2xl">
+            <h2 id="modal-titulo" class="text-amber-500 font-black text-[10px] uppercase italic tracking-widest mb-2">SISTEMA</h2>
+            <p id="modal-subtext" class="text-white text-sm mb-6 font-medium leading-relaxed"></p>
+            <div id="modal-input-area" class="mb-4">
+                <input id="modal-input" class="input-custom border-amber-500/20" type="text" maxlength="80">
+            </div>
+            <div class="flex gap-3">
+                <button id="btn-cancelar" class="flex-1 py-3 text-[10px] font-black uppercase text-gray-500">CANCELAR</button>
+                <button id="modal-confirm" class="flex-1 bg-amber-500 text-gray-950 py-4 rounded-2xl text-[10px] font-black uppercase shadow-lg shadow-amber-500/20">CONFIRMAR</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CARREGANDO / CONFIGURAÇÃO -->
+    <section id="tela-carregando" class="secao ativa items-center justify-center p-6 text-center">
+        <img src="logo.png" onerror="this.src='https://raw.githubusercontent.com/melobortolatorenan-max/Promotor-ajudante/main/logo.png'" class="w-16 h-16 rounded-2xl mb-4" alt="">
+        <div id="carregando-txt" class="text-[10px] font-black uppercase tracking-widest text-gray-500">Carregando...</div>
+    </section>
+
+    <!-- LOGIN / CRIAR CONTA -->
+    <section id="tela-auth" class="secao overflow-y-auto no-scrollbar">
+        <div class="m-auto w-full max-w-sm p-6">
+            <div class="flex items-center gap-3 mb-8">
+                <img src="logo.png" onerror="this.src='https://raw.githubusercontent.com/melobortolatorenan-max/Promotor-ajudante/main/logo.png'" class="w-12 h-12 rounded-xl" alt="">
+                <div>
+                    <h1 class="text-[9px] font-bold text-gray-500 uppercase tracking-widest leading-none">Promotor</h1>
+                    <span class="text-2xl font-black text-amber-500 uppercase italic leading-none">Ajudante</span>
+                </div>
+            </div>
+            <h2 id="auth-titulo" class="text-amber-500 font-black italic uppercase text-lg mb-6">Entrar</h2>
+            <div class="space-y-4">
+                <input id="a-nome" class="input-custom hidden" placeholder="Seu nome" autocomplete="name" maxlength="60">
+                <input id="a-email" class="input-custom" type="email" placeholder="E-mail" autocomplete="email" inputmode="email">
+                <input id="a-senha" class="input-custom" type="password" placeholder="Senha (mínimo 6 caracteres)" autocomplete="current-password">
+                <p id="a-erro" class="text-red-500 text-[11px] font-bold min-h-[1rem]" role="alert"></p>
+                <button id="a-btn" data-act="authSubmit" class="btn-amarelo">ENTRAR</button>
+                <button id="a-troca" data-act="authModo" class="w-full py-3 text-[10px] font-black text-gray-400 uppercase">CRIAR CONTA NOVA</button>
+                <button data-act="authReset" class="w-full py-2 text-[10px] font-black text-gray-600 uppercase">ESQUECI A SENHA</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- APP -->
+    <section id="tela-app" class="secao">
+        <header class="p-4 border-b border-gray-800 bg-gray-950/80 sticky top-0 z-50" style="padding-top:max(1rem, env(safe-area-inset-top))">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-3">
+                    <img src="logo.png" onerror="this.src='https://raw.githubusercontent.com/melobortolatorenan-max/Promotor-ajudante/main/logo.png'" class="w-10 h-10 rounded-xl" alt="">
+                    <div>
+                        <h1 class="text-[9px] font-bold text-gray-500 uppercase tracking-widest leading-none">Promotor</h1>
+                        <span class="text-xl font-black text-amber-500 uppercase italic leading-none">Ajudante</span>
+                    </div>
+                </div>
+                <button id="btn-conta" data-act="tab" data-id="c" class="p-2 text-gray-500" aria-label="Minha conta e notificações"><i data-lucide="settings" class="w-5 h-5"></i></button>
+            </div>
+            <nav class="flex gap-1 bg-gray-900 p-1 rounded-2xl border border-gray-800">
+                <button data-act="tab" data-id="h" class="nav-aba flex-1 py-2 rounded-xl text-[9px] font-black uppercase">Início</button>
+                <button data-act="tab" data-id="l" class="nav-aba flex-1 py-2 rounded-xl text-[9px] font-black uppercase">Lojas</button>
+                <button data-act="tab" data-id="p" class="nav-aba flex-1 py-2 rounded-xl text-[9px] font-black uppercase">Produtos</button>
+            </nav>
+        </header>
+        <main id="corpo" class="p-4 flex-1 overflow-y-auto no-scrollbar pb-24"></main>
+    </section>
+
+    <script src="firebase-config.js"></script>
+    <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendPasswordResetEmail, updateProfile }
+        from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+    import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, writeBatch, serverTimestamp }
+        from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+    import { getMessaging, getToken, deleteToken, onMessage, isSupported }
+        from "https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging.js";
+
+    /* ================= utilidades ================= */
+    const $ = (s) => document.querySelector(s);
+    const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const fmt = (d) => d.split('-').reverse().join('/');
+    // dias entre hoje (fuso do aparelho) e a data 'AAAA-MM-DD'. Negativo = já venceu.
+    function diasAte(dataISO) {
+        const [y, m, d] = dataISO.split('-').map(Number);
+        const alvo = new Date(y, m - 1, d);
+        const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+        return Math.round((alvo - hoje) / 86400000);
+    }
+    const plural = (n, a, b) => n === 1 ? a : b;
+
+    /* ================= estado ================= */
+    let app, auth, db, messaging, msgOk = false;
+    let uid = null, userInfo = null;
+    let lojas = [], produtos = [];
+    let unsubs = [];
+    let prontoProd = false;
+    let view = { tab: 'h', lojaId: null, prod: null, preLoja: null, origem: null };
+    let modoCriar = false;
+    const ignorados = new Set(JSON.parse(sessionStorage.getItem('ign_venc') || '[]'));
+
+    const colLojas = () => collection(db, 'users', uid, 'lojas');
+    const colProd  = () => collection(db, 'users', uid, 'produtos');
+    const refLoja  = (id) => doc(db, 'users', uid, 'lojas', id);
+    const refProd  = (id) => doc(db, 'users', uid, 'produtos', id);
+    const nomeLoja = (id) => (lojas.find(l => l.id === id) || {}).nome || '—';
+
+    function erroDb(e) {
+        console.error(e);
+        const msg = e && e.code === 'permission-denied'
+            ? 'Sem permissão. Saia e entre novamente.'
+            : 'Não foi possível salvar. Verifique a conexão e tente de novo.';
+        aviso(msg, { soConfirmar: true });
+    }
+
+    /* ================= modal ================= */
+    const modal = $('#modal-container');
+    function fecharModal() { modal.style.display = 'none'; }
+    function aviso(msg, o = {}) {
+        $('#modal-titulo').textContent = o.titulo || 'SISTEMA';
+        $('#modal-subtext').innerHTML = msg; // quem chama escapa o conteúdo dinâmico
+        const inp = $('#modal-input');
+        const temInput = o.input !== undefined && o.input !== null;
+        $('#modal-input-area').style.display = temInput ? 'block' : 'none';
+        if (temInput) inp.value = o.input;
+        $('#btn-cancelar').style.display = o.soConfirmar ? 'none' : 'block';
+        modal.style.display = 'flex';
+        $('#btn-cancelar').onclick = () => { fecharModal(); if (o.cancel) o.cancel(); };
+        $('#modal-confirm').onclick = () => { const v = temInput ? inp.value.trim() : true; fecharModal(); if (o.ok) o.ok(v); };
+        setTimeout(() => (temInput ? inp : $('#modal-confirm')).focus(), 50);
+    }
+    document.addEventListener('keydown', (e) => {
+        if (modal.style.display !== 'flex') {
+            if (e.key === 'Enter' && $('#tela-auth').classList.contains('ativa') && /^a-(email|senha|nome)$/.test(e.target.id)) acoes.authSubmit();
+            return;
+        }
+        if (e.key === 'Escape') { ($('#btn-cancelar').style.display !== 'none' ? $('#btn-cancelar') : $('#modal-confirm')).click(); }
+        if (e.key === 'Enter' && e.target.id === 'modal-input') $('#modal-confirm').click();
+    });
+
+    /* ================= telas ================= */
+    function mostrar(nome) {
+        ['carregando', 'auth', 'app'].forEach(n => $('#tela-' + n).classList.toggle('ativa', n === nome));
+        if (nome === 'app') lucide.createIcons();
+    }
+
+    function ir(tab, extra = {}) {
+        view = { tab, lojaId: null, prod: null, preLoja: null, origem: null, ...extra };
+        desenhar(true);
+        if (tab !== 'p' && tab !== 'c') setTimeout(verificarVencidos, 300);
+    }
+
+    // Redesenha após mudanças vindas do banco, sem atrapalhar formulários abertos
+    function atualizar() {
+        if (!uid) return;
+        if (view.tab === 'p' || view.tab === 'c') return;
+        desenhar(false);
+    }
+
+    function desenhar(topo) {
+        document.querySelectorAll('.nav-aba').forEach(b => b.classList.toggle('ativa', b.dataset.id === view.tab));
+        $('#btn-conta').classList.toggle('text-amber-500', view.tab === 'c');
+        $('#btn-conta').classList.toggle('text-gray-500', view.tab !== 'c');
+        const m = $('#corpo');
+        const st = m.scrollTop;
+        let html = '';
+        if (view.tab === 'h') html = htmlHome();
+        else if (view.tab === 'l') html = view.lojaId ? htmlLoja(view.lojaId) : htmlLojas();
+        else if (view.tab === 'p') html = htmlForm();
+        else html = htmlConta();
+        m.innerHTML = html;
+        m.scrollTop = topo ? 0 : st;
+        lucide.createIcons();
+    }
+
+    function htmlHome() {
+        const alertas = produtos.filter(p => diasAte(p.data) <= 5)
+            .sort((a, b) => a.data.localeCompare(b.data) || a.nome.localeCompare(b.nome));
+        const grupos = {};
+        alertas.forEach(p => (grupos[p.data] = grupos[p.data] || []).push(p));
+        const blocos = Object.keys(grupos).sort().map(data => {
+            const d = diasAte(data), crit = d <= 0;
+            const rot = d < 0 ? `VENCIDO HÁ ${-d} ${plural(-d, 'DIA', 'DIAS')}`
+                : d === 0 ? 'VENCE HOJE' : d === 1 ? 'VENCE AMANHÃ' : `VENCE EM ${d} DIAS`;
+            return `
+            <div class="mb-6">
+                <h3 class="text-[10px] font-black uppercase ${crit ? 'text-red-500 animate-pulse' : 'text-amber-500'} mb-2 italic flex items-center gap-2">
+                    <i data-lucide="calendar" class="w-3 h-3"></i> ${rot}: ${fmt(data)}
+                </h3>
+                <div class="space-y-2">
+                    ${grupos[data].map(a => `
+                    <div class="card-app p-3 border-l-4 ${crit ? 'border-l-red-600' : 'border-l-amber-500'} flex justify-between items-center cursor-pointer" data-act="verLoja" data-id="${esc(a.lojaId)}">
+                        <div class="flex-1 truncate mr-2">
+                            <span class="text-[8px] text-gray-500 font-bold uppercase block leading-none mb-1">${esc(nomeLoja(a.lojaId))}</span>
+                            <div class="text-white font-black italic uppercase text-xs truncate leading-tight">${esc(a.nome)}</div>
+                            <span class="${crit ? 'text-red-500' : 'text-amber-500'} font-bold text-[9px] uppercase">${esc(a.qtd)} UN</span>
+                        </div>
+                        <button data-act="resolver" data-id="${esc(a.id)}" class="p-2 bg-red-500/10 rounded-lg" aria-label="Remover (resolvido)"><i data-lucide="trash-2" class="w-3.5 h-3.5 text-red-500"></i></button>
+                    </div>`).join('')}
+                </div>
+            </div>`;
+        }).join('');
+        return `
+            <div class="grid grid-cols-2 gap-3 mb-6">
+                <div class="bg-gray-900/50 p-3 rounded-2xl border border-gray-800 text-center">
+                    <div class="text-xl font-black text-amber-500">${lojas.length}</div>
+                    <div class="text-[8px] text-gray-500 font-bold uppercase">Lojas</div>
+                </div>
+                <div class="bg-gray-900/50 p-3 rounded-2xl border border-gray-800 text-center">
+                    <div class="text-xl font-black text-red-500">${alertas.length}</div>
+                    <div class="text-[8px] text-gray-500 font-bold uppercase">Alertas</div>
+                </div>
+            </div>
+            ${blocos || '<div class="opacity-20 text-center py-10 uppercase font-black text-xs">Sem alertas</div>'}`;
+    }
+
+    function htmlLojas() {
+        const itens = lojas.map(l => {
+            const qtd = produtos.filter(p => p.lojaId === l.id).length;
+            return `
+            <div class="card-app p-3 mb-2 flex justify-between items-center">
+                <div class="flex items-center gap-3 overflow-hidden">
+                    <div class="flex flex-col gap-1.5 border-r border-gray-800 pr-3">
+                        <button data-act="moverLoja" data-id="${esc(l.id)}" data-dir="-1" class="text-gray-600 active:text-amber-500" aria-label="Subir"><i data-lucide="circle-arrow-up" class="w-4 h-4"></i></button>
+                        <button data-act="moverLoja" data-id="${esc(l.id)}" data-dir="1" class="text-gray-600 active:text-amber-500" aria-label="Descer"><i data-lucide="circle-arrow-down" class="w-4 h-4"></i></button>
+                    </div>
+                    <div class="flex items-center gap-2 truncate cursor-pointer" data-act="verLoja" data-id="${esc(l.id)}">
+                        <div class="truncate">
+                            <div class="font-black uppercase italic text-[13px] text-white truncate">${esc(l.nome)}</div>
+                            <div class="text-[8px] text-amber-500 font-bold uppercase">${qtd} ${plural(qtd, 'PRODUTO', 'PRODUTOS')}</div>
+                        </div>
+                        <button data-act="renomearLoja" data-id="${esc(l.id)}" class="p-1 text-blue-400 opacity-60" aria-label="Renomear"><i data-lucide="pen-line" class="w-3.5 h-3.5"></i></button>
+                    </div>
+                </div>
+                <div class="flex gap-2 ml-2">
+                    <button data-act="novoProd" data-id="${esc(l.id)}" class="p-1 text-green-500" aria-label="Adicionar produto"><i data-lucide="circle-plus" class="w-5 h-5"></i></button>
+                    <button data-act="delLoja" data-id="${esc(l.id)}" class="p-1 text-red-600" aria-label="Apagar loja"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
+                </div>
+            </div>`;
+        }).join('');
+        return `<button data-act="addLoja" class="btn-amarelo mb-4 shadow-lg shadow-amber-500/10 text-[10px]">+ NOVA LOJA</button>${itens}`;
+    }
+
+    function htmlLoja(id) {
+        const l = lojas.find(x => x.id === id);
+        if (!l) { view.lojaId = null; return htmlLojas(); }
+        const agrupados = {};
+        produtos.filter(p => p.lojaId === id)
+            .sort((a, b) => a.data.localeCompare(b.data))
+            .forEach(p => {
+                const k = p.nome.trim().toUpperCase();
+                (agrupados[k] = agrupados[k] || { nome: p.nome, itens: [] }).itens.push(p);
+            });
+        const grupos = Object.values(agrupados).map(g => `
+            <div class="card-app p-3">
+                <div class="text-amber-500 font-black uppercase italic text-[10px] mb-2 border-b border-white/5 pb-1">${esc(g.nome)}</div>
+                <div class="space-y-2">
+                    ${g.itens.map(it => {
+                        const d = diasAte(it.data);
+                        const cor = d <= 0 ? 'text-red-500' : d <= 5 ? 'text-amber-500' : 'text-gray-500';
+                        const rot = d < 0 ? 'vencido' : d === 0 ? 'hoje' : d === 1 ? 'amanhã' : `em ${d} d`;
+                        return `
+                        <div class="flex justify-between items-center bg-gray-950/30 p-2 rounded-lg">
+                            <div class="text-white font-bold text-[11px] leading-tight">${fmt(it.data)} <span class="${cor} font-black uppercase text-[9px]">· ${rot}</span>
+                                <span class="text-gray-500 font-medium block">Qtd: ${esc(it.qtd)}</span>
+                            </div>
+                            <div class="flex gap-3">
+                                <button data-act="editProd" data-id="${esc(it.id)}" class="p-1 text-blue-400" aria-label="Editar"><i data-lucide="pen-line" class="w-4 h-4"></i></button>
+                                <button data-act="delProd" data-id="${esc(it.id)}" class="p-1 text-red-500" aria-label="Remover"><i data-lucide="circle-x" class="w-4 h-4"></i></button>
+                            </div>
+                        </div>`;
+                    }).join('')}
+                </div>
+            </div>`).join('');
+        return `
+            <div class="flex items-center justify-between mb-6">
+                <button class="flex items-center gap-2 flex-1 truncate text-left" data-act="voltarLojas">
+                    <i data-lucide="chevron-left" class="w-6 h-6 text-amber-500 shrink-0"></i>
+                    <h2 class="font-black uppercase text-amber-500 italic text-lg truncate">${esc(l.nome)}</h2>
+                </button>
+                <button data-act="novoProd" data-id="${esc(l.id)}" class="bg-amber-500 text-gray-950 px-3 py-2 rounded-xl text-[10px] font-black uppercase">+ PRODUTO</button>
+            </div>
+            <div class="space-y-3">${grupos || '<div class="text-center opacity-20 py-10 font-black text-xs uppercase">Sem produtos</div>'}</div>`;
+    }
+
+    function htmlForm() {
+        const e = view.prod ? produtos.find(p => p.id === view.prod) : null;
+        const p = e || { nome: '', qtd: '', data: '' };
+        const sel = e ? e.lojaId : (view.preLoja || '');
+        if (!lojas.length) {
+            return `<h2 class="text-amber-500 font-black italic uppercase text-lg mb-4">Novo Produto</h2>
+                <p class="text-gray-400 text-sm mb-6">Cadastre uma loja primeiro para poder adicionar produtos.</p>
+                <button data-act="tab" data-id="l" class="btn-amarelo">IR PARA LOJAS</button>`;
+        }
+        return `
+            <button class="flex items-center gap-2 mb-6" data-act="voltarForm">
+                <i data-lucide="chevron-left" class="w-6 h-6 text-amber-500"></i>
+                <h2 class="text-amber-500 font-black italic uppercase text-lg">${e ? 'Editar' : 'Novo'} Produto</h2>
+            </button>
+            <div class="space-y-4">
+                <div><label class="text-[9px] font-black text-gray-500 uppercase ml-2" for="pl">Loja Selecionada</label>
+                <select id="pl" class="input-custom"><option value="">Selecionar loja...</option>${lojas.map(l => `<option value="${esc(l.id)}" ${l.id === sel ? 'selected' : ''}>${esc(l.nome)}</option>`).join('')}</select></div>
+                <div><label class="text-[9px] font-black text-gray-500 uppercase ml-2" for="pn">Nome do Produto</label>
+                <input id="pn" class="input-custom" placeholder="Ex: Iogurte" maxlength="120" value="${esc(p.nome)}"></div>
+                <div class="flex gap-3">
+                    <div class="flex-1"><label class="text-[9px] font-black text-gray-500 uppercase ml-2" for="pq">Quantidade</label>
+                    <input id="pq" type="number" inputmode="numeric" min="0" class="input-custom" placeholder="1" value="${esc(p.qtd)}"></div>
+                    <div class="flex-[2]"><label class="text-[9px] font-black text-gray-500 uppercase ml-2" for="pd">Vencimento</label>
+                    <input id="pd" type="date" class="input-custom" value="${esc(p.data)}"></div>
+                </div>
+                <button data-act="salvarProd" class="btn-amarelo mt-4">SALVAR PRODUTO</button>
+                <button data-act="voltarForm" class="w-full py-3 text-[10px] font-black text-gray-500 uppercase">CANCELAR</button>
+            </div>`;
+    }
+
+    function notifEstado() {
+        if (!msgOk) return { txt: 'Sem suporte neste aparelho/navegador', ativo: false, suporte: false };
+        if (Notification.permission === 'denied') return { txt: 'Bloqueadas no navegador', ativo: false, suporte: true };
+        if (Notification.permission === 'granted' && localStorage.getItem('fcm_token')) return { txt: 'Ativas neste aparelho', ativo: true, suporte: true };
+        return { txt: 'Desativadas neste aparelho', ativo: false, suporte: true };
+    }
+
+    function htmlConta() {
+        const n = notifEstado();
+        return `
+            <h2 class="text-amber-500 font-black italic uppercase text-lg mb-6">Minha Conta</h2>
+            <div class="card-app p-4 mb-3">
+                <div class="text-[9px] text-gray-500 font-black uppercase mb-1">Promotor</div>
+                <div class="text-white font-black italic uppercase text-sm truncate">${esc((userInfo && userInfo.displayName) || 'Sem nome')}</div>
+                <div class="text-gray-400 text-xs truncate">${esc(userInfo && userInfo.email)}</div>
+            </div>
+            <div class="card-app p-4 mb-3">
+                <div class="flex items-center gap-2 mb-1">
+                    <i data-lucide="${n.ativo ? 'bell' : 'bell-off'}" class="w-4 h-4 ${n.ativo ? 'text-amber-500' : 'text-gray-500'}"></i>
+                    <div class="text-[9px] text-gray-500 font-black uppercase">Notificações de vencimento</div>
+                </div>
+                <div class="text-white font-bold text-sm mb-2">${n.txt}</div>
+                <p class="text-gray-500 text-[11px] leading-snug mb-3">Você recebe um aviso pela manhã quando houver produtos vencendo em 5 dias, 3 dias, 2 dias e no dia do vencimento.</p>
+                ${n.suporte ? (n.ativo
+                    ? '<button data-act="notifOff" class="w-full py-3 rounded-xl border border-gray-700 text-[10px] font-black uppercase text-gray-400">DESATIVAR NESTE APARELHO</button>'
+                    : '<button data-act="notifOn" class="btn-amarelo">ATIVAR NOTIFICAÇÕES</button>')
+                    : '<p class="text-[11px] text-gray-500">No iPhone, abra o site no Safari, toque em Compartilhar e em "Adicionar à Tela de Início". Depois abra o app pelo ícone e ative aqui.</p>'}
+            </div>
+            <button data-act="sair" class="w-full py-4 rounded-xl border border-red-900/50 text-[10px] font-black uppercase text-red-500 mt-2">SAIR DA CONTA</button>
+            <p class="text-center text-[9px] text-gray-700 mt-6 uppercase font-bold">Promotor Ajudante · v4</p>`;
+    }
+
+    /* ================= ações ================= */
+    function chunkOps(ops) {
+        const execs = [];
+        for (let i = 0; i < ops.length; i += 400) {
+            const b = writeBatch(db);
+            ops.slice(i, i + 400).forEach(f => f(b));
+            execs.push(b.commit());
+        }
+        return Promise.all(execs);
+    }
+
+    const acoes = {
+        tab: (d) => ir(d.id),
+        verLoja: (d) => ir('l', { lojaId: d.id }),
+        voltarLojas: () => ir('l'),
+        addLoja: () => aviso('NOME DA NOVA LOJA:', { input: '', ok: n => {
+            if (n) addDoc(colLojas(), { nome: n.slice(0, 80), ordem: Date.now(), criadoEm: serverTimestamp() }).catch(erroDb);
+        }}),
+        renomearLoja: (d) => {
+            const l = lojas.find(x => x.id === d.id); if (!l) return;
+            aviso('EDITAR NOME DA LOJA:', { input: l.nome, ok: n => { if (n) updateDoc(refLoja(l.id), { nome: n.slice(0, 80) }).catch(erroDb); } });
+        },
+        moverLoja: (d) => {
+            const i = lojas.findIndex(x => x.id === d.id), j = i + Number(d.dir);
+            if (i < 0 || j < 0 || j >= lojas.length) return;
+            const a = lojas[i], b = lojas[j];
+            let oa = a.ordem, ob = b.ordem;
+            if (oa === ob) ob = oa + (j > i ? 1 : -1);
+            chunkOps([bt => bt.update(refLoja(a.id), { ordem: ob }), bt => bt.update(refLoja(b.id), { ordem: oa })]).catch(erroDb);
+        },
+        delLoja: (d) => {
+            const l = lojas.find(x => x.id === d.id); if (!l) return;
+            const dela = produtos.filter(p => p.lojaId === l.id);
+            aviso(`APAGAR <b>${esc(l.nome)}</b>${dela.length ? ` E ${dela.length} ${plural(dela.length, 'PRODUTO', 'PRODUTOS')}` : ''}?`, { ok: () => {
+                const ops = dela.map(p => bt => bt.delete(refProd(p.id)));
+                ops.push(bt => bt.delete(refLoja(l.id)));
+                chunkOps(ops).catch(erroDb);
+            }});
+        },
+        novoProd: (d) => ir('p', { preLoja: d.id, origem: view.tab === 'l' && view.lojaId ? view.lojaId : null }),
+        editProd: (d) => { const p = produtos.find(x => x.id === d.id); if (p) ir('p', { prod: p.id, origem: p.lojaId }); },
+        voltarForm: () => view.origem ? ir('l', { lojaId: view.origem }) : ir('h'),
+        delProd: (d) => aviso('REMOVER ITEM?', { ok: () => deleteDoc(refProd(d.id)).catch(erroDb) }),
+        resolver: (d) => aviso('RESOLVIDO?', { ok: () => deleteDoc(refProd(d.id)).catch(erroDb) }),
+        salvarProd: () => {
+            const nome = $('#pn').value.trim(), data = $('#pd').value, lojaId = $('#pl').value;
+            const qRaw = $('#pq').value.trim();
+            const qtd = qRaw === '' ? 1 : Math.max(0, parseInt(qRaw, 10) || 0);
+            if (!nome || !data || !lojaId) return aviso('PREENCHA TUDO!', { soConfirmar: true });
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return aviso('DATA INVÁLIDA!', { soConfirmar: true });
+            const dados = { nome: nome.slice(0, 120), qtd, data, lojaId };
+            if (view.prod) updateDoc(refProd(view.prod), dados).catch(erroDb);
+            else addDoc(colProd(), { ...dados, criadoEm: serverTimestamp() }).catch(erroDb);
+            ir('h');
+        },
+        authModo: () => {
+            modoCriar = !modoCriar;
+            $('#a-nome').classList.toggle('hidden', !modoCriar);
+            $('#auth-titulo').textContent = modoCriar ? 'Criar conta' : 'Entrar';
+            $('#a-btn').textContent = modoCriar ? 'CRIAR CONTA' : 'ENTRAR';
+            $('#a-troca').textContent = modoCriar ? 'JÁ TENHO CONTA' : 'CRIAR CONTA NOVA';
+            $('#a-senha').autocomplete = modoCriar ? 'new-password' : 'current-password';
+            $('#a-erro').textContent = '';
+        },
+        authSubmit: async () => {
+            const email = $('#a-email').value.trim(), senha = $('#a-senha').value, nome = $('#a-nome').value.trim();
+            const erro = $('#a-erro'); erro.textContent = '';
+            if (!email || !senha) { erro.textContent = 'Preencha e-mail e senha.'; return; }
+            if (modoCriar && !nome) { erro.textContent = 'Informe seu nome.'; return; }
+            const btn = $('#a-btn'); btn.disabled = true;
+            try {
+                if (modoCriar) {
+                    const cred = await createUserWithEmailAndPassword(auth, email, senha);
+                    await updateProfile(cred.user, { displayName: nome });
+                    await setDoc(doc(db, 'users', cred.user.uid), { nome, email, criadoEm: serverTimestamp() }, { merge: true });
+                } else {
+                    await signInWithEmailAndPassword(auth, email, senha);
+                }
+            } catch (e) { erro.textContent = msgAuth(e); }
+            btn.disabled = false;
+        },
+        authReset: async () => {
+            const email = $('#a-email').value.trim(), erro = $('#a-erro');
+            if (!email) { erro.textContent = 'Digite seu e-mail acima e toque de novo.'; return; }
+            try { await sendPasswordResetEmail(auth, email); erro.className = erro.className.replace('text-red-500', 'text-amber-500'); erro.textContent = 'Enviamos um link para redefinir a senha no seu e-mail.'; }
+            catch (e) { erro.className = erro.className.replace('text-amber-500', 'text-red-500'); erro.textContent = msgAuth(e); }
+        },
+        notifOn: () => ativarNotificacoes(false),
+        notifOff: async () => { await desativarNotificacoes(); desenhar(false); },
+        sair: () => aviso('SAIR DA CONTA?', { ok: async () => { await desativarNotificacoes(); await signOut(auth); } }),
+    };
+
+    document.addEventListener('click', (e) => {
+        const el = e.target.closest('[data-act]');
+        if (!el || !acoes[el.dataset.act]) return;
+        acoes[el.dataset.act](el.dataset);
+    });
+
+    function msgAuth(e) {
+        const m = {
+            'auth/invalid-credential': 'E-mail ou senha incorretos.',
+            'auth/wrong-password': 'E-mail ou senha incorretos.',
+            'auth/user-not-found': 'E-mail ou senha incorretos.',
+            'auth/invalid-email': 'E-mail inválido.',
+            'auth/email-already-in-use': 'Este e-mail já tem conta. Toque em "Já tenho conta".',
+            'auth/weak-password': 'A senha precisa ter pelo menos 6 caracteres.',
+            'auth/network-request-failed': 'Sem conexão com a internet.',
+            'auth/too-many-requests': 'Muitas tentativas. Aguarde um pouco e tente de novo.',
+        };
+        return m[e.code] || 'Não foi possível concluir. Tente novamente.';
+    }
+
+    /* ================= vencidos ================= */
+    function verificarVencidos() {
+        if (!uid || !prontoProd || modal.style.display === 'flex' || view.tab === 'p') return;
+        const p = produtos.find(x => diasAte(x.data) < 0 && !ignorados.has(x.id));
+        if (!p) return;
+        const proximo = () => setTimeout(verificarVencidos, 400);
+        aviso(`<b>${esc(p.nome)}</b> - ${esc(nomeLoja(p.lojaId))}<br><br>Este produto já passou da data de vencimento! Deseja remover?`, {
+            titulo: 'JÁ VENCEU!',
+            ok: () => { deleteDoc(refProd(p.id)).catch(erroDb); proximo(); },
+            cancel: () => { ignorados.add(p.id); sessionStorage.setItem('ign_venc', JSON.stringify([...ignorados])); proximo(); },
+        });
+    }
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && uid) { atualizar(); verificarVencidos(); }
+    });
+
+    /* ================= notificações (FCM) ================= */
+    async function ativarNotificacoes(silencioso) {
+        try {
+            if (!msgOk) { if (!silencioso) aviso('Este aparelho/navegador não suporta notificações.', { soConfirmar: true }); return false; }
+            let perm = Notification.permission;
+            if (perm === 'default') { if (silencioso) return false; perm = await Notification.requestPermission(); }
+            if (perm !== 'granted') {
+                if (!silencioso) aviso('Permissão negada. Libere as notificações deste site nas configurações do navegador.', { soConfirmar: true });
+                desenhar(false); return false;
+            }
+            const reg = await navigator.serviceWorker.register('firebase-messaging-sw.js');
+            await navigator.serviceWorker.ready;
+            const token = await getToken(messaging, { vapidKey: window.FCM_VAPID_KEY, serviceWorkerRegistration: reg });
+            if (!token) throw new Error('sem-token');
+            await setDoc(doc(db, 'users', uid, 'tokens', token), { token, ua: navigator.userAgent.slice(0, 150), atualizadoEm: serverTimestamp() });
+            localStorage.setItem('fcm_token', token);
+            if (!silencioso) { aviso('Notificações ativadas neste aparelho!', { soConfirmar: true }); }
+            if (view.tab === 'c') desenhar(false);
+            return true;
+        } catch (e) {
+            console.error(e);
+            if (!silencioso) aviso('Não foi possível ativar as notificações (' + esc(e.code || e.message) + ').', { soConfirmar: true });
+            return false;
+        }
+    }
+    async function desativarNotificacoes() {
+        const token = localStorage.getItem('fcm_token');
+        try {
+            if (token && uid) await deleteDoc(doc(db, 'users', uid, 'tokens', token));
+            if (messaging) await deleteToken(messaging);
+        } catch (e) { console.warn(e); }
+        localStorage.removeItem('fcm_token');
+    }
+
+    /* ================= dados antigos (localStorage) ================= */
+    function dadosAntigos() {
+        try { const a = JSON.parse(localStorage.getItem('db_promotor_v3') || '[]'); return Array.isArray(a) && a.some(l => l && l.nome) ? a : null; }
+        catch { return null; }
+    }
+    function oferecerImportacao() {
+        const antigos = dadosAntigos();
+        if (!antigos || localStorage.getItem('imp_' + uid)) return;
+        const nProd = antigos.reduce((s, l) => s + ((l.produtos || []).length), 0);
+        aviso(`Encontrei dados antigos neste aparelho: <b>${antigos.length}</b> ${plural(antigos.length, 'loja', 'lojas')} e <b>${nProd}</b> ${plural(nProd, 'produto', 'produtos')}.<br><br>Importar para a sua conta?`, {
+            titulo: 'IMPORTAR DADOS',
+            ok: () => {
+                const base = Date.now(), ops = [];
+                antigos.forEach((l, i) => {
+                    if (!l || !l.nome) return;
+                    const lr = doc(colLojas());
+                    ops.push(bt => bt.set(lr, { nome: String(l.nome).slice(0, 80), ordem: base + i, criadoEm: serverTimestamp() }));
+                    (l.produtos || []).forEach(p => {
+                        if (!p || !p.nome || !/^\d{4}-\d{2}-\d{2}$/.test(p.data || '')) return;
+                        ops.push(bt => bt.set(doc(colProd()), { nome: String(p.nome).slice(0, 120), qtd: Math.max(0, parseInt(p.qtd, 10) || 0), data: p.data, lojaId: lr.id, criadoEm: serverTimestamp() }));
+                    });
+                });
+                chunkOps(ops).then(() => localStorage.setItem('imp_' + uid, '1')).catch(erroDb);
+            },
+            cancel: () => localStorage.setItem('imp_' + uid, '1'),
+        });
+    }
+
+    /* ================= sessão ================= */
+    function entrar(user) {
+        uid = user.uid; userInfo = { displayName: user.displayName, email: user.email };
+        setDoc(doc(db, 'users', uid), { nome: user.displayName || '', email: user.email || '' }, { merge: true }).catch(() => {});
+        prontoProd = false;
+        unsubs.push(onSnapshot(query(colLojas(), orderBy('ordem')), (snap) => {
+            lojas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            atualizar();
+        }, erroDb));
+        unsubs.push(onSnapshot(query(colProd(), orderBy('data')), (snap) => {
+            produtos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            prontoProd = true;
+            atualizar();
+            verificarVencidos();
+        }, erroDb));
+        mostrar('app');
+        ir('h');
+        if (msgOk && Notification.permission === 'granted') ativarNotificacoes(true); // renova o token em silêncio
+        setTimeout(oferecerImportacao, 900);
+    }
+    function aoSair() {
+        unsubs.forEach(u => u()); unsubs = [];
+        uid = null; userInfo = null; lojas = []; produtos = []; prontoProd = false;
+        $('#a-senha').value = '';
+        mostrar('auth');
+    }
+
+    async function iniciar() {
+        const cfg = window.FIREBASE_CONFIG;
+        if (!cfg || !cfg.apiKey || /COLE/i.test(cfg.apiKey)) {
+            $('#carregando-txt').innerHTML = 'Falta configurar o Firebase.<br><br><span class="normal-case font-medium text-gray-600">Preencha o arquivo <b>firebase-config.js</b> conforme o LEIA-ME.</span>';
+            return;
+        }
+        app = initializeApp(cfg);
+        auth = getAuth(app);
+        try {
+            db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
+        } catch (e) {
+            console.warn('Cache offline indisponível:', e);
+            db = initializeFirestore(app, {});
+        }
+        try {
+            msgOk = await isSupported() && 'Notification' in window && 'serviceWorker' in navigator;
+            if (msgOk) {
+                messaging = getMessaging(app);
+                onMessage(messaging, (p) => { const n = p.notification || {}; aviso(esc(n.body || ''), { titulo: n.title || 'PROMOTOR AJUDANTE', soConfirmar: true }); });
+            }
+        } catch (e) { msgOk = false; console.warn(e); }
+        onAuthStateChanged(auth, (user) => user ? entrar(user) : aoSair());
+    }
+
+    lucide.createIcons();
+    iniciar();
+    </script>
+</body>
+</html>
