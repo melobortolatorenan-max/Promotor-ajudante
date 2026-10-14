@@ -193,8 +193,42 @@
     const nomeMarca = (lojaId, marcaId) => (marcasDe(lojaId).find(m => m.id === marcaId) || {}).nome || '';
     const doMarca = (p, marcaId) => marcaId === '_sem' ? !p.marcaId : p.marcaId === marcaId;
     const rotuloLoja = (p) => esc(nomeLoja(p.lojaId)) + (p.marcaId && nomeMarca(p.lojaId, p.marcaId) ? ' · ' + esc(nomeMarca(p.lojaId, p.marcaId)) : '');
-    const optsMarcas = (lojaId, sel) => '<option value="">Sem marca</option>' +
-        marcasDe(lojaId).map(m => `<option value="${esc(m.id)}" ${m.id === sel ? 'selected' : ''}>${esc(m.nome)}</option>`).join('');
+    const norm = (s) => String(s || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    let ultimaMarca = '';
+    // Campo "Marca" do formulário: sem marcas na loja vira um botão "Cadastrar marca";
+    // com marcas vira uma lista, e "+ Cadastrar marca" é sempre a última opção.
+    function campoMarca(lojaId, sel, extras = []) {
+        ultimaMarca = sel || '';
+        const lista = [...marcasDe(lojaId)];
+        extras.forEach(x => { if (!lista.some(m => m.id === x.id)) lista.push(x); });
+        if (!lista.length) {
+            return `<button type="button" data-act="novaMarcaForm" class="input-custom text-left text-amber-500 font-black uppercase text-xs">+ Cadastrar marca</button>`;
+        }
+        return `<select id="pm" class="input-custom"><option value="">Selecione a marca...</option>` +
+            lista.map(m => `<option value="${esc(m.id)}" ${m.id === sel ? 'selected' : ''}>${esc(m.nome)}</option>`).join('') +
+            `<option value="__nova">+ Cadastrar marca</option></select>`;
+    }
+    function refreshCampoMarca(lojaId, sel, extras) {
+        const c = $('#campo-marca'); if (c) c.innerHTML = campoMarca(lojaId, sel, extras);
+    }
+    // Sugestões de nomes de produtos já cadastrados (ignora maiúsculas e acentos)
+    function sugestoes(texto) {
+        const q = norm(texto);
+        if (!q) return [];
+        const vistos = new Map();
+        produtos.forEach(p => { const k = norm(p.nome); if (k && !vistos.has(k)) vistos.set(k, p.nome.trim()); });
+        return [...vistos.entries()]
+            .filter(([k]) => k.includes(q) && k !== q)
+            .sort((a, b) => (b[0].startsWith(q) - a[0].startsWith(q)) || a[0].localeCompare(b[0]))
+            .slice(0, 6).map(e => e[1]);
+    }
+    function mostrarSugestoes() {
+        const box = $('#sug'), inp = $('#pn'); if (!box || !inp) return;
+        const lista = sugestoes(inp.value);
+        if (!lista.length) { box.classList.add('hidden'); box.innerHTML = ''; return; }
+        box.innerHTML = lista.map(n => `<button type="button" data-act="pickSug" data-nome="${esc(n)}" class="w-full text-left px-3 py-3 text-xs font-black italic uppercase text-white border-b border-white/5 active:bg-amber-500 active:text-gray-950">${esc(n)}</button>`).join('');
+        box.classList.remove('hidden');
+    }
 
     function erroDb(e) {
         console.error(e);
@@ -445,9 +479,12 @@
                 <div><label class="text-[9px] font-black text-gray-500 uppercase ml-2" for="pl">Loja Selecionada</label>
                 <select id="pl" class="input-custom"><option value="">Selecionar loja...</option>${lojas.map(l => `<option value="${esc(l.id)}" ${l.id === sel ? 'selected' : ''}>${esc(l.nome)}</option>`).join('')}</select></div>
                 <div><label class="text-[9px] font-black text-gray-500 uppercase ml-2" for="pm">Marca</label>
-                <select id="pm" class="input-custom">${optsMarcas(sel, selMarca)}</select></div>
+                <div id="campo-marca">${campoMarca(sel, selMarca)}</div></div>
                 <div><label class="text-[9px] font-black text-gray-500 uppercase ml-2" for="pn">Nome do Produto</label>
-                <input id="pn" class="input-custom" placeholder="Ex: Iogurte" maxlength="120" value="${esc(p.nome)}"></div>
+                <div class="relative">
+                    <input id="pn" class="input-custom" placeholder="Ex: Iogurte" maxlength="120" autocomplete="off" value="${esc(p.nome)}">
+                    <div id="sug" class="hidden absolute left-0 right-0 top-full mt-1 z-20 card-app overflow-hidden shadow-2xl shadow-black"></div>
+                </div></div>
                 <div class="flex gap-3">
                     <div class="flex-1"><label class="text-[9px] font-black text-gray-500 uppercase ml-2" for="pq">Quantidade</label>
                     <input id="pq" type="number" inputmode="numeric" min="0" class="input-custom" placeholder="1" value="${esc(p.qtd)}"></div>
@@ -531,6 +568,26 @@
             }});
         },
         voltarLoja: () => ir('l', { lojaId: view.lojaId }),
+        pickSug: (d) => {
+            $('#pn').value = d.nome;
+            const box = $('#sug'); box.classList.add('hidden'); box.innerHTML = '';
+            const q = $('#pq'); if (q) q.focus();
+        },
+        novaMarcaForm: () => {
+            const lojaId = $('#pl') ? $('#pl').value : '';
+            const l = lojas.find(x => x.id === lojaId);
+            if (!l) return aviso('ESCOLHA A LOJA PRIMEIRO.', { soConfirmar: true });
+            const restaurar = () => refreshCampoMarca(lojaId, ultimaMarca);
+            aviso(`NOVA MARCA EM <b>${esc(l.nome)}</b>:`, { input: '', cancel: restaurar, ok: n => {
+                if (!n) return restaurar();
+                const marcas = l.marcas || [];
+                const igual = marcas.find(m => m.nome.toLowerCase() === n.toLowerCase());
+                if (igual) return refreshCampoMarca(lojaId, igual.id);
+                const nova = { id: 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), nome: n.slice(0, 60) };
+                updateDoc(refLoja(l.id), { marcas: [...marcas, nova] }).catch(erroDb);
+                refreshCampoMarca(lojaId, nova.id, [nova]);
+            }});
+        },
         verMarca: (d) => ir('l', { lojaId: d.id, marcaId: d.marca }),
         addMarca: (d) => {
             const l = lojas.find(x => x.id === d.id); if (!l) return;
@@ -572,10 +629,14 @@
             const qtd = qRaw === '' ? 1 : Math.max(0, parseInt(qRaw, 10) || 0);
             if (!nome || !data || !lojaId) return aviso('PREENCHA TUDO!', { soConfirmar: true });
             if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return aviso('DATA INVÁLIDA!', { soConfirmar: true });
+            // Produto novo precisa de marca. Produtos antigos sem marca podem continuar sem.
+            const original = view.prod ? produtos.find(x => x.id === view.prod) : null;
+            if ((!original || original.marcaId) && !marcaId) return aviso('ESCOLHA OU CADASTRE A MARCA!', { soConfirmar: true });
             const dados = { nome: nome.slice(0, 120), qtd, data, lojaId, marcaId };
+            const voltar = view.origem ? { lojaId: view.origem, marcaId: view.origemMarca } : null;
             if (view.prod) updateDoc(refProd(view.prod), dados).catch(erroDb);
             else addDoc(colProd(), { ...dados, criadoEm: serverTimestamp() }).catch(erroDb);
-            ir('h');
+            if (voltar) ir('l', voltar); else ir('h');
         },
         authModo: () => {
             modoCriar = !modoCriar;
@@ -623,10 +684,16 @@
     };
 
     document.addEventListener('change', (e) => {
-        if (e.target.id === 'pl' && $('#pm')) $('#pm').innerHTML = optsMarcas(e.target.value, '');
+        if (e.target.id === 'pl') refreshCampoMarca(e.target.value, '');
+        if (e.target.id === 'pm') {
+            if (e.target.value === '__nova') { e.target.value = ultimaMarca; acoes.novaMarcaForm(); }
+            else ultimaMarca = e.target.value;
+        }
     });
+    document.addEventListener('input', (e) => { if (e.target.id === 'pn') mostrarSugestoes(); });
 
     document.addEventListener('click', (e) => {
+        if (!e.target.closest('#sug') && e.target.id !== 'pn') { const b = $('#sug'); if (b) b.classList.add('hidden'); }
         const el = e.target.closest('[data-act]');
         if (!el || !acoes[el.dataset.act]) return;
         acoes[el.dataset.act](el.dataset);
