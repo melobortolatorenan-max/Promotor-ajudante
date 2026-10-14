@@ -73,6 +73,17 @@
         button { cursor: pointer; }
         button:focus-visible, [data-act]:focus-visible { outline: 2px solid #f59e0b; outline-offset: 2px; }
 
+        /* Relatório impresso (PDF): só o #print-area aparece ao imprimir */
+        #print-area { display: none; }
+        @media print {
+            @page { size: A4; margin: 14mm 14mm 16mm; }
+            html, body { overflow: visible !important; height: auto !important; background: #fff !important; color: #111 !important; }
+            body > *:not(#print-area) { display: none !important; }
+            #print-area { display: block !important; font-family: 'Inter', Arial, sans-serif; color: #111; }
+            #print-area, #print-area * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .rel-card { break-inside: avoid; page-break-inside: avoid; }
+        }
+
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
@@ -149,6 +160,8 @@
         </header>
         <main id="corpo" class="p-4 flex-1 overflow-y-auto no-scrollbar pb-24"></main>
     </section>
+
+    <div id="print-area" aria-hidden="true"></div>
 
     <script src="firebase-config.js"></script>
     <script type="module">
@@ -455,7 +468,10 @@
                         <h2 class="font-black uppercase text-amber-500 italic text-lg truncate leading-none">${esc(m.nome)}</h2>
                     </div>
                 </button>
-                <button data-act="novoProd" data-id="${esc(l.id)}" data-marca="${esc(marcaId)}" class="bg-amber-500 text-gray-950 px-3 py-2 rounded-xl text-[10px] font-black uppercase">+ PRODUTO</button>
+                <div class="flex items-center gap-2 shrink-0 ml-2">
+                    <button data-act="relatorioMarca" data-id="${esc(l.id)}" data-marca="${esc(marcaId)}" class="flex items-center gap-1.5 border border-amber-500/50 text-amber-500 px-2.5 py-2 rounded-xl text-[10px] font-black uppercase" aria-label="Imprimir relatório da marca"><i data-lucide="printer" class="w-4 h-4"></i> Relatório</button>
+                    <button data-act="novoProd" data-id="${esc(l.id)}" data-marca="${esc(marcaId)}" class="bg-amber-500 text-gray-950 px-3 py-2 rounded-xl text-[10px] font-black uppercase">+ PRODUTO</button>
+                </div>
             </div>
             <div class="space-y-3">${grupos || '<div class="text-center opacity-20 py-10 font-black text-xs uppercase">Sem produtos</div>'}</div>`;
     }
@@ -568,6 +584,7 @@
             }});
         },
         voltarLoja: () => ir('l', { lojaId: view.lojaId }),
+        relatorioMarca: (d) => imprimirRelatorio(d.id, d.marca),
         pickSug: (d) => {
             $('#pn').value = d.nome;
             const box = $('#sug'); box.classList.add('hidden'); box.innerHTML = '';
@@ -717,6 +734,56 @@
             'auth/account-exists-with-different-credential': 'Já existe uma conta com este e-mail. Entre com e-mail e senha.',
         };
         return e.code in m ? m[e.code] : 'Não foi possível concluir. Tente novamente.';
+    }
+
+    /* ================= relatório da marca (PDF) ================= */
+    const LARANJA = '#f59e0b';
+    function dataHoje() {
+        const d = new Date();
+        return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
+    }
+    async function imprimirRelatorio(lojaId, marcaId) {
+        const l = lojas.find(x => x.id === lojaId); if (!l) return;
+        const nomeM = marcaId === '_sem' ? 'Sem marca' : nomeMarca(lojaId, marcaId);
+        const lista = produtos.filter(p => p.lojaId === lojaId && doMarca(p, marcaId))
+            .sort((a, b) => a.data.localeCompare(b.data) || a.nome.localeCompare(b.nome));
+        if (!lista.length) return aviso('ESTA MARCA AINDA NÃO TEM PRODUTOS CADASTRADOS.', { soConfirmar: true });
+        const promotor = (userInfo && (userInfo.displayName || userInfo.email)) || '';
+        const hoje = dataHoje();
+        const sep = `<span style="margin:0 8px;color:${LARANJA}">|</span>`;
+        const cartoes = lista.map(p => `
+            <div class="rel-card" style="display:flex;justify-content:space-between;align-items:center;gap:12px;border:1.5px solid #e5e7eb;border-left:6px solid ${LARANJA};border-radius:10px;padding:11px 14px;margin-bottom:9px">
+                <div style="font-size:13px;font-weight:800;text-transform:uppercase;font-style:italic;flex:1">${esc(p.nome)}</div>
+                <div style="display:flex;gap:7px;flex-shrink:0">
+                    <span style="border:1.5px solid ${LARANJA};color:${LARANJA};border-radius:20px;padding:3px 11px;font-size:11.5px;font-weight:900">${fmt(p.data)}</span>
+                    <span style="background:${LARANJA};color:#000;border-radius:20px;padding:3px 11px;font-size:11.5px;font-weight:900">${esc(p.qtd)} un</span>
+                </div>
+            </div>`).join('');
+        $('#print-area').innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:center">
+                <div style="display:flex;align-items:center;gap:14px">
+                    <img src="logo.png" onerror="this.onerror=null;this.src='https://raw.githubusercontent.com/melobortolatorenan-max/Promotor-ajudante/main/logo.png'" style="width:92px;height:92px;border-radius:20px;object-fit:cover" alt="">
+                    <div style="line-height:1">
+                        <div style="font-size:11px;letter-spacing:.22em;color:#6b7280;font-weight:700">PROMOTOR</div>
+                        <div style="font-size:30px;color:${LARANJA};font-weight:900;font-style:italic;margin-top:3px">AJUDANTE</div>
+                    </div>
+                </div>
+                <div style="text-align:right;font-size:11px;letter-spacing:.16em;color:#6b7280;font-weight:800;line-height:1.5">RELATÓRIO<br><span style="color:#111">DA MARCA</span></div>
+            </div>
+            <div style="margin:20px 0 18px;border-left:5px solid ${LARANJA};background:#fff7e6;padding:10px 13px;border-radius:0 8px 8px 0;font-size:11.5px;display:flex;flex-wrap:wrap;row-gap:4px">
+                <span><b>Loja:</b> ${esc(l.nome)}</span>${sep}
+                <span><b>Marca:</b> ${esc(nomeM)}</span>${sep}
+                <span><b>Data do relatório:</b> ${hoje}</span>${sep}
+                <span><b>Promotor:</b> ${esc(promotor)}</span>
+            </div>
+            ${cartoes}`;
+        const img = $('#print-area img');
+        if (img && !img.complete) await new Promise(r => { img.onload = img.onerror = r; setTimeout(r, 2500); });
+        const tituloAntes = document.title;
+        document.title = ('Relatorio ' + nomeM + ' - ' + l.nome + ' - ' + hoje.replace(/\//g, '-')).replace(/[\\/:*?"<>|]/g, '');
+        const depois = () => { document.title = tituloAntes; $('#print-area').innerHTML = ''; window.removeEventListener('afterprint', depois); };
+        window.addEventListener('afterprint', depois);
+        window.print();
     }
 
     /* ================= vencidos ================= */
