@@ -150,7 +150,10 @@
                         <span class="text-xl font-black text-amber-500 uppercase italic leading-none">Ajudante</span>
                     </div>
                 </div>
-                <button id="btn-conta" data-act="tab" data-id="c" class="p-2 text-gray-500" aria-label="Minha conta e notificações"><i data-lucide="settings" class="w-5 h-5"></i></button>
+                <div class="flex items-center gap-1">
+                    <button id="btn-venc" data-act="novoVencido" class="flex items-center gap-1.5 border border-red-500/50 text-red-500 px-2.5 py-2 rounded-xl text-[10px] font-black uppercase" aria-label="Registrar produto vencido"><i data-lucide="package-x" class="w-4 h-4"></i> Vencido</button>
+                    <button id="btn-conta" data-act="tab" data-id="c" class="p-2 text-gray-500" aria-label="Minha conta e notificações"><i data-lucide="settings" class="w-5 h-5"></i></button>
+                </div>
             </div>
             <nav class="flex gap-1 bg-gray-900 p-1 rounded-2xl border border-gray-800">
                 <button data-act="tab" data-id="h" class="nav-aba flex-1 py-2 rounded-xl text-[9px] font-black uppercase">Início</button>
@@ -178,6 +181,7 @@
     const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     const fmt = (d) => d.split('-').reverse().join('/');
     // dias entre hoje (fuso do aparelho) e a data 'AAAA-MM-DD'. Negativo = já venceu.
+    const isoLocal = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
     function diasAte(dataISO) {
         const [y, m, d] = dataISO.split('-').map(Number);
         const alvo = new Date(y, m - 1, d);
@@ -189,7 +193,9 @@
     /* ================= estado ================= */
     let app, auth, db, messaging, msgOk = false;
     let uid = null, userInfo = null;
-    let lojas = [], produtos = [];
+    let lojas = [], produtos = [], vencidos = [];
+    let vencErro = '';      // preenchido se as regras do Firebase ainda não liberam 'vencidos'
+    let filtroVenc = '';    // filtro de marca na tela Relatório de vencidos
     let unsubs = [];
     let prontoProd = false;
     let view = { tab: 'h', lojaId: null, marcaId: null, prod: null, preLoja: null, preMarca: '', origem: null, origemMarca: null };
@@ -200,6 +206,8 @@
     const colProd  = () => collection(db, 'users', uid, 'produtos');
     const refLoja  = (id) => doc(db, 'users', uid, 'lojas', id);
     const refProd  = (id) => doc(db, 'users', uid, 'produtos', id);
+    const colVenc  = () => collection(db, 'users', uid, 'vencidos');
+    const refVenc  = (id) => doc(db, 'users', uid, 'vencidos', id);
     const nomeLoja = (id) => (lojas.find(l => l.id === id) || {}).nome || '—';
     // As marcas ficam dentro do documento da loja: loja.marcas = [{ id, nome }]
     const marcasDe = (lojaId) => ((lojas.find(l => l.id === lojaId) || {}).marcas) || [];
@@ -229,7 +237,7 @@
         const q = norm(texto);
         if (!q) return [];
         const vistos = new Map();
-        produtos.forEach(p => { const k = norm(p.nome); if (k && !vistos.has(k)) vistos.set(k, p.nome.trim()); });
+        [...produtos, ...vencidos].forEach(p => { const k = norm(p.nome); if (k && !vistos.has(k)) vistos.set(k, p.nome.trim()); });
         return [...vistos.entries()]
             .filter(([k]) => k.includes(q) && k !== q)
             .sort((a, b) => (b[0].startsWith(q) - a[0].startsWith(q)) || a[0].localeCompare(b[0]))
@@ -243,6 +251,14 @@
         box.classList.remove('hidden');
     }
 
+    function erroVenc(e) {
+        console.error(e);
+        if (e && e.code === 'permission-denied') {
+            vencErro = 'permission-denied';
+            return aviso('SEM PERMISSÃO PARA SALVAR OS VENCIDOS. As regras do Firebase ainda precisam ser atualizadas.', { soConfirmar: true });
+        }
+        erroDb(e);
+    }
     function erroDb(e) {
         console.error(e);
         const msg = e && e.code === 'permission-denied'
@@ -285,26 +301,29 @@
     function ir(tab, extra = {}) {
         view = { tab, lojaId: null, marcaId: null, prod: null, preLoja: null, preMarca: '', origem: null, origemMarca: null, ...extra };
         desenhar(true);
-        if (tab !== 'p' && tab !== 'c') setTimeout(verificarVencidos, 300);
+        if (tab !== 'p' && tab !== 'c' && tab !== 'v') setTimeout(verificarVencidos, 300);
     }
 
     // Redesenha após mudanças vindas do banco, sem atrapalhar formulários abertos
     function atualizar() {
         if (!uid) return;
-        if (view.tab === 'p' || view.tab === 'c') return;
+        if (view.tab === 'p' || view.tab === 'c' || view.tab === 'v') return;
         desenhar(false);
     }
 
     function desenhar(topo) {
         document.querySelectorAll('.nav-aba').forEach(b => b.classList.toggle('ativa', b.dataset.id === view.tab));
-        $('#btn-conta').classList.toggle('text-amber-500', view.tab === 'c');
-        $('#btn-conta').classList.toggle('text-gray-500', view.tab !== 'c');
+        const naConta = view.tab === 'c' || view.tab === 'r';
+        $('#btn-conta').classList.toggle('text-amber-500', naConta);
+        $('#btn-conta').classList.toggle('text-gray-500', !naConta);
         const m = $('#corpo');
         const st = m.scrollTop;
         let html = '';
         if (view.tab === 'h') html = htmlHome();
         else if (view.tab === 'l') html = view.lojaId ? (view.marcaId ? htmlMarca(view.lojaId, view.marcaId) : htmlLoja(view.lojaId)) : htmlLojas();
         else if (view.tab === 'p') html = htmlForm();
+        else if (view.tab === 'v') html = htmlVencForm();
+        else if (view.tab === 'r') html = htmlRelVenc();
         else html = htmlConta();
         m.innerHTML = html;
         m.scrollTop = topo ? 0 : st;
@@ -519,6 +538,103 @@
         return { txt: 'Desativadas neste aparelho', ativo: false, suporte: true };
     }
 
+    const dataBR = (iso) => iso ? fmt(iso) : '';
+    const marcasTodas = () => {           // todas as marcas cadastradas (por nome, sem repetir)
+        const mapa = new Map();
+        lojas.forEach(l => (l.marcas || []).forEach(m => { const k = norm(m.nome); if (k && !mapa.has(k)) mapa.set(k, m.nome); }));
+        vencidos.forEach(v => { const k = norm(v.marcaNome); if (k && !mapa.has(k)) mapa.set(k, v.marcaNome); });
+        return [...mapa.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+    };
+    const avisoRegras = () => vencErro === 'permission-denied'
+        ? `<div class="card-app p-3 mb-4 border-l-4 border-l-red-600 text-[11px] text-gray-300 leading-snug"><b class="text-red-500 uppercase">Atenção:</b> as regras do Firebase ainda não liberam os registros de vencidos. Atualize as regras para poder salvar e ver esta lista.</div>` : '';
+
+    function htmlVencForm() {
+        const e = view.venc ? vencidos.find(v => v.id === view.venc) : null;
+        const v = e || { nome: '', qtd: '', dataVenc: '', lojaId: '', marcaId: '' };
+        const lojaSel = lojas.some(l => l.id === v.lojaId) ? v.lojaId : '';
+        const marcaSel = lojaSel && marcasDe(lojaSel).some(m => m.id === v.marcaId) ? v.marcaId : '';
+        if (!lojas.length) {
+            return `<h2 class="text-red-500 font-black italic uppercase text-lg mb-4">Registrar Vencido</h2>
+                <p class="text-gray-400 text-sm mb-6">Cadastre uma loja primeiro para poder registrar produtos vencidos.</p>
+                <button data-act="tab" data-id="l" class="btn-amarelo">IR PARA LOJAS</button>`;
+        }
+        return `
+            <button class="flex items-center gap-2 mb-6" data-act="voltarVenc">
+                <i data-lucide="chevron-left" class="w-6 h-6 text-amber-500"></i>
+                <h2 class="text-red-500 font-black italic uppercase text-lg">${e ? 'Editar' : 'Registrar'} Vencido</h2>
+            </button>
+            ${avisoRegras()}
+            <div class="space-y-4">
+                <div><label class="text-[9px] font-black text-gray-500 uppercase ml-2" for="pl">Loja que foi retirado</label>
+                <select id="pl" class="input-custom"><option value="">Selecionar loja...</option>${lojas.map(l => `<option value="${esc(l.id)}" ${l.id === lojaSel ? 'selected' : ''}>${esc(l.nome)}</option>`).join('')}</select></div>
+                <div><label class="text-[9px] font-black text-gray-500 uppercase ml-2" for="pm">Marca do produto</label>
+                <div id="campo-marca">${campoMarca(lojaSel, marcaSel)}</div></div>
+                <div><label class="text-[9px] font-black text-gray-500 uppercase ml-2" for="pn">Nome do produto</label>
+                <div class="relative">
+                    <input id="pn" class="input-custom" placeholder="Ex: Iogurte" maxlength="120" autocomplete="off" value="${esc(v.nome)}">
+                    <div id="sug" class="hidden absolute left-0 right-0 top-full mt-1 z-20 card-app overflow-hidden shadow-2xl shadow-black"></div>
+                </div></div>
+                <div class="flex gap-3">
+                    <div class="flex-1"><label class="text-[9px] font-black text-gray-500 uppercase ml-2" for="pq">Qtd retirada</label>
+                    <input id="pq" type="number" inputmode="numeric" min="1" class="input-custom" placeholder="0" value="${esc(v.qtd)}"></div>
+                    <div class="flex-[2]"><label class="text-[9px] font-black text-gray-500 uppercase ml-2" for="pd">Data de vencimento</label>
+                    <input id="pd" type="date" class="input-custom" value="${esc(v.dataVenc)}"></div>
+                </div>
+                <p class="text-[10px] text-gray-500 ml-2">Data da retirada: <b class="text-amber-500">${e ? dataBR(e.dataRetirada) : dataBR(isoLocal(new Date())) + ' (hoje)'}</b></p>
+                <button data-act="salvarVenc" class="btn-amarelo mt-2">SALVAR VENCIDO</button>
+                <button data-act="voltarVenc" class="w-full py-3 text-[10px] font-black text-gray-500 uppercase">CANCELAR</button>
+            </div>`;
+    }
+
+    function htmlRelVenc() {
+        const marcas = marcasTodas();
+        const lista = vencidos.filter(v => !filtroVenc || norm(v.marcaNome) === filtroVenc)
+            .sort((a, b) => (b.dataRetirada || '').localeCompare(a.dataRetirada || '') || a.nome.localeCompare(b.nome));
+        const grupos = new Map();
+        lista.forEach(v => { const k = norm(v.marcaNome) || '_'; if (!grupos.has(k)) grupos.set(k, { nome: v.marcaNome || 'Sem marca', itens: [] }); grupos.get(k).itens.push(v); });
+        const blocos = [...grupos.values()].sort((a, b) => a.nome.localeCompare(b.nome)).map(g => `
+            <div class="mb-5">
+                <h3 class="text-[10px] font-black uppercase text-amber-500 mb-2 italic flex items-center gap-2"><i data-lucide="tag" class="w-3 h-3"></i> ${esc(g.nome)}</h3>
+                <div class="space-y-2">
+                    ${g.itens.map(v => `
+                    <div class="card-app p-3 border-l-4 border-l-red-600">
+                        <div class="flex justify-between items-start gap-2">
+                            <div class="flex-1 min-w-0">
+                                <div class="text-white font-black italic uppercase text-xs leading-tight">${esc(v.nome)}</div>
+                                <div class="text-[9px] text-gray-500 font-bold uppercase mt-1 truncate">Loja: ${esc(v.lojaNome || '—')}</div>
+                            </div>
+                            <div class="text-right shrink-0">
+                                <div class="text-[8px] text-gray-500 font-bold uppercase leading-none">Qtd retirada</div>
+                                <div class="text-amber-500 font-black text-lg leading-none mt-1">${esc(v.qtd)}</div>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center mt-2 pt-2 border-t border-white/5">
+                            <div class="text-[10px] text-gray-400 leading-snug">Retirada: <b class="text-white">${dataBR(v.dataRetirada)}</b><br>Vencimento: <b class="text-white">${dataBR(v.dataVenc)}</b></div>
+                            <div class="flex gap-3">
+                                <button data-act="editVenc" data-id="${esc(v.id)}" class="p-1 text-blue-400" aria-label="Editar"><i data-lucide="pen-line" class="w-4 h-4"></i></button>
+                                <button data-act="delVenc" data-id="${esc(v.id)}" class="p-1 text-red-500" aria-label="Apagar"><i data-lucide="circle-x" class="w-4 h-4"></i></button>
+                            </div>
+                        </div>
+                    </div>`).join('')}
+                </div>
+            </div>`).join('');
+        return `
+            <div class="flex items-center justify-between mb-5">
+                <button class="flex items-center gap-2 flex-1 truncate text-left" data-act="tab" data-id="c">
+                    <i data-lucide="chevron-left" class="w-6 h-6 text-amber-500 shrink-0"></i>
+                    <h2 class="font-black uppercase text-amber-500 italic text-lg truncate">Relatório de Vencidos</h2>
+                </button>
+            </div>
+            ${avisoRegras()}
+            <div class="flex gap-2 mb-4">
+                <button data-act="novoVencido" class="flex-1 bg-amber-500 text-gray-950 py-3 rounded-xl text-[10px] font-black uppercase">+ Vencido</button>
+                <button data-act="relatorioVenc" class="flex-1 flex items-center justify-center gap-1.5 border border-amber-500/50 text-amber-500 py-3 rounded-xl text-[10px] font-black uppercase"><i data-lucide="printer" class="w-4 h-4"></i> Relatório</button>
+            </div>
+            <div class="mb-5"><label class="text-[9px] font-black text-gray-500 uppercase ml-2" for="fm">Marca</label>
+            <select id="fm" class="input-custom"><option value="">Todas as marcas</option>${marcas.map(([k, n]) => `<option value="${esc(k)}" ${k === filtroVenc ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></div>
+            ${blocos || '<div class="opacity-20 text-center py-10 uppercase font-black text-xs">Nenhum vencido registrado</div>'}`;
+    }
+
     function htmlConta() {
         const n = notifEstado();
         return `
@@ -528,6 +644,14 @@
                 <div class="text-white font-black italic uppercase text-sm truncate">${esc((userInfo && userInfo.displayName) || 'Sem nome')}</div>
                 <div class="text-gray-400 text-xs truncate">${esc(userInfo && userInfo.email)}</div>
             </div>
+            <button data-act="abrirRelVenc" class="card-app w-full p-4 mb-3 flex items-center justify-between text-left">
+                <div>
+                    <div class="text-[9px] text-gray-500 font-black uppercase mb-1">Registros</div>
+                    <div class="text-white font-black italic uppercase text-sm">Relatório de vencidos</div>
+                    <div class="text-gray-500 text-[11px]">${vencidos.length} ${plural(vencidos.length, 'item retirado', 'itens retirados')}</div>
+                </div>
+                <i data-lucide="chevron-right" class="w-5 h-5 text-amber-500"></i>
+            </button>
             <div class="card-app p-4 mb-3">
                 <div class="flex items-center gap-2 mb-1">
                     <i data-lucide="${n.ativo ? 'bell' : 'bell-off'}" class="w-4 h-4 ${n.ativo ? 'text-amber-500' : 'text-gray-500'}"></i>
@@ -541,7 +665,7 @@
                     : '<p class="text-[11px] text-gray-500">No iPhone, abra o site no Safari, toque em Compartilhar e em "Adicionar à Tela de Início". Depois abra o app pelo ícone e ative aqui.</p>'}
             </div>
             <button data-act="sair" class="w-full py-4 rounded-xl border border-red-900/50 text-[10px] font-black uppercase text-red-500 mt-2">SAIR DA CONTA</button>
-            <p class="text-center text-[9px] text-gray-700 mt-6 uppercase font-bold">Promotor Ajudante · v4</p>`;
+            <p class="text-center text-[9px] text-gray-700 mt-6 uppercase font-bold">Promotor Ajudante · v7</p>`;
     }
 
     /* ================= ações ================= */
@@ -585,6 +709,37 @@
         },
         voltarLoja: () => ir('l', { lojaId: view.lojaId }),
         relatorioMarca: (d) => imprimirRelatorio(d.id, d.marca),
+        novoVencido: () => ir('v', { de: view.tab === 'r' ? 'r' : 'h' }),
+        abrirRelVenc: () => ir('r'),
+        voltarVenc: () => (view.venc || view.de === 'r') ? ir('r') : ir('h'),
+        editVenc: (d) => ir('v', { venc: d.id, de: 'r' }),
+        delVenc: (d) => aviso('APAGAR ESTE REGISTRO DE VENCIDO?', { ok: () => deleteDoc(refVenc(d.id)).catch(erroVenc) }),
+        salvarVenc: () => {
+            const nome = $('#pn').value.trim(), dataVenc = $('#pd').value, lojaId = $('#pl').value;
+            const sm = $('#pm'), marcaId = sm ? sm.value : '';
+            const qtd = parseInt($('#pq').value, 10);
+            if (!nome || !dataVenc || !lojaId) return aviso('PREENCHA TODOS OS CAMPOS!', { soConfirmar: true });
+            if (!marcaId) return aviso('ESCOLHA OU CADASTRE A MARCA!', { soConfirmar: true });
+            if (!(qtd >= 1)) return aviso('INFORME A QUANTIDADE RETIRADA!', { soConfirmar: true });
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(dataVenc)) return aviso('DATA INVÁLIDA!', { soConfirmar: true });
+            const dados = {
+                nome: nome.slice(0, 120), qtd, dataVenc, lojaId, marcaId,
+                lojaNome: nomeLoja(lojaId), marcaNome: sm.options[sm.selectedIndex].text,
+            };
+            if (view.venc) updateDoc(refVenc(view.venc), dados).catch(erroVenc);
+            else addDoc(colVenc(), { ...dados, dataRetirada: isoLocal(new Date()), criadoEm: serverTimestamp() }).catch(erroVenc);
+            ir('r');
+        },
+        relatorioVenc: () => {
+            const marcas = new Map();
+            vencidos.forEach(v => { const k = norm(v.marcaNome) || '_'; if (!marcas.has(k)) marcas.set(k, v.marcaNome || 'Sem marca'); });
+            if (!marcas.size) return aviso('NÃO HÁ VENCIDOS REGISTRADOS PARA GERAR RELATÓRIO.', { soConfirmar: true });
+            const opcoes = [...marcas.entries()].sort((a, b) => a[1].localeCompare(b[1])).map(([k, n]) => `<option value="${esc(k)}" ${k === filtroVenc ? 'selected' : ''}>${esc(n)}</option>`).join('');
+            aviso(`DE QUAL MARCA É O RELATÓRIO?<select id="rel-marca" class="input-custom mt-3">${opcoes}</select>`, {
+                titulo: 'RELATÓRIO DE VENCIDOS',
+                ok: () => imprimirVencidos($('#rel-marca').value),
+            });
+        },
         pickSug: (d) => {
             $('#pn').value = d.nome;
             const box = $('#sug'); box.classList.add('hidden'); box.innerHTML = '';
@@ -701,6 +856,7 @@
     };
 
     document.addEventListener('change', (e) => {
+        if (e.target.id === 'fm') { filtroVenc = e.target.value; desenhar(false); }
         if (e.target.id === 'pl') refreshCampoMarca(e.target.value, '');
         if (e.target.id === 'pm') {
             if (e.target.value === '__nova') { e.target.value = ultimaMarca; acoes.novaMarcaForm(); }
@@ -736,30 +892,12 @@
         return e.code in m ? m[e.code] : 'Não foi possível concluir. Tente novamente.';
     }
 
-    /* ================= relatório da marca (PDF) ================= */
+    /* ================= relatórios impressos (PDF) ================= */
     const LARANJA = '#f59e0b';
-    function dataHoje() {
-        const d = new Date();
-        return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
-    }
-    async function imprimirRelatorio(lojaId, marcaId) {
-        const l = lojas.find(x => x.id === lojaId); if (!l) return;
-        const nomeM = marcaId === '_sem' ? 'Sem marca' : nomeMarca(lojaId, marcaId);
-        const lista = produtos.filter(p => p.lojaId === lojaId && doMarca(p, marcaId))
-            .sort((a, b) => a.data.localeCompare(b.data) || a.nome.localeCompare(b.nome));
-        if (!lista.length) return aviso('ESTA MARCA AINDA NÃO TEM PRODUTOS CADASTRADOS.', { soConfirmar: true });
-        const promotor = (userInfo && (userInfo.displayName || userInfo.email)) || '';
-        const hoje = dataHoje();
-        const sep = `<span style="margin:0 8px;color:${LARANJA}">|</span>`;
-        const cartoes = lista.map(p => `
-            <div class="rel-card" style="display:flex;justify-content:space-between;align-items:center;gap:12px;border:1.5px solid #e5e7eb;border-left:6px solid ${LARANJA};border-radius:10px;padding:11px 14px;margin-bottom:9px">
-                <div style="font-size:13px;font-weight:800;text-transform:uppercase;font-style:italic;flex:1">${esc(p.nome)}</div>
-                <div style="display:flex;gap:7px;flex-shrink:0">
-                    <span style="border:1.5px solid ${LARANJA};color:${LARANJA};border-radius:20px;padding:3px 11px;font-size:11.5px;font-weight:900">${fmt(p.data)}</span>
-                    <span style="background:${LARANJA};color:#000;border-radius:20px;padding:3px 11px;font-size:11.5px;font-weight:900">${esc(p.qtd)} un</span>
-                </div>
-            </div>`).join('');
-        $('#print-area').innerHTML = `
+    const dataHoje = () => dataBR(isoLocal(new Date()));
+    const sepRel = `<span style="margin:0 8px;color:${LARANJA}">|</span>`;
+    function relCabecalho(l1, l2) {
+        return `
             <div style="display:flex;justify-content:space-between;align-items:center">
                 <div style="display:flex;align-items:center;gap:14px">
                     <img src="logo.png" onerror="this.onerror=null;this.src='https://raw.githubusercontent.com/melobortolatorenan-max/Promotor-ajudante/main/logo.png'" style="width:92px;height:92px;border-radius:20px;object-fit:cover" alt="">
@@ -768,27 +906,75 @@
                         <div style="font-size:30px;color:${LARANJA};font-weight:900;font-style:italic;margin-top:3px">AJUDANTE</div>
                     </div>
                 </div>
-                <div style="text-align:right;font-size:11px;letter-spacing:.16em;color:#6b7280;font-weight:800;line-height:1.5">RELATÓRIO<br><span style="color:#111">DA MARCA</span></div>
-            </div>
-            <div style="margin:20px 0 18px;border-left:5px solid ${LARANJA};background:#fff7e6;padding:10px 13px;border-radius:0 8px 8px 0;font-size:11.5px;display:flex;flex-wrap:wrap;row-gap:4px">
-                <span><b>Loja:</b> ${esc(l.nome)}</span>${sep}
-                <span><b>Marca:</b> ${esc(nomeM)}</span>${sep}
-                <span><b>Data do relatório:</b> ${hoje}</span>${sep}
-                <span><b>Promotor:</b> ${esc(promotor)}</span>
-            </div>
-            ${cartoes}`;
+                <div style="text-align:right;font-size:11px;letter-spacing:.16em;color:#6b7280;font-weight:800;line-height:1.5">${l1}<br><span style="color:#111">${l2}</span></div>
+            </div>`;
+    }
+    const relInfo = (campos) => `<div style="margin:20px 0 18px;border-left:5px solid ${LARANJA};background:#fff7e6;padding:10px 13px;border-radius:0 8px 8px 0;font-size:11.5px;display:flex;flex-wrap:wrap;row-gap:4px">${campos.map(([k, v]) => `<span><b>${k}:</b> ${esc(v)}</span>`).join(sepRel)}</div>`;
+    const nomePromotor = () => (userInfo && (userInfo.displayName || userInfo.email)) || '';
+
+    async function abrirImpressao(tituloArquivo, html) {
+        $('#print-area').innerHTML = html;
         const img = $('#print-area img');
         if (img && !img.complete) await new Promise(r => { img.onload = img.onerror = r; setTimeout(r, 2500); });
         const tituloAntes = document.title;
-        document.title = ('Relatorio ' + nomeM + ' - ' + l.nome + ' - ' + hoje.replace(/\//g, '-')).replace(/[\\/:*?"<>|]/g, '');
+        document.title = tituloArquivo.replace(/[\\/:*?"<>|]/g, '');
         const depois = () => { document.title = tituloAntes; $('#print-area').innerHTML = ''; window.removeEventListener('afterprint', depois); };
         window.addEventListener('afterprint', depois);
         window.print();
     }
 
+    // Relatório de uma marca dentro de uma loja
+    function imprimirRelatorio(lojaId, marcaId) {
+        const l = lojas.find(x => x.id === lojaId); if (!l) return;
+        const nomeM = marcaId === '_sem' ? 'Sem marca' : nomeMarca(lojaId, marcaId);
+        const lista = produtos.filter(p => p.lojaId === lojaId && doMarca(p, marcaId))
+            .sort((a, b) => a.data.localeCompare(b.data) || a.nome.localeCompare(b.nome));
+        if (!lista.length) return aviso('ESTA MARCA AINDA NÃO TEM PRODUTOS CADASTRADOS.', { soConfirmar: true });
+        const hoje = dataHoje();
+        const cartoes = lista.map(p => `
+            <div class="rel-card" style="display:flex;justify-content:space-between;align-items:center;gap:12px;border:1.5px solid #e5e7eb;border-left:6px solid ${LARANJA};border-radius:10px;padding:11px 14px;margin-bottom:9px">
+                <div style="font-size:13px;font-weight:800;text-transform:uppercase;font-style:italic;flex:1">${esc(p.nome)}</div>
+                <div style="display:flex;gap:7px;flex-shrink:0">
+                    <span style="border:1.5px solid ${LARANJA};color:${LARANJA};border-radius:20px;padding:3px 11px;font-size:11.5px;font-weight:900">${dataBR(p.data)}</span>
+                    <span style="background:${LARANJA};color:#000;border-radius:20px;padding:3px 11px;font-size:11.5px;font-weight:900">${esc(p.qtd)} un</span>
+                </div>
+            </div>`).join('');
+        return abrirImpressao(`Relatorio ${nomeM} - ${l.nome} - ${hoje.replace(/\//g, '-')}`,
+            relCabecalho('RELATÓRIO', 'DA MARCA') +
+            relInfo([['Loja', l.nome], ['Marca', nomeM], ['Data do relatório', hoje], ['Promotor', nomePromotor()]]) + cartoes);
+    }
+
+    // Relatório de vencidos de uma marca (todas as lojas)
+    function imprimirVencidos(chave) {
+        const lista = vencidos.filter(v => (norm(v.marcaNome) || '_') === chave)
+            .sort((a, b) => (a.dataRetirada || '').localeCompare(b.dataRetirada || '') || a.nome.localeCompare(b.nome));
+        if (!lista.length) return aviso('NÃO HÁ VENCIDOS DESTA MARCA.', { soConfirmar: true });
+        const nomeM = lista[0].marcaNome || 'Sem marca';
+        const hoje = dataHoje();
+        const bloco = (rot, valor, preenchido) => `<div style="text-align:center"><div style="font-size:8.5px;letter-spacing:.12em;color:#6b7280;font-weight:800;margin-bottom:3px">${rot}</div>` +
+            (preenchido
+                ? `<span style="display:inline-block;background:${LARANJA};color:#000;border-radius:20px;padding:3px 12px;font-size:11.5px;font-weight:900">${valor}</span>`
+                : `<span style="display:inline-block;border:1.5px solid ${LARANJA};color:${LARANJA};border-radius:20px;padding:3px 12px;font-size:11.5px;font-weight:900">${valor}</span>`) + `</div>`;
+        const cartoes = lista.map(v => `
+            <div class="rel-card" style="display:flex;justify-content:space-between;align-items:center;gap:12px;border:1.5px solid #e5e7eb;border-left:6px solid ${LARANJA};border-radius:10px;padding:11px 14px;margin-bottom:9px">
+                <div style="flex:1;min-width:0">
+                    <div style="font-size:13px;font-weight:800;text-transform:uppercase;font-style:italic"><span style="color:#6b7280;font-style:normal;font-weight:700;text-transform:none">Produto:</span> ${esc(v.nome)}</div>
+                    <div style="font-size:10.5px;color:#6b7280;margin-top:3px">Loja: ${esc(v.lojaNome || '—')}</div>
+                </div>
+                <div style="display:flex;gap:10px;flex-shrink:0">
+                    ${bloco('DATA DE VENCIMENTO', dataBR(v.dataVenc), false)}
+                    ${bloco('DATA DE RETIRADA', dataBR(v.dataRetirada), false)}
+                    ${bloco('QTD RETIRADA', esc(v.qtd) + ' un', true)}
+                </div>
+            </div>`).join('');
+        return abrirImpressao(`Relatorio de vencidos - ${nomeM} - ${hoje.replace(/\//g, '-')}`,
+            relCabecalho('RELATÓRIO', 'DE VENCIDOS') +
+            relInfo([['Marca', nomeM], ['Data do relatório', hoje], ['Promotor', nomePromotor()]]) + cartoes);
+    }
+
     /* ================= vencidos ================= */
     function verificarVencidos() {
-        if (!uid || !prontoProd || modal.style.display === 'flex' || view.tab === 'p') return;
+        if (!uid || !prontoProd || modal.style.display === 'flex' || view.tab === 'p' || view.tab === 'v') return;
         const p = produtos.find(x => diasAte(x.data) < 0 && !ignorados.has(x.id));
         if (!p) return;
         const proximo = () => setTimeout(verificarVencidos, 400);
@@ -879,6 +1065,12 @@
             atualizar();
             verificarVencidos();
         }, erroDb));
+        vencErro = '';
+        unsubs.push(onSnapshot(query(colVenc(), orderBy('dataRetirada')), (snap) => {
+            vencErro = '';
+            vencidos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            atualizar();
+        }, (e) => { vencErro = e.code || 'erro'; console.warn('vencidos:', e); atualizar(); }));
         mostrar('app');
         ir('h');
         if (msgOk && Notification.permission === 'granted') ativarNotificacoes(true); // renova o token em silêncio
@@ -886,7 +1078,7 @@
     }
     function aoSair() {
         unsubs.forEach(u => u()); unsubs = [];
-        uid = null; userInfo = null; lojas = []; produtos = []; prontoProd = false;
+        uid = null; userInfo = null; lojas = []; produtos = []; vencidos = []; vencErro = ''; filtroVenc = ''; prontoProd = false;
         $('#a-senha').value = '';
         mostrar('auth');
     }
