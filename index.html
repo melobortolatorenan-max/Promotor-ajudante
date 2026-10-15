@@ -181,6 +181,26 @@
     const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     const fmt = (d) => d.split('-').reverse().join('/');
     // dias entre hoje (fuso do aparelho) e a data 'AAAA-MM-DD'. Negativo = já venceu.
+    const mesAtualISO = () => isoLocal(new Date()).slice(0, 7);
+    // Só valem os registros do mês corrente; os de meses anteriores são apagados automaticamente
+    const vencMes = () => vencidos.filter(v => (v.dataRetirada || '').slice(0, 7) === mesAtualISO());
+    function diasParaFimDoMes() {
+        const h = new Date(); h.setHours(0, 0, 0, 0);
+        return Math.round((new Date(h.getFullYear(), h.getMonth() + 1, 0) - h) / 86400000);
+    }
+    function ultimoDiaDoMes() { const h = new Date(); return isoLocal(new Date(h.getFullYear(), h.getMonth() + 1, 0)); }
+    const PERIODOS = [['dia', 'Hoje'], ['semana', 'Esta semana'], ['15', 'Últimos 15 dias'], ['mes', 'Mês todo']];
+    // Faixa de datas de cada período (sempre limitada ao mês corrente)
+    function faixaPeriodo(tipo) {
+        const h = new Date(); h.setHours(0, 0, 0, 0);
+        const fim = isoLocal(h), primeiro = fim.slice(0, 8) + '01';
+        let ini = fim, fimRot = fim;
+        if (tipo === 'semana') { const d = new Date(h); d.setDate(d.getDate() - ((h.getDay() + 6) % 7)); ini = isoLocal(d); }   // segunda-feira
+        if (tipo === '15') { const d = new Date(h); d.setDate(d.getDate() - 14); ini = isoLocal(d); }
+        if (tipo === 'mes') { ini = primeiro; fimRot = ultimoDiaDoMes(); }
+        if (ini < primeiro) ini = primeiro;
+        return { ini, fim, fimRot };
+    }
     const isoLocal = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
     function diasAte(dataISO) {
         const [y, m, d] = dataISO.split('-').map(Number);
@@ -542,7 +562,7 @@
     const marcasTodas = () => {           // todas as marcas cadastradas (por nome, sem repetir)
         const mapa = new Map();
         lojas.forEach(l => (l.marcas || []).forEach(m => { const k = norm(m.nome); if (k && !mapa.has(k)) mapa.set(k, m.nome); }));
-        vencidos.forEach(v => { const k = norm(v.marcaNome); if (k && !mapa.has(k)) mapa.set(k, v.marcaNome); });
+        vencMes().forEach(v => { const k = norm(v.marcaNome); if (k && !mapa.has(k)) mapa.set(k, v.marcaNome); });
         return [...mapa.entries()].sort((a, b) => a[1].localeCompare(b[1]));
     };
     const avisoRegras = () => vencErro === 'permission-denied'
@@ -588,7 +608,7 @@
 
     function htmlRelVenc() {
         const marcas = marcasTodas();
-        const lista = vencidos.filter(v => !filtroVenc || norm(v.marcaNome) === filtroVenc)
+        const lista = vencMes().filter(v => !filtroVenc || norm(v.marcaNome) === filtroVenc)
             .sort((a, b) => (b.dataRetirada || '').localeCompare(a.dataRetirada || '') || a.nome.localeCompare(b.nome));
         const grupos = new Map();
         lista.forEach(v => { const k = norm(v.marcaNome) || '_'; if (!grupos.has(k)) grupos.set(k, { nome: v.marcaNome || 'Sem marca', itens: [] }); grupos.get(k).itens.push(v); });
@@ -626,6 +646,8 @@
                 </button>
             </div>
             ${avisoRegras()}
+            <p class="text-[10px] text-gray-500 leading-snug mb-4">Registros de <b class="text-amber-500">${new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</b>. Eles ficam disponíveis até <b class="text-white">${dataBR(ultimoDiaDoMes())}</b> e são apagados automaticamente a partir do dia 1º do mês seguinte. Baixe o relatório antes.</p>
+            ${diasParaFimDoMes() <= 3 ? `<div class="card-app p-3 mb-4 border-l-4 border-l-red-600 text-[11px] text-gray-300 leading-snug"><b class="text-red-500 uppercase">${diasParaFimDoMes() === 0 ? 'Hoje é o último dia do mês' : 'Faltam ' + diasParaFimDoMes() + ' ' + plural(diasParaFimDoMes(), 'dia', 'dias') + ' para o fim do mês'}:</b> baixe o relatório de vencidos agora. Depois disso os registros serão apagados.</div>` : ''}
             <div class="flex gap-2 mb-4">
                 <button data-act="novoVencido" class="flex-1 bg-amber-500 text-gray-950 py-3 rounded-xl text-[10px] font-black uppercase">+ Vencido</button>
                 <button data-act="relatorioVenc" class="flex-1 flex items-center justify-center gap-1.5 border border-amber-500/50 text-amber-500 py-3 rounded-xl text-[10px] font-black uppercase"><i data-lucide="printer" class="w-4 h-4"></i> Relatório</button>
@@ -648,7 +670,7 @@
                 <div>
                     <div class="text-[9px] text-gray-500 font-black uppercase mb-1">Registros</div>
                     <div class="text-white font-black italic uppercase text-sm">Relatório de vencidos</div>
-                    <div class="text-gray-500 text-[11px]">${vencidos.length} ${plural(vencidos.length, 'item retirado', 'itens retirados')}</div>
+                    <div class="text-gray-500 text-[11px]">${vencMes().length} ${plural(vencMes().length, 'item retirado', 'itens retirados')} neste mês${diasParaFimDoMes() <= 3 ? ' · <b class="text-red-500">zera após ' + dataBR(ultimoDiaDoMes()) + '</b>' : ''}</div>
                 </div>
                 <i data-lucide="chevron-right" class="w-5 h-5 text-amber-500"></i>
             </button>
@@ -665,7 +687,7 @@
                     : '<p class="text-[11px] text-gray-500">No iPhone, abra o site no Safari, toque em Compartilhar e em "Adicionar à Tela de Início". Depois abra o app pelo ícone e ative aqui.</p>'}
             </div>
             <button data-act="sair" class="w-full py-4 rounded-xl border border-red-900/50 text-[10px] font-black uppercase text-red-500 mt-2">SAIR DA CONTA</button>
-            <p class="text-center text-[9px] text-gray-700 mt-6 uppercase font-bold">Promotor Ajudante · v7</p>`;
+            <p class="text-center text-[9px] text-gray-700 mt-6 uppercase font-bold">Promotor Ajudante · v9</p>`;
     }
 
     /* ================= ações ================= */
@@ -732,12 +754,18 @@
         },
         relatorioVenc: () => {
             const marcas = new Map();
-            vencidos.forEach(v => { const k = norm(v.marcaNome) || '_'; if (!marcas.has(k)) marcas.set(k, v.marcaNome || 'Sem marca'); });
-            if (!marcas.size) return aviso('NÃO HÁ VENCIDOS REGISTRADOS PARA GERAR RELATÓRIO.', { soConfirmar: true });
-            const opcoes = [...marcas.entries()].sort((a, b) => a[1].localeCompare(b[1])).map(([k, n]) => `<option value="${esc(k)}" ${k === filtroVenc ? 'selected' : ''}>${esc(n)}</option>`).join('');
-            aviso(`DE QUAL MARCA É O RELATÓRIO?<select id="rel-marca" class="input-custom mt-3">${opcoes}</select>`, {
-                titulo: 'RELATÓRIO DE VENCIDOS',
-                ok: () => imprimirVencidos($('#rel-marca').value),
+            vencMes().forEach(v => { const k = norm(v.marcaNome) || '_'; if (!marcas.has(k)) marcas.set(k, v.marcaNome || 'Sem marca'); });
+            if (!marcas.size) return aviso('NÃO HÁ VENCIDOS REGISTRADOS NESTE MÊS PARA GERAR RELATÓRIO.', { soConfirmar: true });
+            const opMarcas = [...marcas.entries()].sort((a, b) => a[1].localeCompare(b[1])).map(([k, n]) => `<option value="${esc(k)}" ${k === filtroVenc ? 'selected' : ''}>${esc(n)}</option>`).join('');
+            const opPeriodos = PERIODOS.map(([k, nome]) => {
+                const f = faixaPeriodo(k), dm = (iso) => iso.slice(8) + '/' + iso.slice(5, 7);
+                return `<option value="${k}">${nome} · ${k === 'dia' ? dm(f.fim) : dm(f.ini) + ' a ' + dm(f.fimRot)}</option>`;
+            }).join('');
+            const rot = 'class="block text-[9px] text-gray-500 font-black uppercase mt-4 mb-1"';
+            aviso(`<label ${rot}>Marca</label><select id="rel-marca" class="input-custom">${opMarcas}</select>
+                   <label ${rot}>Período</label><select id="rel-periodo" class="input-custom">${opPeriodos}</select>`, {
+                titulo: 'BAIXAR RELATÓRIO DE VENCIDOS',
+                ok: () => imprimirVencidos($('#rel-marca').value, $('#rel-periodo').value),
             });
         },
         pickSug: (d) => {
@@ -923,34 +951,71 @@
         window.print();
     }
 
-    // Relatório de uma marca dentro de uma loja
+    // Cabeçalho do modelo tabela: logo centralizado, linha laranja e uma linha com os dados
+    function relCabecalhoCentral(campos) {
+        const sep = `<span style="margin:0 8px;color:${LARANJA}">|</span>`;
+        return `
+            <div style="display:flex;flex-direction:column;align-items:center;gap:12px">
+                <img src="logo.png" onerror="this.onerror=null;this.src='https://raw.githubusercontent.com/melobortolatorenan-max/Promotor-ajudante/main/logo.png'" style="width:110px;height:110px;border-radius:24px;object-fit:cover" alt="">
+                <div style="line-height:1;text-align:center">
+                    <div style="font-size:11px;letter-spacing:.22em;color:#6b7280;font-weight:700">PROMOTOR</div>
+                    <div style="font-size:30px;color:${LARANJA};font-weight:900;font-style:italic;margin-top:3px">AJUDANTE</div>
+                </div>
+            </div>
+            <div style="height:3px;background:${LARANJA};margin:22px 0 14px"></div>
+            <div style="display:flex;justify-content:center;flex-wrap:wrap;row-gap:4px;font-size:11.5px;text-align:center">${campos.map(([k, v]) => `<span><b>${k}:</b> ${esc(v)}</span>`).join(sep)}</div>`;
+    }
+
+    // Relatório de uma marca dentro de uma loja (modelo tabela: produtos em ordem alfabética,
+    // cada um com suas validades juntas, da mais próxima para a mais distante)
     function imprimirRelatorio(lojaId, marcaId) {
         const l = lojas.find(x => x.id === lojaId); if (!l) return;
         const nomeM = marcaId === '_sem' ? 'Sem marca' : nomeMarca(lojaId, marcaId);
-        const lista = produtos.filter(p => p.lojaId === lojaId && doMarca(p, marcaId))
-            .sort((a, b) => a.data.localeCompare(b.data) || a.nome.localeCompare(b.nome));
+        const lista = produtos.filter(p => p.lojaId === lojaId && doMarca(p, marcaId));
         if (!lista.length) return aviso('ESTA MARCA AINDA NÃO TEM PRODUTOS CADASTRADOS.', { soConfirmar: true });
         const hoje = dataHoje();
-        const cartoes = lista.map(p => `
-            <div class="rel-card" style="display:flex;justify-content:space-between;align-items:center;gap:12px;border:1.5px solid #e5e7eb;border-left:6px solid ${LARANJA};border-radius:10px;padding:11px 14px;margin-bottom:9px">
-                <div style="font-size:13px;font-weight:800;text-transform:uppercase;font-style:italic;flex:1">${esc(p.nome)}</div>
-                <div style="display:flex;gap:7px;flex-shrink:0">
-                    <span style="border:1.5px solid ${LARANJA};color:${LARANJA};border-radius:20px;padding:3px 11px;font-size:11.5px;font-weight:900">${dataBR(p.data)}</span>
-                    <span style="background:${LARANJA};color:#000;border-radius:20px;padding:3px 11px;font-size:11.5px;font-weight:900">${esc(p.qtd)} un</span>
-                </div>
-            </div>`).join('');
+        const grupos = new Map();
+        lista.forEach(p => {
+            const k = norm(p.nome);
+            if (!grupos.has(k)) grupos.set(k, { nome: p.nome.trim(), itens: [], grafias: new Map() });
+            const g = grupos.get(k); g.itens.push(p);
+            const n = p.nome.trim(); g.grafias.set(n, (g.grafias.get(n) || 0) + 1);
+        });
+        // Se o mesmo produto foi digitado de formas diferentes (maiúsculas/acentos), mostra a grafia mais usada e mais completa
+        grupos.forEach(g => {
+            const pontos = (n, c) => c * 10 + (/^[A-ZÀ-Ý]/.test(n) ? 1 : 0) + (/[^\u0000-\u007f]/.test(n) ? 1 : 0);
+            g.nome = [...g.grafias.entries()].sort((a, b) => pontos(b[0], b[1]) - pontos(a[0], a[1]))[0][0];
+        });
+        const ordenados = [...grupos.values()].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
+        ordenados.forEach(g => g.itens.sort((a, b) => a.data.localeCompare(b.data)));
+        const th = `padding:10px 12px;font-size:10.5px;letter-spacing:.14em;text-align:center;width:50%`;
+        const corpo = ordenados.map(g => `
+            <tbody class="rel-card">
+                <tr><td colspan="2" style="padding:11px 12px 8px;font-size:13px;font-weight:800;text-transform:uppercase;font-style:italic;border-left:5px solid ${LARANJA};background:#f3f4f6">${esc(g.nome)}</td></tr>
+                ${g.itens.map((p, i) => `<tr style="background:${i % 2 ? '#f9fafb' : '#fff'}">
+                    <td style="padding:8px 12px;text-align:center;color:${LARANJA};font-weight:900;font-size:13px;border-bottom:1px solid #e5e7eb">${dataBR(p.data)}</td>
+                    <td style="padding:8px 12px;text-align:center;color:${LARANJA};font-weight:900;font-size:13px;border-bottom:1px solid #e5e7eb">${esc(p.qtd)}</td></tr>`).join('')}
+                <tr><td colspan="2" style="height:12px;padding:0"></td></tr>
+            </tbody>`).join('');
         return abrirImpressao(`Relatorio ${nomeM} - ${l.nome} - ${hoje.replace(/\//g, '-')}`,
-            relCabecalho('RELATÓRIO', 'DA MARCA') +
-            relInfo([['Loja', l.nome], ['Marca', nomeM], ['Data do relatório', hoje], ['Promotor', nomePromotor()]]) + cartoes);
+            relCabecalhoCentral([['Loja', l.nome], ['Marca', nomeM], ['Data do relatório', hoje], ['Promotor', nomePromotor()]]) +
+            `<table style="width:100%;border-collapse:collapse;margin-top:22px">
+                <thead><tr style="border-bottom:3px solid ${LARANJA}"><th style="${th}">VENCIMENTO</th><th style="${th}">QUANTIDADE</th></tr></thead>
+                ${corpo}
+            </table>`);
     }
 
     // Relatório de vencidos de uma marca (todas as lojas)
-    function imprimirVencidos(chave) {
-        const lista = vencidos.filter(v => (norm(v.marcaNome) || '_') === chave)
+    function imprimirVencidos(chave, periodo = 'mes') {
+        const f = faixaPeriodo(periodo);
+        const lista = vencMes().filter(v => (norm(v.marcaNome) || '_') === chave && v.dataRetirada >= f.ini && v.dataRetirada <= f.fim)
             .sort((a, b) => (a.dataRetirada || '').localeCompare(b.dataRetirada || '') || a.nome.localeCompare(b.nome));
-        if (!lista.length) return aviso('NÃO HÁ VENCIDOS DESTA MARCA.', { soConfirmar: true });
+        if (!lista.length) return aviso('NÃO HÁ VENCIDOS DESTA MARCA NO PERÍODO ESCOLHIDO.', { soConfirmar: true });
         const nomeM = lista[0].marcaNome || 'Sem marca';
         const hoje = dataHoje();
+        const ddmm = (iso) => iso.slice(8) + '/' + iso.slice(5, 7);
+        const textoPeriodo = periodo === 'dia' ? dataBR(f.fim) : ddmm(f.ini) + ' a ' + ddmm(f.fimRot);
+        const nomePeriodo = (PERIODOS.find(x => x[0] === periodo) || ['', ''])[1];
         const bloco = (rot, valor, preenchido) => `<div style="text-align:center"><div style="font-size:8.5px;letter-spacing:.12em;color:#6b7280;font-weight:800;margin-bottom:3px">${rot}</div>` +
             (preenchido
                 ? `<span style="display:inline-block;background:${LARANJA};color:#000;border-radius:20px;padding:3px 12px;font-size:11.5px;font-weight:900">${valor}</span>`
@@ -967,9 +1032,22 @@
                     ${bloco('QTD RETIRADA', esc(v.qtd) + ' un', true)}
                 </div>
             </div>`).join('');
-        return abrirImpressao(`Relatorio de vencidos - ${nomeM} - ${hoje.replace(/\//g, '-')}`,
+        return abrirImpressao(`Relatorio de vencidos - ${nomeM} - ${nomePeriodo} - ${hoje.replace(/\//g, '-')}`,
             relCabecalho('RELATÓRIO', 'DE VENCIDOS') +
-            relInfo([['Marca', nomeM], ['Data do relatório', hoje], ['Promotor', nomePromotor()]]) + cartoes);
+            relInfo([['Marca', nomeM], ['Período', nomePeriodo + ' (' + textoPeriodo + ')'], ['Data do relatório', hoje], ['Promotor', nomePromotor()]]) + cartoes);
+    }
+
+    /* ================= limpeza mensal dos vencidos ================= */
+    let limpandoVenc = false;
+    function limparVencidosAntigos() {
+        if (limpandoVenc || !uid) return;
+        const mes = mesAtualISO();
+        const antigos = vencidos.filter(v => /^\d{4}-\d{2}-\d{2}$/.test(v.dataRetirada || '') && v.dataRetirada.slice(0, 7) < mes);
+        if (!antigos.length) return;
+        limpandoVenc = true;
+        chunkOps(antigos.map(v => bt => bt.delete(refVenc(v.id))))
+            .catch(e => console.warn('limpeza de vencidos:', e))
+            .finally(() => { limpandoVenc = false; });
     }
 
     /* ================= vencidos ================= */
@@ -985,7 +1063,7 @@
         });
     }
     document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible' && uid) { atualizar(); verificarVencidos(); }
+        if (document.visibilityState === 'visible' && uid) { limparVencidosAntigos(); atualizar(); verificarVencidos(); }
     });
 
     /* ================= notificações (FCM) ================= */
@@ -1069,6 +1147,7 @@
         unsubs.push(onSnapshot(query(colVenc(), orderBy('dataRetirada')), (snap) => {
             vencErro = '';
             vencidos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            limparVencidosAntigos();
             atualizar();
         }, (e) => { vencErro = e.code || 'erro'; console.warn('vencidos:', e); atualizar(); }));
         mostrar('app');
