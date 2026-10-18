@@ -5,6 +5,7 @@ const admin = require('firebase-admin');
 const DIAS_AVISO = [0, 2, 3, 5];               // dia do vencimento, 2, 3 e 5 dias antes
 const FUSO = 'America/Sao_Paulo';
 const APP_URL = process.env.APP_URL || '';
+const FORCAR = process.env.FORCAR === 'true';   // true = envia mesmo que já tenha enviado hoje (usado em testes)
 
 admin.initializeApp({ credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)) });
 const db = admin.firestore();
@@ -31,6 +32,10 @@ async function main() {
   let enviados = 0, tokensRemovidos = 0, usuariosAvisados = 0;
 
   for (const uref of usuarios) {
+    // Evita aviso repetido: se esse promotor já foi avisado hoje (por outro disparo), pula.
+    const perfil = await uref.get();
+    if (!FORCAR && perfil.exists && perfil.data().ultimoAviso === hoje) continue;
+
     const tokensSnap = await uref.collection('tokens').get();
     if (tokensSnap.empty) continue;
 
@@ -45,6 +50,7 @@ async function main() {
     const porData = {};
     prodSnap.forEach(p => { const x = p.data(); (porData[x.data] = porData[x.data] || []).push(x); });
     usuariosAvisados++;
+    await uref.set({ ultimoAviso: hoje }, { merge: true });
 
     for (let i = 0; i < DIAS_AVISO.length; i++) {
       const itens = porData[datas[i]];
