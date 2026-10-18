@@ -2,8 +2,12 @@ name: Avisos de vencimento
 
 on:
   schedule:
-    - cron: '5 9 * * *'    # 09:05 UTC = 06:05 no horário de Brasília
-  workflow_dispatch:        # permite rodar manualmente para testar
+    - cron: '30 9 * * *'   # reserva: 09:30 UTC = 06:30 em Brasília (o GitHub pode atrasar horas)
+  workflow_dispatch:        # permite disparar na hora certa por um agendador externo e testar à mão
+    inputs:
+      forcar:
+        description: 'true = enviar mesmo que já tenha enviado hoje (teste)'
+        default: 'false'
 
 jobs:
   avisos:
@@ -21,5 +25,6 @@ jobs:
         run: node enviar-avisos.js
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FORCAR: ${{ github.event.inputs.forcar }}
           # Endereço do app na Vercel.
           APP_URL: https://promotor-ajudante.vercel.app/
