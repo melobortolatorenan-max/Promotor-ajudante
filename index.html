@@ -125,7 +125,7 @@
     <section id="tela-carregando" class="secao ativa items-center justify-center p-6 text-center">
         <img src="logo.png" onerror="this.src='https://raw.githubusercontent.com/melobortolatorenan-max/Promotor-ajudante/main/logo.png'" class="w-16 h-16 rounded-2xl mb-4" alt="">
         <div id="carregando-txt" class="text-[10px] font-black uppercase tracking-widest text-gray-500">Carregando...</div>
-        <div class="text-[9px] text-gray-700 mt-3 font-bold">v11</div>
+        <div class="text-[9px] text-gray-700 mt-3 font-bold">v12</div>
     </section>
 
     <!-- LOGIN / CRIAR CONTA -->
@@ -178,6 +178,7 @@
                 <button data-act="tab" data-id="p" class="nav-aba flex-1 py-2 rounded-xl text-[9px] font-black uppercase">Produtos</button>
             </nav>
         </header>
+        <div id="faixa-conexao" class="hidden" role="status"></div>
         <main id="corpo" class="p-4 flex-1 overflow-y-auto no-scrollbar pb-24"></main>
     </section>
 
@@ -234,6 +235,7 @@
     let vencErro = '';      // preenchido se as regras do Firebase ainda não liberam 'vencidos'
     let filtroVenc = '';    // filtro de marca na tela Relatório de vencidos
     let unsubs = [];
+    const pendentes = { lojas: false, produtos: false, vencidos: false };   // alterações ainda não enviadas ao servidor
     let prontoProd = false;
     let view = { tab: 'h', lojaId: null, marcaId: null, prod: null, preLoja: null, preMarca: '', origem: null, origemMarca: null };
     let modoCriar = false;
@@ -303,6 +305,40 @@
             ? 'Sem permissão. Saia e entre novamente.'
             : 'Não foi possível salvar. Verifique a conexão e tente de novo.';
         aviso(msg, { soConfirmar: true });
+    }
+
+    /* ================= conexão / modo offline ================= */
+    function atualizarFaixaConexao() {
+        const f = $('#faixa-conexao'); if (!f) return;
+        const base = 'px-4 py-2 text-[10px] font-black uppercase tracking-wide text-center ';
+        if (!navigator.onLine) {
+            f.className = base + 'bg-amber-500 text-gray-950';
+            f.textContent = 'Sem internet · pode continuar usando. Tudo será enviado quando a conexão voltar.';
+        } else if (pendentes.lojas || pendentes.produtos || pendentes.vencidos) {
+            f.className = base + 'bg-gray-800 text-amber-500';
+            f.textContent = 'Enviando alterações...';
+        } else { f.className = 'hidden'; f.textContent = ''; }
+    }
+    window.addEventListener('online', atualizarFaixaConexao);
+    window.addEventListener('offline', atualizarFaixaConexao);
+
+    // Service worker: guarda o app no aparelho para abrir e funcionar sem internet
+    const HOSTS_CACHE = ['cdn.tailwindcss.com', 'unpkg.com', 'www.gstatic.com', 'fonts.googleapis.com', 'fonts.gstatic.com', 'raw.githubusercontent.com'];
+    async function aquecerCache(forcar) {
+        if (!forcar && localStorage.getItem('sw_aquecido') === '1') return;
+        const nomes = [location.href, ...performance.getEntriesByType('resource').map(r => r.name)];
+        const urls = [...new Set(nomes)].filter(u => { try { const x = new URL(u); return x.origin === location.origin || HOSTS_CACHE.includes(x.hostname); } catch (_) { return false; } });
+        await Promise.all(urls.map(u => fetch(u).catch(() => fetch(u, { mode: 'no-cors' }).catch(() => {}))));
+        localStorage.setItem('sw_aquecido', '1');
+    }
+    function registrarSW() {
+        if (!('serviceWorker' in navigator)) return;
+        // quando o service worker novo assume, a página recarrega as bibliotecas por ele para guardá-las no aparelho
+        navigator.serviceWorker.addEventListener('message', (e) => { if (e.data === 'sw-ativo-v1') aquecerCache(true); });
+        navigator.serviceWorker.register('firebase-messaging-sw.js')
+            .then(() => navigator.serviceWorker.ready)
+            .then(() => { if (navigator.serviceWorker.controller) aquecerCache(false); })
+            .catch(e => console.warn('SW:', e));
     }
 
     /* ================= modal ================= */
@@ -732,7 +768,7 @@
                     : '<p class="text-[11px] text-gray-500">No iPhone, abra o site no Safari, toque em Compartilhar e em "Adicionar à Tela de Início". Depois abra o app pelo ícone e ative aqui.</p>'}
             </div>
             <button data-act="sair" class="w-full py-4 rounded-xl border border-red-900/50 text-[10px] font-black uppercase text-red-500 mt-2">SAIR DA CONTA</button>
-            <p class="text-center text-[9px] text-gray-700 mt-6 uppercase font-bold">Promotor Ajudante · v11</p>`;
+            <p class="text-center text-[9px] text-gray-700 mt-6 uppercase font-bold">Promotor Ajudante · v12</p>`;
     }
 
     /* ================= ações ================= */
@@ -1199,31 +1235,35 @@
         uid = user.uid; userInfo = { displayName: user.displayName, email: user.email };
         setDoc(doc(db, 'users', uid), { nome: user.displayName || '', email: user.email || '' }, { merge: true }).catch(() => {});
         prontoProd = false;
-        unsubs.push(onSnapshot(query(colLojas(), orderBy('ordem')), (snap) => {
+        unsubs.push(onSnapshot(query(colLojas(), orderBy('ordem')), { includeMetadataChanges: true }, (snap) => {
             lojas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            pendentes.lojas = snap.metadata.hasPendingWrites; atualizarFaixaConexao();
             atualizar();
         }, erroDb));
-        unsubs.push(onSnapshot(query(colProd(), orderBy('data')), (snap) => {
+        unsubs.push(onSnapshot(query(colProd(), orderBy('data')), { includeMetadataChanges: true }, (snap) => {
             produtos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            pendentes.produtos = snap.metadata.hasPendingWrites; atualizarFaixaConexao();
             prontoProd = true;
             atualizar();
             verificarVencidos();
         }, erroDb));
         vencErro = '';
-        unsubs.push(onSnapshot(query(colVenc(), orderBy('dataRetirada')), (snap) => {
+        unsubs.push(onSnapshot(query(colVenc(), orderBy('dataRetirada')), { includeMetadataChanges: true }, (snap) => {
             vencErro = '';
             vencidos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            pendentes.vencidos = snap.metadata.hasPendingWrites; atualizarFaixaConexao();
             limparVencidosAntigos();
             atualizar();
         }, (e) => { vencErro = e.code || 'erro'; console.warn('vencidos:', e); atualizar(); }));
         mostrar('app');
+        atualizarFaixaConexao();
         ir('h');
         if (msgOk && Notification.permission === 'granted') ativarNotificacoes(true); // renova o token em silêncio
         setTimeout(oferecerImportacao, 900);
     }
     function aoSair() {
         unsubs.forEach(u => u()); unsubs = [];
-        uid = null; userInfo = null; lojas = []; produtos = []; vencidos = []; vencErro = ''; filtroVenc = ''; prontoProd = false;
+        uid = null; userInfo = null; lojas = []; produtos = []; vencidos = []; pendentes.lojas = pendentes.produtos = pendentes.vencidos = false; vencErro = ''; filtroVenc = ''; prontoProd = false;
         $('#a-senha').value = '';
         mostrar('auth');
     }
@@ -1235,6 +1275,7 @@
             $('#carregando-txt').innerHTML = 'Falta configurar o Firebase.<br><br><span class="normal-case font-medium text-gray-600">Preencha o arquivo <b>firebase-config.js</b> conforme o LEIA-ME.</span>';
             return;
         }
+        registrarSW();
         app = initializeApp(cfg);
         auth = getAuth(app);
         try {
