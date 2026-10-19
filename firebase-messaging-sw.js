@@ -58,7 +58,8 @@ async function redeOuCache(req) {
   try {
     return await Promise.race([rede, new Promise((_, rej) => setTimeout(() => rej(new Error('lento')), ESPERA_REDE_MS))]);
   } catch (_) {
-    const guardado = await cache.match(req, { ignoreSearch: true }) || (req.mode === 'navigate' ? await cache.match('./index.html') : null);
+    const guardado = await cache.match(req, { ignoreSearch: true, ignoreVary: true })
+      || (req.mode === 'navigate' ? (await cache.match('./index.html', { ignoreVary: true }) || await cache.match('./', { ignoreVary: true })) : null);
     if (guardado) return guardado;
     return rede;   // não há cópia: espera a internet mesmo
   }
@@ -66,7 +67,7 @@ async function redeOuCache(req) {
 // Cópia do aparelho primeiro; se não houver, busca na internet e guarda
 async function cacheOuRede(req) {
   const cache = await caches.open(CACHE);
-  const guardado = await cache.match(req);
+  const guardado = await cache.match(req, { ignoreVary: true });
   if (guardado) return guardado;
   const r = await fetch(req);
   if (r && (r.ok || r.type === 'opaque')) cache.put(req, r.clone());
