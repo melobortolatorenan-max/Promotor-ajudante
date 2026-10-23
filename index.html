@@ -125,7 +125,7 @@
     <section id="tela-carregando" class="secao ativa items-center justify-center p-6 text-center">
         <img src="logo.png" onerror="this.src='https://raw.githubusercontent.com/melobortolatorenan-max/Promotor-ajudante/main/logo.png'" class="w-16 h-16 rounded-2xl mb-4" alt="">
         <div id="carregando-txt" class="text-[10px] font-black uppercase tracking-widest text-gray-500">Carregando...</div>
-        <div class="text-[9px] text-gray-700 mt-3 font-bold">v12</div>
+        <div class="text-[9px] text-gray-700 mt-3 font-bold">v13</div>
     </section>
 
     <!-- LOGIN / CRIAR CONTA -->
@@ -768,7 +768,7 @@
                     : '<p class="text-[11px] text-gray-500">No iPhone, abra o site no Safari, toque em Compartilhar e em "Adicionar à Tela de Início". Depois abra o app pelo ícone e ative aqui.</p>'}
             </div>
             <button data-act="sair" class="w-full py-4 rounded-xl border border-red-900/50 text-[10px] font-black uppercase text-red-500 mt-2">SAIR DA CONTA</button>
-            <p class="text-center text-[9px] text-gray-700 mt-6 uppercase font-bold">Promotor Ajudante · v12</p>`;
+            <p class="text-center text-[9px] text-gray-700 mt-6 uppercase font-bold">Promotor Ajudante · v13</p>`;
     }
 
     /* ================= ações ================= */
@@ -1107,36 +1107,59 @@
             </table>`);
     }
 
-    // Relatório de vencidos de uma marca (todas as lojas)
+    // Relatório de vencidos de uma marca (modelo tabela, igual ao de estoque):
+    // separado por loja e, dentro de cada loja, por produto (ordem alfabética);
+    // cada produto lista suas retiradas com vencimento, retirada e quantidade.
     function imprimirVencidos(chave, periodo = 'mes') {
         const f = faixaPeriodo(periodo);
-        const lista = vencMes().filter(v => (norm(v.marcaNome) || '_') === chave && v.dataRetirada >= f.ini && v.dataRetirada <= f.fim)
-            .sort((a, b) => (a.dataRetirada || '').localeCompare(b.dataRetirada || '') || a.nome.localeCompare(b.nome));
+        const lista = vencMes().filter(v => (norm(v.marcaNome) || '_') === chave && v.dataRetirada >= f.ini && v.dataRetirada <= f.fim);
         if (!lista.length) return aviso('NÃO HÁ VENCIDOS DESTA MARCA NO PERÍODO ESCOLHIDO.', { soConfirmar: true });
         const nomeM = lista[0].marcaNome || 'Sem marca';
         const hoje = dataHoje();
         const ddmm = (iso) => iso.slice(8) + '/' + iso.slice(5, 7);
         const textoPeriodo = periodo === 'dia' ? dataBR(f.fim) : ddmm(f.ini) + ' a ' + ddmm(f.fimRot);
         const nomePeriodo = (PERIODOS.find(x => x[0] === periodo) || ['', ''])[1];
-        const bloco = (rot, valor, preenchido) => `<div style="text-align:center"><div style="font-size:8.5px;letter-spacing:.12em;color:#6b7280;font-weight:800;margin-bottom:3px">${rot}</div>` +
-            (preenchido
-                ? `<span style="display:inline-block;background:${LARANJA};color:#000;border-radius:20px;padding:3px 12px;font-size:11.5px;font-weight:900">${valor}</span>`
-                : `<span style="display:inline-block;border:1.5px solid ${LARANJA};color:${LARANJA};border-radius:20px;padding:3px 12px;font-size:11.5px;font-weight:900">${valor}</span>`) + `</div>`;
-        const cartoes = lista.map(v => `
-            <div class="rel-card" style="display:flex;justify-content:space-between;align-items:center;gap:12px;border:1.5px solid #e5e7eb;border-left:6px solid ${LARANJA};border-radius:10px;padding:11px 14px;margin-bottom:9px">
-                <div style="flex:1;min-width:0">
-                    <div style="font-size:13px;font-weight:800;text-transform:uppercase;font-style:italic"><span style="color:#6b7280;font-style:normal;font-weight:700;text-transform:none">Produto:</span> ${esc(v.nome)}</div>
-                    <div style="font-size:10.5px;color:#6b7280;margin-top:3px">Loja: ${esc(v.lojaNome || '—')}</div>
-                </div>
-                <div style="display:flex;gap:10px;flex-shrink:0">
-                    ${bloco('DATA DE VENCIMENTO', dataBR(v.dataVenc), false)}
-                    ${bloco('DATA DE RETIRADA', dataBR(v.dataRetirada), false)}
-                    ${bloco('QTD RETIRADA', esc(v.qtd) + ' un', true)}
-                </div>
-            </div>`).join('');
+        const cmp = (a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' });
+        // agrupa por loja e, dentro dela, por produto
+        const lojasMap = new Map();
+        lista.forEach(v => {
+            const kl = norm(v.lojaNome) || '_';
+            if (!lojasMap.has(kl)) lojasMap.set(kl, { nome: (v.lojaNome || '—').trim(), prods: new Map() });
+            const L = lojasMap.get(kl);
+            const kp = norm(v.nome);
+            if (!L.prods.has(kp)) L.prods.set(kp, { grafias: new Map(), itens: [] });
+            const P = L.prods.get(kp); P.itens.push(v);
+            const n = v.nome.trim(); P.grafias.set(n, (P.grafias.get(n) || 0) + 1);
+        });
+        const pontos = (n, c) => c * 10 + (/^[A-ZÀ-Ý]/.test(n) ? 1 : 0) + (/[^\u0000-\u007f]/.test(n) ? 1 : 0);
+        const th = `padding:10px 12px;font-size:10.5px;letter-spacing:.14em;text-align:center;width:33.33%`;
+        const td = `padding:8px 12px;text-align:center;color:${LARANJA};font-weight:900;font-size:13px;border-bottom:1px solid #e5e7eb`;
+        const corpo = [...lojasMap.values()].sort((a, b) => cmp(a.nome, b.nome)).map(L => {
+            const prods = [...L.prods.values()].map(P => ({
+                nome: [...P.grafias.entries()].sort((a, b) => pontos(b[0], b[1]) - pontos(a[0], a[1]))[0][0],
+                itens: P.itens.sort((a, b) => (a.dataVenc || '').localeCompare(b.dataVenc || '') || (a.dataRetirada || '').localeCompare(b.dataRetirada || '')),
+            })).sort((a, b) => cmp(a.nome, b.nome));
+            const cabecalhoLoja = `
+            <tbody style="break-after:avoid;page-break-after:avoid">
+                <tr><td colspan="3" style="padding:16px 12px 6px;border-bottom:3px solid ${LARANJA};font-size:15px;font-weight:900;text-transform:uppercase;letter-spacing:.04em"><span style="color:${LARANJA};font-size:10px;letter-spacing:.18em;margin-right:8px">LOJA</span>${esc(L.nome)}</td></tr>
+            </tbody>`;
+            const blocos = prods.map(P => `
+            <tbody class="rel-card">
+                <tr><td colspan="3" style="padding:11px 12px 8px;font-size:13px;font-weight:800;text-transform:uppercase;font-style:italic;border-left:5px solid ${LARANJA};background:#f3f4f6">${esc(P.nome)}</td></tr>
+                ${P.itens.map((v, i) => `<tr style="background:${i % 2 ? '#f9fafb' : '#fff'}">
+                    <td style="${td}">${dataBR(v.dataVenc)}</td>
+                    <td style="${td}">${dataBR(v.dataRetirada)}</td>
+                    <td style="${td}">${esc(v.qtd)}</td></tr>`).join('')}
+                <tr><td colspan="3" style="height:10px;padding:0"></td></tr>
+            </tbody>`).join('');
+            return cabecalhoLoja + blocos;
+        }).join('');
         return abrirImpressao(`Relatorio de vencidos - ${nomeM} - ${nomePeriodo} - ${hoje.replace(/\//g, '-')}`,
-            relCabecalho('RELATÓRIO', 'DE VENCIDOS') +
-            relInfo([['Marca', nomeM], ['Período', nomePeriodo + ' (' + textoPeriodo + ')'], ['Data do relatório', hoje], ['Promotor', nomePromotor()]]) + cartoes);
+            relCabecalhoCentral([['Marca', nomeM], ['Período', nomePeriodo + ' (' + textoPeriodo + ')'], ['Data do relatório', hoje], ['Promotor', nomePromotor()]]) +
+            `<table style="width:100%;border-collapse:collapse;margin-top:22px">
+                <thead><tr style="border-bottom:3px solid ${LARANJA}"><th style="${th}">VENCIMENTO</th><th style="${th}">RETIRADA</th><th style="${th}">QUANTIDADE</th></tr></thead>
+                ${corpo}
+            </table>`);
     }
 
     /* ================= limpeza mensal dos vencidos ================= */
