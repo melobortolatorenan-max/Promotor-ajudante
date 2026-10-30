@@ -125,7 +125,7 @@
     <section id="tela-carregando" class="secao ativa items-center justify-center p-6 text-center">
         <img src="logo.png" onerror="this.src='https://raw.githubusercontent.com/melobortolatorenan-max/Promotor-ajudante/main/logo.png'" class="w-16 h-16 rounded-2xl mb-4" alt="">
         <div id="carregando-txt" class="text-[10px] font-black uppercase tracking-widest text-gray-500">Carregando...</div>
-        <div class="text-[9px] text-gray-700 mt-3 font-bold">v14</div>
+        <div class="text-[9px] text-gray-700 mt-3 font-bold">v15</div>
     </section>
 
     <!-- LOGIN / CRIAR CONTA -->
@@ -407,53 +407,27 @@
         if (view.busca) atualizarBusca();
     }
 
-    /* ================= busca de produtos (lupa) ================= */
-    // Campo de busca. Sem escopo: procura em todas as lojas. Com escopo: só na loja indicada.
-    function htmlBusca(escopoLojaId) {
+    /* ================= busca de produtos (lupa) na tela da marca ================= */
+    function htmlBusca() {
         return `
             <div class="relative mb-4">
                 <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-amber-500 pointer-events-none"><i data-lucide="search" class="w-4 h-4"></i></span>
-                <input id="busca" type="search" class="input-custom" style="padding-left:2.6rem;padding-right:2.8rem" placeholder="Buscar produto${escopoLojaId ? ' nesta loja' : ''}..." autocomplete="off" autocapitalize="off" value="${esc(view.busca || '')}" data-escopo="${esc(escopoLojaId || '')}">
+                <input id="busca" type="search" class="input-custom" style="padding-left:2.6rem;padding-right:2.8rem" placeholder="Buscar produto..." autocomplete="off" autocapitalize="off" value="${esc(view.busca || '')}">
                 <button id="busca-x" data-act="limparBusca" class="absolute right-1.5 top-1/2 -translate-y-1/2 p-2 text-gray-500 ${view.busca ? '' : 'hidden'}" aria-label="Limpar busca"><i data-lucide="x" class="w-4 h-4"></i></button>
-            </div>
-            <div id="busca-res"></div>`;
-    }
-    function htmlResultadosBusca(q, escopoLojaId) {
-        const nq = norm(q);
-        const achados = produtos.filter(p => (!escopoLojaId || p.lojaId === escopoLojaId) && norm(p.nome).includes(nq));
-        if (!achados.length) return '<div class="opacity-30 text-center py-10 uppercase font-black text-xs">Nenhum produto encontrado</div>';
-        const grupos = new Map();
-        achados.forEach(p => {
-            const k = p.lojaId + '|' + (p.marcaId || '') + '|' + norm(p.nome);
-            if (!grupos.has(k)) grupos.set(k, { lojaId: p.lojaId, marcaId: p.marcaId || '', nome: p.nome.trim(), itens: [] });
-            grupos.get(k).itens.push(p);
-        });
-        const lista = [...grupos.values()].map(g => ({ ...g, loja: nomeLoja(g.lojaId), marca: g.marcaId ? nomeMarca(g.lojaId, g.marcaId) : 'Sem marca' }))
-            .sort((a, b) => a.loja.localeCompare(b.loja, 'pt-BR', { sensitivity: 'base' }) || a.marca.localeCompare(b.marca, 'pt-BR', { sensitivity: 'base' }) || a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
-        const cartoes = lista.map(g => {
-            const chips = g.itens.sort((a, b) => a.data.localeCompare(b.data)).map(it => {
-                const d = diasAte(it.data);
-                const cor = d <= 0 ? 'text-red-500' : d <= 5 ? 'text-amber-500' : 'text-gray-300';
-                return `<span class="text-[11px] font-black px-2 py-1 rounded-lg bg-gray-950/60 border border-white/5 ${cor}">${fmt(it.data)} · ${esc(it.qtd)} un</span>`;
-            }).join('');
-            return `
-            <div class="card-app p-3 mb-2 cursor-pointer" data-act="verMarca" data-id="${esc(g.lojaId)}" data-marca="${esc(g.marcaId || '_sem')}">
-                <div class="text-[9px] text-gray-500 font-bold uppercase leading-none mb-1 truncate">${escopoLojaId ? '' : esc(g.loja) + ' · '}${esc(g.marca)}</div>
-                <div class="text-amber-500 font-black italic uppercase text-[13px] mb-2">${esc(g.nome)}</div>
-                <div class="flex flex-wrap gap-2">${chips}</div>
             </div>`;
-        }).join('');
-        return `<div class="text-[9px] text-gray-500 font-bold uppercase mb-2">${lista.length} ${plural(lista.length, 'produto encontrado', 'produtos encontrados')}</div>${cartoes}`;
     }
+    // Mostra só os produtos cujo nome contém o texto (ignora maiúsculas e acentos); cada produto mantém todas as suas datas
     function atualizarBusca() {
         const inp = $('#busca'); if (!inp) return;
         view.busca = inp.value;
-        const q = inp.value.trim();
-        const normal = $('#lista-normal'), res = $('#busca-res'), x = $('#busca-x');
-        if (x) x.classList.toggle('hidden', !inp.value);
-        if (!q) { if (normal) normal.classList.remove('hidden'); if (res) res.innerHTML = ''; return; }
-        if (normal) normal.classList.add('hidden');
-        if (res) res.innerHTML = htmlResultadosBusca(q, inp.dataset.escopo);
+        const q = norm(inp.value);
+        let visiveis = 0;
+        document.querySelectorAll('#lista-prod [data-nome]').forEach(g => {
+            const ok = !q || g.dataset.nome.includes(q);
+            g.hidden = !ok; if (ok) visiveis++;
+        });
+        const x = $('#busca-x'); if (x) x.classList.toggle('hidden', !inp.value);
+        const vazio = $('#busca-vazio'); if (vazio) vazio.classList.toggle('hidden', !(q && visiveis === 0));
     }
 
     function htmlHome() {
@@ -521,7 +495,7 @@
                 </div>
             </div>`;
         }).join('');
-        return `<button data-act="addLoja" class="btn-amarelo mb-4 shadow-lg shadow-amber-500/10 text-[10px]">+ NOVA LOJA</button>${htmlBusca('')}<div id="lista-normal">${itens}</div>`;
+        return `<button data-act="addLoja" class="btn-amarelo mb-4 shadow-lg shadow-amber-500/10 text-[10px]">+ NOVA LOJA</button>${itens}`;
     }
 
     function resumoVenc(lista) {
@@ -565,9 +539,8 @@
                 </button>
                 <button data-act="addMarca" data-id="${esc(l.id)}" class="bg-amber-500 text-gray-950 px-3 py-2 rounded-xl text-[10px] font-black uppercase">+ MARCA</button>
             </div>
-            ${htmlBusca(l.id)}
-            <div id="lista-normal">${cartoes}${cartaoSem}
-            ${(!cartoes && !cartaoSem) ? '<div class="text-center opacity-20 py-10 font-black text-xs uppercase">Cadastre uma marca</div>' : ''}</div>`;
+            ${cartoes}${cartaoSem}
+            ${(!cartoes && !cartaoSem) ? '<div class="text-center opacity-20 py-10 font-black text-xs uppercase">Cadastre uma marca</div>' : ''}`;
     }
 
     // Tela da marca: produtos daquela marca nesta loja
@@ -585,7 +558,7 @@
                 (agrupados[k] = agrupados[k] || { nome: p.nome, itens: [] }).itens.push(p);
             });
         const grupos = Object.values(agrupados).map(g => `
-            <div class="card-app p-3">
+            <div class="card-app p-3" data-nome="${esc(norm(g.nome))}">
                 <div class="text-amber-500 font-black uppercase italic text-[10px] mb-2 border-b border-white/5 pb-1">${esc(g.nome)}</div>
                 <div class="space-y-2">
                     ${g.itens.map(it => {
@@ -619,7 +592,9 @@
                     <button data-act="novoProd" data-id="${esc(l.id)}" data-marca="${esc(marcaId)}" class="bg-amber-500 text-gray-950 px-3 py-2 rounded-xl text-[10px] font-black uppercase">+ PRODUTO</button>
                 </div>
             </div>
-            <div class="space-y-3">${grupos || '<div class="text-center opacity-20 py-10 font-black text-xs uppercase">Sem produtos</div>'}</div>`;
+            ${grupos ? htmlBusca() : ''}
+            <div id="busca-vazio" class="hidden opacity-30 text-center py-10 uppercase font-black text-xs">Nenhum produto encontrado</div>
+            <div id="lista-prod" class="space-y-3">${grupos || '<div class="text-center opacity-20 py-10 font-black text-xs uppercase">Sem produtos</div>'}</div>`;
     }
 
     function htmlForm() {
@@ -820,7 +795,7 @@
                     : '<p class="text-[11px] text-gray-500">No iPhone, abra o site no Safari, toque em Compartilhar e em "Adicionar à Tela de Início". Depois abra o app pelo ícone e ative aqui.</p>'}
             </div>
             <button data-act="sair" class="w-full py-4 rounded-xl border border-red-900/50 text-[10px] font-black uppercase text-red-500 mt-2">SAIR DA CONTA</button>
-            <p class="text-center text-[9px] text-gray-700 mt-6 uppercase font-bold">Promotor Ajudante · v14</p>`;
+            <p class="text-center text-[9px] text-gray-700 mt-6 uppercase font-bold">Promotor Ajudante · v15</p>`;
     }
 
     /* ================= ações ================= */
