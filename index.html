@@ -125,7 +125,7 @@
     <section id="tela-carregando" class="secao ativa items-center justify-center p-6 text-center">
         <img src="logo.png" onerror="this.src='https://raw.githubusercontent.com/melobortolatorenan-max/Promotor-ajudante/main/logo.png'" class="w-16 h-16 rounded-2xl mb-4" alt="">
         <div id="carregando-txt" class="text-[10px] font-black uppercase tracking-widest text-gray-500">Carregando...</div>
-        <div class="text-[9px] text-gray-700 mt-3 font-bold">v15</div>
+        <div class="text-[9px] text-gray-700 mt-3 font-bold">v16</div>
     </section>
 
     <!-- LOGIN / CRIAR CONTA -->
@@ -232,6 +232,7 @@
     let app, auth, db, messaging, msgOk = false;
     let uid = null, userInfo = null;
     let lojas = [], produtos = [], vencidos = [];
+    let diasAviso = [2, 3, 5];   // dias antes do vencimento em que o promotor quer ser avisado (1 a 5)
     let vencErro = '';      // preenchido se as regras do Firebase ainda não liberam 'vencidos'
     let filtroVenc = '';    // filtro de marca na tela Relatório de vencidos
     let unsubs = [];
@@ -788,14 +789,28 @@
                     <div class="text-[9px] text-gray-500 font-black uppercase">Notificações de vencimento</div>
                 </div>
                 <div class="text-white font-bold text-sm mb-2">${n.txt}</div>
-                <p class="text-gray-500 text-[11px] leading-snug mb-3">Você recebe um aviso pela manhã quando houver produtos vencendo em 5 dias, 3 dias, 2 dias e no dia do vencimento.</p>
+                <p class="text-gray-500 text-[11px] leading-snug mb-3">Você recebe um aviso pela manhã sobre os produtos que vencem nos dias escolhidos abaixo e no dia do vencimento.</p>
                 ${n.suporte ? (n.ativo
                     ? '<button data-act="notifOff" class="w-full py-3 rounded-xl border border-gray-700 text-[10px] font-black uppercase text-gray-400">DESATIVAR NESTE APARELHO</button>'
                     : '<button data-act="notifOn" class="btn-amarelo">ATIVAR NOTIFICAÇÕES</button>')
                     : '<p class="text-[11px] text-gray-500">No iPhone, abra o site no Safari, toque em Compartilhar e em "Adicionar à Tela de Início". Depois abra o app pelo ícone e ative aqui.</p>'}
             </div>
+            <div class="card-app p-4 mb-3">
+                <div class="text-[9px] text-gray-500 font-black uppercase mb-3">Notificação em (dias antes):</div>
+                <div class="flex gap-2 mb-3">
+                    ${[1, 2, 3, 4, 5].map(n => { const on = diasAviso.includes(n); return `
+                    <button data-act="alternarDia" data-dia="${n}" aria-pressed="${on}" aria-label="${n} ${n === 1 ? 'dia' : 'dias'} antes" class="flex-1 flex flex-col items-center gap-1.5 py-3 rounded-2xl border ${on ? 'bg-amber-500 text-gray-950 border-amber-500' : 'bg-gray-900/60 text-gray-500 border-gray-700'}">
+                        <i data-lucide="${on ? 'bell-ring' : 'bell'}" class="w-4 h-4"></i>
+                        <span class="text-xl font-black leading-none">${n}</span>
+                        <span class="text-[8px] font-black uppercase leading-none">${n === 1 ? 'dia' : 'dias'}</span>
+                    </button>`; }).join('')}
+                </div>
+                <p class="text-gray-500 text-[11px] leading-snug">${diasAviso.length
+                    ? `Você será avisado <b class="text-amber-500">${diasAviso.length === 1 ? diasAviso[0] + (diasAviso[0] === 1 ? ' dia' : ' dias') : diasAviso.slice(0, -1).join(', ') + ' e ' + diasAviso[diasAviso.length - 1] + ' dias'}</b> antes do vencimento e também no dia do vencimento.`
+                    : 'Nenhum dia selecionado: você receberá só o aviso no dia do vencimento.'}</p>
+            </div>
             <button data-act="sair" class="w-full py-4 rounded-xl border border-red-900/50 text-[10px] font-black uppercase text-red-500 mt-2">SAIR DA CONTA</button>
-            <p class="text-center text-[9px] text-gray-700 mt-6 uppercase font-bold">Promotor Ajudante · v15</p>`;
+            <p class="text-center text-[9px] text-gray-700 mt-6 uppercase font-bold">Promotor Ajudante · v16</p>`;
     }
 
     /* ================= ações ================= */
@@ -1003,6 +1018,12 @@
             if (!email) { erro.textContent = 'Digite seu e-mail acima e toque de novo.'; return; }
             try { await sendPasswordResetEmail(auth, email); erro.className = erro.className.replace('text-red-500', 'text-amber-500'); erro.textContent = 'Enviamos um link para redefinir a senha no seu e-mail.'; }
             catch (e) { erro.className = erro.className.replace('text-amber-500', 'text-red-500'); erro.textContent = msgAuth(e); }
+        },
+        alternarDia: (d) => {
+            const n = Number(d.dia); if (!(n >= 1 && n <= 5)) return;
+            diasAviso = diasAviso.includes(n) ? diasAviso.filter(x => x !== n) : [...diasAviso, n].sort((a, b) => a - b);
+            desenhar(false);
+            setDoc(doc(db, 'users', uid), { diasAviso }, { merge: true }).catch(erroDb);
         },
         notifOn: () => ativarNotificacoes(false),
         notifOff: async () => { await desativarNotificacoes(); desenhar(false); },
@@ -1299,6 +1320,11 @@
             atualizar();
             verificarVencidos();
         }, erroDb));
+        unsubs.push(onSnapshot(doc(db, 'users', uid), (snap) => {
+            const d = snap.exists() ? snap.data().diasAviso : null;
+            diasAviso = Array.isArray(d) ? [...new Set(d.filter(n => Number.isInteger(n) && n >= 1 && n <= 5))].sort((a, b) => a - b) : [2, 3, 5];
+            if (view.tab === 'c') desenhar(false);
+        }, (e) => console.warn('perfil:', e)));
         vencErro = '';
         unsubs.push(onSnapshot(query(colVenc(), orderBy('dataRetirada')), { includeMetadataChanges: true }, (snap) => {
             vencErro = '';
@@ -1315,7 +1341,7 @@
     }
     function aoSair() {
         unsubs.forEach(u => u()); unsubs = [];
-        uid = null; userInfo = null; lojas = []; produtos = []; vencidos = []; pendentes.lojas = pendentes.produtos = pendentes.vencidos = false; vencErro = ''; filtroVenc = ''; prontoProd = false;
+        uid = null; userInfo = null; diasAviso = [2, 3, 5]; lojas = []; produtos = []; vencidos = []; pendentes.lojas = pendentes.produtos = pendentes.vencidos = false; vencErro = ''; filtroVenc = ''; prontoProd = false;
         $('#a-senha').value = '';
         mostrar('auth');
     }
