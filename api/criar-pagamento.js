@@ -36,3 +36,7 @@ module.exports = async (req, res) => {
     if (!r.ok || !j.init_point) throw new Error('Mercado Pago: ' + JSON.stringify(j).slice(0, 300));
     return res.status(200).json({ url: j.init_point });
   } catch (e) {
+    console.error('criar-pagamento:', e);
+    return res.status(500).json({ erro: 'falha' });
+  }
+};
