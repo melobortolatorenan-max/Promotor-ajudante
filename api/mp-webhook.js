@@ -36,3 +36,33 @@ module.exports = async (req, res) => {
     let ref = null;
     if (p.external_reference) {
       const d = await db.collection('users').doc(String(p.external_reference)).get();
+      if (d.exists) ref = d.ref;
+    }
+    if (!ref && p.payer && p.payer.email) {
+      const email = String(p.payer.email).trim().toLowerCase();
+      const [a, c] = await Promise.all([
+        db.collection('users').where('email', '==', email).limit(1).get(),
+        db.collection('users').where('emailPagamento', '==', email).limit(1).get(),
+      ]);
+      const achado = a.docs[0] || c.docs[0];
+      if (achado) ref = achado.ref;
+    }
+    if (!ref) { console.warn('Pagamento ' + id + ' aprovado, mas sem usuário correspondente. Libere manualmente.'); return res.status(200).send('sem-usuario'); }
+
+    const pagRef = db.collection('pagamentos').doc(String(id));
+    await db.runTransaction(async (t) => {
+      const [pg, u] = await Promise.all([t.get(pagRef), t.get(ref)]);
+      if (pg.exists) return;                               // já processado (o MP reenvia avisos)
+      const hoje = hojeSP();
+      const atual = u.data() && u.data().acessoAte;
+      const base = typeof atual === 'string' && atual > hoje ? atual : hoje;
+      const novo = somaDias(base, DIAS);
+      t.set(ref, { acessoAte: novo, liberadoEm: admin.firestore.FieldValue.serverTimestamp(), pagamentoInformadoEm: admin.firestore.FieldValue.delete() }, { merge: true });
+      t.set(pagRef, { uid: ref.id, valor: p.transaction_amount, em: admin.firestore.FieldValue.serverTimestamp() });
+    });
+    return res.status(200).send('ok');
+  } catch (e) {
+    console.error('mp-webhook:', e);
+    return res.status(500).send('erro');
+  }
+};
