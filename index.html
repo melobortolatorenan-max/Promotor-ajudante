@@ -1090,6 +1090,23 @@
                 clearTimeout(t); cap.enviando = false; btn.disabled = false;
             }
         },
+        pagar: async () => {
+            const btn = $('#pag-pagar'); if (btn) btn.disabled = true;
+            const reabrir = () => { if (btn) btn.disabled = false; };
+            try {
+                if (!navigator.onLine) throw new Error('offline');
+                const token = await auth.currentUser.getIdToken();
+                const r = await fetch('/api/criar-pagamento', { method: 'POST', headers: { Authorization: 'Bearer ' + token } });
+                const j = await r.json().catch(() => ({}));
+                if (!r.ok || !j.url) throw new Error('api');
+                window.location.href = j.url;      // link do Mercado Pago ligado a esta conta (liberação automática)
+            } catch (e) {
+                console.warn('pagar:', e);
+                reabrir();
+                if (!navigator.onLine) { const st = $('#pag-status'); if (st) { st.className = 'text-[11px] font-bold mt-3 text-red-500'; st.textContent = 'Sem internet. Conecte-se e tente novamente.'; } return; }
+                window.open(PAGAMENTO_LINK, '_blank', 'noopener');   // plano B: link fixo (liberação após conferência)
+            }
+        },
         pagJa: async () => {
             const inp = $('#pag-email'), btn = $('#pag-ja'), st = $('#pag-status');
             const emailPag = ((inp && inp.value) || '').trim().toLowerCase();
@@ -1498,7 +1515,8 @@
                 <div class="text-5xl font-black text-white leading-none">${PRECO_ANUAL}</div>
                 <div class="text-[10px] text-gray-500 font-black uppercase mt-2">por ano · todas as funções</div>
             </div>
-            <a href="${PAGAMENTO_LINK}" target="_blank" rel="noopener" class="btn-amarelo flex items-center justify-center gap-2 text-center mb-5"><i data-lucide="credit-card" class="w-4 h-4"></i> PAGAR ${PRECO_ANUAL}</a>
+            <button id="pag-pagar" data-act="pagar" class="btn-amarelo flex items-center justify-center gap-2 text-center mb-2"><i data-lucide="credit-card" class="w-4 h-4"></i> PAGAR ${PRECO_ANUAL}</button>
+            <p class="text-[10px] text-gray-500 font-bold text-center mb-5">Depois de pagar, volte ao app: o acesso é liberado automaticamente.</p>
             <div class="card-app p-4 mb-3">
                 <div class="text-[9px] text-gray-500 font-black uppercase mb-2">Já pagou?</div>
                 <label class="text-[9px] font-black text-gray-500 uppercase ml-2" for="pag-email">E-mail usado no pagamento</label>
