@@ -24,7 +24,8 @@ module.exports = async (req, res) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + process.env.MP_ACCESS_TOKEN },
       body: JSON.stringify({
-        items: [{ title: 'Promotor Ajudante - acesso anual', quantity: 1, unit_price: PRECO, currency_id: 'BRL' }],
+        items: [{ title: 'Anuidade Promotor Ajudante', quantity: 1, unit_price: PRECO, currency_id: 'BRL' }],
+        statement_descriptor: 'PROMOTORAJUDANTE',   // nome na fatura do cartão (máx. 16 caracteres)
         external_reference: dec.uid,
         payer: dec.email ? { email: dec.email } : undefined,
         notification_url: `${base}/api/mp-webhook`,
