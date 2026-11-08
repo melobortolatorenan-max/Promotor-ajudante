@@ -30,6 +30,21 @@ module.exports = async (req, res) => {
     const r = await fetch('https://api.mercadopago.com/v1/payments/' + encodeURIComponent(id), { headers: { Authorization: 'Bearer ' + process.env.MP_ACCESS_TOKEN } });
     if (!r.ok) { console.error('MP respondeu', r.status); return res.status(500).send('erro-mp'); }
     const p = await r.json();
+    // reembolso / estorno de um pagamento que já tinha liberado acesso: retira os 365 dias dele
+    if (['refunded', 'charged_back', 'cancelled'].includes(p.status)) {
+      const pagRef0 = db.collection('pagamentos').doc(String(id));
+      const feito = await db.runTransaction(async (t) => {
+        const pg = await t.get(pagRef0);
+        if (!pg.exists || pg.data().estornadoEm) return false;     // nunca liberamos, ou já retiramos
+        const uref = db.collection('users').doc(String(pg.data().uid));
+        const u = await t.get(uref);
+        const atual = u.exists ? u.data().acessoAte : null;
+        if (typeof atual === 'string') t.set(uref, { acessoAte: somaDias(atual, -DIAS) }, { merge: true });
+        t.set(pagRef0, { estornadoEm: admin.firestore.FieldValue.serverTimestamp(), statusFinal: p.status }, { merge: true });
+        return true;
+      });
+      return res.status(200).send(feito ? 'acesso-retirado' : 'ignorado');
+    }
     if (p.status !== 'approved' || p.currency_id !== 'BRL' || Number(p.transaction_amount) < PRECO) return res.status(200).send('nao-aprovado');
 
     // descobre o usuário: pelo uid gravado no link; se não houver, pelo e-mail do pagador
@@ -52,7 +67,7 @@ module.exports = async (req, res) => {
     const pagRef = db.collection('pagamentos').doc(String(id));
     await db.runTransaction(async (t) => {
       const [pg, u] = await Promise.all([t.get(pagRef), t.get(ref)]);
-      if (pg.exists) return;                               // já processado (o MP reenvia avisos)
+      if (pg.exists) return;                               // já processado (o MP reenvia avisos); se foi estornado, não libera de novo
       const hoje = hojeSP();
       const atual = u.data() && u.data().acessoAte;
       const base = typeof atual === 'string' && atual > hoje ? atual : hoje;
