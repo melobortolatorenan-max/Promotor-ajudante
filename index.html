@@ -315,10 +315,10 @@
         }
         ctx.restore();
         const logo = logoSemFundo();
-        const lw = Math.round(W * 0.14), lh = logo ? lw * logo.height / logo.width : lw;
-        const yMeio = H - pad - lh / 2;
+        const hL = fs * 1.25 + fsMenor * 1.1;          // altura do bloco de texto (PROMOTOR até AJUDANTE)
+        const lh = hL, lw = logo ? hL * logo.width / logo.height : 0;
         if (logo) {
-            ctx.save(); ctx.globalAlpha = 0.6;
+            ctx.save(); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high'; ctx.globalAlpha = 0.9;
             ctx.drawImage(logo, pad, H - pad - lh, lw, lh);
             ctx.restore();
         }
@@ -326,7 +326,7 @@
         ctx.save();
         ctx.shadowColor = 'rgba(0,0,0,.75)'; ctx.shadowBlur = lh * 0.15;
         ctx.fillStyle = '#f59e0b'; ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
-        const xTexto = pad + lw + lh * 0.12;
+        const xTexto = pad + lw + lh * 0.25;
         ctx.font = `600 ${fsMenor}px Arial, sans-serif`;   // mesmo tamanho da data e hora
         // alinhado com as linhas da direita: AJUDANTE na linha do nome, PROMOTOR na linha da data
         ctx.fillText('PROMOTOR', xTexto, H - pad - fs * 1.25);
@@ -347,8 +347,16 @@
             else if (m < 60) px[i + 3] = Math.round(px[i + 3] * (m - 30) / 30);
         }
         cx.putImageData(d, 0, 0);
-        logoLimpo = c;
-        return c;
+        // recorta as margens transparentes, para o desenho ficar alinhado pela parte visível
+        let x0 = c.width, y0 = c.height, x1 = -1, y1 = -1;
+        for (let y = 0; y < c.height; y++) for (let x = 0; x < c.width; x++) {
+            if (px[(y * c.width + x) * 4 + 3] > 8) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+        }
+        if (x1 < 0) { logoLimpo = c; return c; }
+        const r = document.createElement('canvas'); r.width = x1 - x0 + 1; r.height = y1 - y0 + 1;
+        r.getContext('2d').drawImage(c, x0, y0, r.width, r.height, 0, 0, r.width, r.height);
+        logoLimpo = r;
+        return r;
     }
     async function obterLocalizacao() {
         // Só usa a localização se ela já estiver liberada no navegador. Nunca pede permissão durante a foto.
