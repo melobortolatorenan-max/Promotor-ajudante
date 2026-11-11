@@ -48,6 +48,23 @@ async function main() {
     const tokensSnap = await uref.collection('tokens').get();
     if (tokensSnap.empty) continue;
 
+    // Aviso do fim do acesso: quando faltam 7 dias ou menos, uma vez por dia
+    const pl = perfil.exists ? perfil.data() : {};
+    if (typeof pl.acessoAte === 'string' && pl.avisoPlanoEm !== hoje) {
+      const dPlano = Math.round((Date.parse(pl.acessoAte + 'T00:00:00-03:00') - Date.parse(hoje + 'T00:00:00-03:00')) / 86400000);
+      if (dPlano >= 0 && dPlano <= 7) {
+        const tk = tokensSnap.docs.map(d => d.data().token).filter(Boolean);
+        if (tk.length) {
+          const corpoPlano = dPlano === 0 ? 'Seu acesso vence hoje. Renove no app para continuar.' : `Seu acesso vence em ${dPlano} ${dPlano === 1 ? 'dia' : 'dias'}. Renove no app para continuar.`;
+          const webPlano = { notification: { tag: 'plano' } };
+          if (APP_URL) { webPlano.fcmOptions = { link: APP_URL }; webPlano.notification.icon = APP_URL + 'logo.png'; }
+          const rPlano = await messaging.sendEachForMulticast({ tokens: tk, notification: { title: 'Promotor Ajudante', body: corpoPlano }, webpush: webPlano });
+          enviados += rPlano.successCount;
+          await uref.set({ avisoPlanoEm: hoje }, { merge: true });
+        }
+      }
+    }
+
     const dias = diasDoPromotor(perfil);
     if (!dias.length) continue;
     const datas = dias.map(n => somaDias(hoje, n));
