@@ -125,8 +125,17 @@
     <section id="tela-carregando" class="secao ativa items-center justify-center p-6 text-center">
         <img src="logo.png" onerror="this.src='https://raw.githubusercontent.com/melobortolatorenan-max/Promotor-ajudante/main/logo.png'" class="w-16 h-16 mb-4" style="mix-blend-mode:lighten" alt="">
         <div id="carregando-txt" class="text-[10px] font-black uppercase tracking-widest text-gray-500">Carregando...</div>
-        <div class="text-[9px] text-gray-700 mt-3 font-bold">v40</div>
+        <div class="text-[9px] text-gray-700 mt-3 font-bold">v42</div>
     </section>
+
+    <!-- DESFAZER -->
+    <div id="desfazer" class="hidden fixed left-4 right-4 bottom-6 items-center justify-between gap-3 p-4 rounded-2xl border border-gray-700 bg-gray-900 shadow-2xl" style="z-index:97">
+        <span id="desfazer-texto" class="text-[11px] font-black text-gray-300 uppercase"></span>
+        <div class="flex items-center gap-1">
+            <button data-act="desfazer" class="text-[10px] font-black uppercase text-amber-500 px-3 py-2">Desfazer</button>
+            <button data-act="fecharDesfazer" class="text-[12px] font-black text-gray-500 px-2 py-2" aria-label="Fechar">✕</button>
+        </div>
+    </div>
 
     <!-- FOTO PDV -->
     <div id="pdv" class="hidden fixed inset-0 flex-col items-center justify-center p-4 gap-4" style="z-index:96;background:#000" role="dialog" aria-modal="true">
@@ -256,7 +265,7 @@
         from "https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging.js";
 
     /* ================= utilidades ================= */
-    const VERSAO_APP = 'v40';
+    const VERSAO_APP = 'v42';
     document.getElementById('versao-login').textContent = VERSAO_APP;
     const API_BASE = 'https://promotor-ajudante.vercel.app';
     const SETORES = ['Bebidas', 'Doces', 'Higiene', 'Laticínios', 'Leites', 'Limpeza', 'Massas congeladas', 'Molhos', 'Pães', 'Salgadinhos', 'Temperos'];
@@ -456,6 +465,9 @@
     }
 
     /* ---- leitura de código de barras e registro de códigos ---- */
+    let relAcao = 'imprimir';        // 'imprimir' ou 'compartilhar' (vale para o próximo relatório)
+    let filtroSetor = '';            // filtro de setor na lista de produtos da marca
+    let desfazerTimer = null, desfazerFn = null;
     const leitor = { stream: null, timer: null, busy: false, detector: null };
     function leitorFechar() {
         clearInterval(leitor.timer); leitor.timer = null; leitor.busy = false;
@@ -622,6 +634,72 @@
             } else erroDb(e);
         }
     }
+    // Exporta lojas, produtos e vencidos em planilha (abre no Excel)
+    function exportarCsv() {
+        const cel = (v) => { const t = String(v ?? '').replace(/"/g, '""'); return /[";\r\n]/.test(t) ? `"${t}"` : t; };
+        const nomeLoja = (id) => (lojas.find(l => l.id === id) || {}).nome || '';
+        const nomeMarca = (lojaId, marcaId) => { const l = lojas.find(x => x.id === lojaId); const m = l && (l.marcas || []).find(x => x.id === marcaId); return m ? m.nome : 'Sem marca'; };
+        const linhas = [['PRODUTOS'], ['Loja', 'Marca', 'Setor', 'Produto', 'Validade', 'Quantidade', 'Codigo de barras']];
+        produtos.forEach(p => linhas.push([nomeLoja(p.lojaId), nomeMarca(p.lojaId, p.marcaId), p.setor || '', p.nome, p.data, p.semQtd ? '' : p.qtd, p.codigo || '']));
+        linhas.push([], ['VENCIDOS'], ['Loja', 'Marca', 'Produto', 'Vencimento', 'Retirada', 'Quantidade', 'Motivo']);
+        vencidos.forEach(v => linhas.push([nomeLoja(v.lojaId), nomeMarca(v.lojaId, v.marcaId), v.nome, v.dataVenc, v.dataRetirada, v.qtd, v.motivo || '']));
+        const csv = '\ufeff' + linhas.map(l => l.map(cel).join(';')).join('\r\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'Promotor Ajudante - dados.csv';
+        document.body.appendChild(a); a.click();
+        setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+    }
+    // Resumo da semana na tela inicial: produtos que vencem em até 7 dias, por loja
+    function htmlResumoSemana() {
+        const proximos = produtos.filter(p => { const d = diasAte(p.data); return d >= 0 && d <= 7; });
+        if (!proximos.length) return '';
+        const porLoja = {};
+        proximos.forEach(p => { porLoja[p.lojaId] = (porLoja[p.lojaId] || 0) + 1; });
+        const linhas = Object.entries(porLoja).map(([id, n]) => {
+            const nome = (lojas.find(l => l.id === id) || {}).nome || 'Loja';
+            return `<div class="flex justify-between text-[11px] py-0.5"><span class="text-gray-300 font-bold uppercase">${esc(nome)}</span><span class="text-amber-500 font-black">${n} ${n === 1 ? 'produto' : 'produtos'}</span></div>`;
+        }).join('');
+        return `<div class="card-app p-4 mb-4"><div class="text-[9px] text-gray-500 font-black uppercase mb-2">Vence nos próximos 7 dias</div>${linhas}</div>`;
+    }
+    let ultimaListaVenc = [];
+    function htmlResumoVencidos(lista) {
+        if (!lista.length) return '';
+        const nomeLoja = (id) => (lojas.find(l => l.id === id) || {}).nome || 'Loja';
+        const total = lista.reduce((t, v) => t + (Number(v.qtd) || 0), 0);
+        const somar = (chave) => { const o = {}; lista.forEach(v => { const k = chave(v); o[k] = (o[k] || 0) + (Number(v.qtd) || 0); }); return o; };
+        const tabela = (titulo, obj) => `<table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:10px">
+            <thead><tr><th style="text-align:left;padding:6px 12px;border-bottom:2px solid #f59e0b">${titulo}</th><th style="text-align:center;padding:6px 12px;border-bottom:2px solid #f59e0b">Unidades</th></tr></thead>
+            <tbody>${Object.entries(obj).sort((a, b) => b[1] - a[1]).map(([k, n]) => `<tr><td style="padding:6px 12px;border-bottom:1px solid #e5e7eb">${esc(k)}</td><td style="padding:6px 12px;text-align:center;border-bottom:1px solid #e5e7eb;font-weight:900">${n}</td></tr>`).join('')}</tbody></table>`;
+        return `<div style="margin-top:26px"><p style="font-weight:900;font-size:12px;color:#f59e0b;text-transform:uppercase;margin:0">Resumo · ${total} unidades retiradas</p>`
+            + tabela('Loja', somar(v => nomeLoja(v.lojaId)))
+            + tabela('Motivo', somar(v => (v.motivo || '').trim() || 'Sem motivo informado'))
+            + '</div>';
+    }
+    function abrirImpressaoVenc(titulo, html) { return abrirImpressao(titulo, html + htmlResumoVencidos(ultimaListaVenc)); }
+    // Meu plano: mostra até quando vai o acesso e quantos dias faltam
+    function htmlPlano() {
+        if (contaAntiga || perfilAcesso.gratis === true) {
+            return `<div class="card-app p-4 mb-4"><div class="text-[9px] text-gray-500 font-black uppercase mb-1">Meu plano</div><p class="text-[12px] text-gray-300">Acesso livre.</p></div>`;
+        }
+        const ate = perfilAcesso.acessoAte;
+        if (typeof ate !== 'string') return '';
+        const dias = diasAte(ate);
+        const cor = dias <= 7 ? 'text-amber-500' : 'text-gray-300';
+        return `<div class="card-app p-4 mb-4">
+            <div class="text-[9px] text-gray-500 font-black uppercase mb-1">Meu plano</div>
+            <p class="text-[12px] text-gray-300">Acesso até <b class="text-white">${dataBR(ate)}</b> · <span class="${cor} font-black">${dias > 0 ? dias + ' dias restantes' : 'vence hoje'}</span></p>
+            <button data-act="pagar" class="mt-3 w-full py-3 rounded-xl border border-amber-500 text-[10px] font-black uppercase text-amber-500">Renovar acesso (R$ 50,00)</button>
+        </div>`;
+    }
+    // Aviso na tela inicial quando faltam 7 dias ou menos
+    function htmlBannerPlano() {
+        if (contaAntiga || perfilAcesso.gratis === true) return '';
+        const ate = perfilAcesso.acessoAte;
+        if (typeof ate !== 'string') return '';
+        const dias = diasAte(ate);
+        if (dias < 0 || dias > 7) return '';
+        return `<button data-act="tab" data-id="c" class="w-full mb-4 p-3 rounded-2xl border border-amber-500/60 text-left text-[11px] font-black text-amber-500 uppercase">${dias === 0 ? 'Seu acesso vence hoje.' : 'Seu acesso vence em ' + dias + ' dias.'} Toque para renovar.</button>`;
+    }
     function fecharLegal() { const box = $('#legal'); box.classList.add('hidden'); box.classList.remove('flex'); }
 
     /* ---- cobrança: acesso anual ---- */
@@ -714,7 +792,8 @@
             f.textContent = 'Sem internet · pode continuar usando. Tudo será enviado quando a conexão voltar.';
         } else if (pendentes.lojas || pendentes.produtos || pendentes.vencidos) {
             f.className = base + 'bg-gray-800 text-amber-500';
-            f.textContent = 'Enviando alterações...';
+            const n = (pendentes.lojas || 0) + (pendentes.produtos || 0) + (pendentes.vencidos || 0);
+            f.textContent = n + (n === 1 ? ' alteração aguardando envio' : ' alterações aguardando envio');
         } else { f.className = 'hidden'; f.textContent = ''; }
     }
     window.addEventListener('online', atualizarFaixaConexao);
@@ -858,6 +937,8 @@
             </div>`;
         }).join('');
         return `
+            ${htmlResumoSemana()}
+            ${htmlBannerPlano()}
             <button data-act="fotoPdv" class="w-full mb-4 flex items-center justify-center gap-2 py-3 rounded-2xl border border-amber-500 text-amber-500 text-[11px] font-black uppercase"><i data-lucide="camera" class="w-4 h-4"></i> Foto PDV</button>
             <div class="grid grid-cols-2 gap-3 mb-6">
                 <div class="bg-gray-900/50 p-3 rounded-2xl border border-gray-800 text-center">
@@ -952,7 +1033,7 @@
         const m = ehSem ? { id: '_sem', nome: 'Sem marca' } : (l.marcas || []).find(x => x.id === marcaId);
         if (!m) { view.marcaId = null; return htmlLoja(lojaId); }
         const agrupados = {};
-        produtos.filter(p => p.lojaId === lojaId && doMarca(p, marcaId))
+        produtos.filter(p => p.lojaId === lojaId && doMarca(p, marcaId) && (!filtroSetor || p.setor === filtroSetor))
             .sort((a, b) => a.data.localeCompare(b.data))
             .forEach(p => {
                 const k = p.nome.trim().toUpperCase();
@@ -993,6 +1074,7 @@
                     <button data-act="novoProd" data-id="${esc(l.id)}" data-marca="${esc(marcaId)}" class="bg-amber-500 text-gray-950 px-3 py-2 rounded-xl text-[10px] font-black uppercase">+ PRODUTO</button>
                 </div>
             </div>
+            <div class="mb-3"><select id="f-setor" class="input-custom"><option value="">Todos os setores</option>${SETORES.map(x => `<option value="${esc(x)}" ${x === filtroSetor ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></div>
             ${grupos ? htmlBusca() : ''}
             <div id="busca-vazio" class="hidden opacity-30 text-center py-10 uppercase font-black text-xs">Nenhum produto encontrado</div>
             <div id="lista-prod" class="space-y-3">${grupos || '<div class="text-center opacity-20 py-10 font-black text-xs uppercase">Sem produtos</div>'}</div>`;
@@ -1233,6 +1315,8 @@
                 </div>
                 <i data-lucide="chevron-right" class="w-5 h-5 text-amber-500"></i>
             </button>
+            ${htmlPlano()}
+            <button data-act="exportarDados" class="w-full py-3 text-[10px] font-black text-amber-500 uppercase">Exportar dados (planilha)</button>
             <button data-act="excluirConta" class="w-full py-3 text-[10px] font-black text-red-500 uppercase">EXCLUIR MINHA CONTA</button>
             <button data-act="legal" data-aba="termos" class="w-full py-3 text-[10px] font-black text-gray-500 uppercase">TERMOS, PRIVACIDADE E REEMBOLSO</button>
             <button data-act="sair" class="w-full py-4 rounded-xl border border-red-900/50 text-[10px] font-black uppercase text-red-500 mt-2">SAIR DA CONTA</button>
@@ -1290,7 +1374,10 @@
         abrirRelVenc: () => ir('r'),
         voltarVenc: () => (view.venc || view.de === 'r') ? ir('r') : ir('h'),
         editVenc: (d) => ir('v', { venc: d.id, de: 'r' }),
-        delVenc: (d) => aviso('APAGAR ESTE REGISTRO DE VENCIDO?', { ok: () => deleteDoc(refVenc(d.id)).catch(erroVenc) }),
+        delVenc: (d) => aviso('APAGAR ESTE REGISTRO DE VENCIDO?', { ok: () => {
+            const item = vencidos.find(x => x.id === d.id);
+            deleteDoc(refVenc(d.id)).then(() => { if (item) mostrarDesfazer('Registro apagado', () => setDoc(refVenc(item.id), semId(item))); }).catch(erroVenc);
+        } }),
         salvarVenc: () => {
             const nome = $('#pn').value.trim(), dataVenc = $('#pd').value, lojaId = $('#pl').value;
             const sm = $('#pm'), marcaId = sm ? sm.value : '';
@@ -1350,9 +1437,10 @@
             }).join('');
             const rot = 'class="block text-[9px] text-gray-500 font-black uppercase mt-4 mb-1"';
             aviso(`<label ${rot}>Marca</label><select id="rel-marca" class="input-custom">${opMarcas}</select>
-                   <label ${rot}>Período</label><select id="rel-periodo" class="input-custom">${opPeriodos}</select>`, {
+                   <label ${rot}>Período</label><select id="rel-periodo" class="input-custom">${opPeriodos}</select>
+                   <label ${rot}>Ação</label><select id="rel-acao" class="input-custom"><option value="imprimir">Imprimir ou salvar PDF</option><option value="compartilhar">Compartilhar PDF (WhatsApp)</option></select>`, {
                 titulo: 'BAIXAR RELATÓRIO DE VENCIDOS',
-                ok: () => { const c = $('#rel-marca').value, per = $('#rel-periodo').value; if (per === 'datas') abrirCalendario(c); else imprimirVencidos(c, per); },
+                ok: () => { const c = $('#rel-marca').value, per = $('#rel-periodo').value; relAcao = $('#rel-acao').value; if (per === 'datas') abrirCalendario(c); else imprimirVencidos(c, per); },
             });
         },
         pickSug: (d) => {
@@ -1409,7 +1497,12 @@
         novoProd: (d) => ir('p', { preLoja: d.id, preMarca: d.marca || '', origem: (view.tab === 'l' && view.lojaId) ? view.lojaId : null, origemMarca: view.marcaId || null }),
         editProd: (d) => { const p = produtos.find(x => x.id === d.id); if (p) ir('p', { prod: p.id, origem: p.lojaId, origemMarca: p.marcaId || '_sem' }); },
         voltarForm: () => view.origem ? ir('l', { lojaId: view.origem, marcaId: view.origemMarca }) : ir('h'),
-        delProd: (d) => aviso('REMOVER ITEM?', { ok: () => deleteDoc(refProd(d.id)).catch(erroDb) }),
+        delProd: (d) => aviso('REMOVER ITEM?', { ok: () => {
+            const item = produtos.find(x => x.id === d.id);
+            deleteDoc(refProd(d.id)).then(() => { if (item) mostrarDesfazer('Produto removido', () => setDoc(refProd(item.id), semId(item))); }).catch(erroDb);
+        } }),
+        desfazer: () => desfazerAgora(),
+        fecharDesfazer: () => fecharDesfazer(),
         resolver: (d) => aviso('RESOLVIDO?', { ok: () => deleteDoc(refProd(d.id)).catch(erroDb) }),
         salvarProd: () => {
             const nome = $('#pn').value.trim(), data = $('#pd').value, lojaId = $('#pl').value, marcaId = $('#pm') ? $('#pm').value : '';
@@ -1539,6 +1632,7 @@
         lerCodigo: () => lerCodigo(),
         scanFechar: () => leitorFechar(),
         excluirConta: () => confirmarExclusao(),
+        exportarDados: () => exportarCsv(),
         legal: (d) => abrirLegal(d.aba),
         legalFechar: () => fecharLegal(),
         pagar: async () => {
@@ -1592,6 +1686,7 @@
         if (view.tab === 'v' && ['pm', 'pd'].includes(e.target.id)) atualizarDicaBaixa();
         if (e.target.id === 'pl') refreshCampoMarca(e.target.value, '');
         if (e.target.id === 'pd') atualizarMotivoObrigatorio();
+        if (e.target.id === 'f-setor') { filtroSetor = e.target.value; desenhar(false); }
         if (e.target.id === 'pq-semqtd') {
             const pq = $('#pq'); if (pq) { pq.disabled = e.target.checked; if (e.target.checked) pq.value = ''; pq.classList.toggle('opacity-40', e.target.checked); }
         }
@@ -1738,7 +1833,56 @@
     const relInfo = (campos) => `<div style="margin:20px 0 18px;border-left:5px solid ${LARANJA};background:#fff7e6;padding:10px 13px;border-radius:0 8px 8px 0;font-size:11.5px;display:flex;flex-wrap:wrap;row-gap:4px">${campos.map(([k, v]) => `<span><b>${k}:</b> ${esc(v)}</span>`).join(sepRel)}</div>`;
     const nomePromotor = () => (userInfo && (userInfo.displayName || userInfo.email)) || '';
 
+    const semId = (o) => { const { id, ...resto } = o; return resto; };
+    function mostrarDesfazer(texto, fn) {
+        desfazerFn = fn;
+        $('#desfazer-texto').textContent = texto;
+        const box = $('#desfazer'); box.classList.remove('hidden'); box.classList.add('flex');
+        clearTimeout(desfazerTimer);
+        desfazerTimer = setTimeout(fecharDesfazer, 6000);
+    }
+    function fecharDesfazer() {
+        clearTimeout(desfazerTimer); desfazerFn = null;
+        const box = $('#desfazer'); if (box) { box.classList.add('hidden'); box.classList.remove('flex'); }
+    }
+    async function desfazerAgora() {
+        const fn = desfazerFn; fecharDesfazer();
+        if (fn) { try { await fn(); } catch (e) { erroDb(e); } }
+    }
+    async function gerarPdfBlob(html) {
+        if (!window.html2pdf) await new Promise((ok, erro) => {
+            const sc = document.createElement('script');
+            sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+            sc.onload = ok; sc.onerror = erro; document.head.appendChild(sc);
+        });
+        const div = document.createElement('div');
+        div.innerHTML = html; div.style.width = '794px'; div.style.background = '#fff';
+        document.body.appendChild(div);
+        try {
+            const img = div.querySelector('img');
+            if (img && !img.complete) await new Promise(r => { img.onload = img.onerror = r; setTimeout(r, 2500); });
+            return await window.html2pdf().set({ margin: 10, image: { type: 'jpeg', quality: 0.95 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }).from(div).outputPdf('blob');
+        } finally { div.remove(); }
+    }
+    async function compartilharPdf(titulo, html) {
+        try {
+            const blob = await gerarPdfBlob(html);
+            const nome = titulo.replace(/[\\/:*?"<>|]/g, '') + '.pdf';
+            const arq = new File([blob], nome, { type: 'application/pdf' });
+            if (navigator.canShare && navigator.canShare({ files: [arq] })) {
+                try { await navigator.share({ files: [arq], title: titulo }); } catch (e) { /* cancelado */ }
+            } else {
+                const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nome;
+                document.body.appendChild(a); a.click(); a.remove();
+            }
+        } catch (e) {
+            console.error('pdf:', e);
+            aviso('Não foi possível gerar o PDF agora. Verifique a conexão e tente de novo.', { soConfirmar: true });
+        }
+    }
     async function abrirImpressao(tituloArquivo, html) {
+        const acao = relAcao; relAcao = 'imprimir';
+        if (acao === 'compartilhar') return compartilharPdf(tituloArquivo, html);
         $('#print-area').innerHTML = html;
         const img = $('#print-area img');
         if (img && !img.complete) await new Promise(r => { img.onload = img.onerror = r; setTimeout(r, 2500); });
@@ -1851,7 +1995,8 @@
             </tbody>`).join('');
             return cabecalhoLoja + blocos;
         }).join('');
-        return abrirImpressao(`Relatorio de vencidos - ${nomeM} - ${nomePeriodo} - ${hoje.replace(/\//g, '-')}`,
+        ultimaListaVenc = lista;
+        return abrirImpressaoVenc(`Relatorio de vencidos - ${nomeM} - ${nomePeriodo} - ${hoje.replace(/\//g, '-')}`,
             relCabecalhoCentral([['Marca', nomeM], ['Período', nomePeriodo + ' (' + textoPeriodo + ')'], ['Data do relatório', hoje], ['Promotor', nomePromotor()]]) +
             `<table style="width:100%;border-collapse:collapse;margin-top:22px">
                 <thead><tr style="border-bottom:3px solid ${LARANJA}"><th style="${th}">VENCIMENTO</th><th style="${th}">RETIRADA</th><th style="${th}">QUANTIDADE</th></tr></thead>
@@ -2016,12 +2161,12 @@
         prontoProd = false;
         unsubs.push(onSnapshot(query(colLojas(), orderBy('ordem')), { includeMetadataChanges: true }, (snap) => {
             lojas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-            pendentes.lojas = snap.metadata.hasPendingWrites; atualizarFaixaConexao();
+            pendentes.lojas = snap.docs.filter(d => d.metadata.hasPendingWrites).length; atualizarFaixaConexao();
             atualizar();
         }, erroDb));
         unsubs.push(onSnapshot(query(colProd(), orderBy('data')), { includeMetadataChanges: true }, (snap) => {
             produtos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-            pendentes.produtos = snap.metadata.hasPendingWrites; atualizarFaixaConexao();
+            pendentes.produtos = snap.docs.filter(d => d.metadata.hasPendingWrites).length; atualizarFaixaConexao();
             prontoProd = true;
             atualizar();
             verificarVencidos();
@@ -2041,7 +2186,7 @@
         unsubs.push(onSnapshot(query(colVenc(), orderBy('dataRetirada')), { includeMetadataChanges: true }, (snap) => {
             vencErro = '';
             vencidos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-            pendentes.vencidos = snap.metadata.hasPendingWrites; atualizarFaixaConexao();
+            pendentes.vencidos = snap.docs.filter(d => d.metadata.hasPendingWrites).length; atualizarFaixaConexao();
             limparVencidosAntigos();
             atualizar();
         }, (e) => { vencErro = e.code || 'erro'; console.warn('vencidos:', e); atualizar(); }));
