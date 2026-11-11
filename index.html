@@ -125,7 +125,7 @@
     <section id="tela-carregando" class="secao ativa items-center justify-center p-6 text-center">
         <img src="logo.png" onerror="this.src='https://raw.githubusercontent.com/melobortolatorenan-max/Promotor-ajudante/main/logo.png'" class="w-16 h-16 mb-4" style="mix-blend-mode:lighten" alt="">
         <div id="carregando-txt" class="text-[10px] font-black uppercase tracking-widest text-gray-500">Carregando...</div>
-        <div class="text-[9px] text-gray-700 mt-3 font-bold">v42</div>
+        <div class="text-[9px] text-gray-700 mt-3 font-bold">v43</div>
     </section>
 
     <!-- DESFAZER -->
@@ -265,7 +265,7 @@
         from "https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging.js";
 
     /* ================= utilidades ================= */
-    const VERSAO_APP = 'v42';
+    const VERSAO_APP = 'v43';
     document.getElementById('versao-login').textContent = VERSAO_APP;
     const API_BASE = 'https://promotor-ajudante.vercel.app';
     const SETORES = ['Bebidas', 'Doces', 'Higiene', 'Laticínios', 'Leites', 'Limpeza', 'Massas congeladas', 'Molhos', 'Pães', 'Salgadinhos', 'Temperos'];
@@ -937,7 +937,6 @@
             </div>`;
         }).join('');
         return `
-            ${htmlResumoSemana()}
             ${htmlBannerPlano()}
             <button data-act="fotoPdv" class="w-full mb-4 flex items-center justify-center gap-2 py-3 rounded-2xl border border-amber-500 text-amber-500 text-[11px] font-black uppercase"><i data-lucide="camera" class="w-4 h-4"></i> Foto PDV</button>
             <div class="grid grid-cols-2 gap-3 mb-6">
@@ -1209,6 +1208,7 @@
                     <p class="text-[9px] text-gray-500 ml-2">Este motivo aparece no relatório impresso.</p>
                 </div>
                 <button data-act="salvarVenc" class="btn-amarelo mt-2">SALVAR VENCIDO</button>
+                ${htmlResumoSemana()}
                 <button data-act="voltarVenc" class="w-full py-3 text-[10px] font-black text-gray-500 uppercase">CANCELAR</button>
             </div>`;
     }
