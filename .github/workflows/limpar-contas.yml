@@ -8,6 +8,9 @@ on:
       dry_run:
         description: 'true = só simular (padrão); false = enviar avisos e excluir de verdade'
         default: 'true'
+      email_teste:
+        description: 'Opcional: e-mail para receber um aviso de TESTE (não altera contas)'
+        default: ''
 
 jobs:
   limpar:
@@ -28,3 +31,4 @@ jobs:
           GMAIL_USER: melobortolato.renan@gmail.com
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           DRY_RUN: ${{ github.event.inputs.dry_run || 'true' }}
+          EMAIL_TESTE: ${{ github.event.inputs.email_teste || '' }}
