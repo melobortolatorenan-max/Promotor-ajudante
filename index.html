@@ -412,8 +412,14 @@
     async function pdvIniciarCamera() {
         if (pdv.stream) return;
         try {
-            pdv.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+            pdv.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false });
             const v = $('#pdv-video'); v.srcObject = pdv.stream; await v.play();
+            // sobe para a resolução máxima que este aparelho oferece
+            const track = pdv.stream.getVideoTracks()[0];
+            const caps = track && track.getCapabilities ? track.getCapabilities() : {};
+            if (caps.width && caps.height) {
+                await track.applyConstraints({ width: { ideal: caps.width.max }, height: { ideal: caps.height.max } }).catch(() => {});
+            }
         } catch (e) {
             console.error('camera PDV:', e);
             aviso('Não consegui acessar a câmera. Confira a permissão do navegador.', { soConfirmar: true });
@@ -442,10 +448,32 @@
         const v = $('#pdv-video');
         if (!v.videoWidth) return;
         const local = await obterLocalizacao();
-        const c = $('#pdv-canvas'); c.width = v.videoWidth; c.height = v.videoHeight;
-        const ctx = c.getContext('2d'); ctx.drawImage(v, 0, 0, c.width, c.height);
-        desenharMarca(ctx, c.width, c.height, nome, local);
-        pdv.blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.92));
+        // foto em tamanho cheio do sensor (quando o navegador permite); senão, usa o quadro do vídeo
+        let fonte = v, FW = v.videoWidth, FH = v.videoHeight;
+        try {
+            const track = pdv.stream && pdv.stream.getVideoTracks()[0];
+            if (track && 'ImageCapture' in window) {
+                const bmp = await createImageBitmap(await new ImageCapture(track).takePhoto());
+                fonte = bmp; FW = bmp.width; FH = bmp.height;
+            }
+        } catch (e) { console.warn('ImageCapture indisponível, usando o quadro do vídeo:', e); }
+        // a saída é sempre em pé: se o quadro vier na horizontal, gira para ficar vertical
+        const vw = FW, vh = FH;
+        const girar = vw > vh;
+        const W0 = girar ? vh : vw, H0 = girar ? vw : vh;
+        const c = $('#pdv-canvas'); c.width = W0; c.height = H0;
+        const ctx = c.getContext('2d');
+        ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+        ctx.save();
+        if (girar) {
+            const ang = (screen.orientation && screen.orientation.angle) || 0;
+            if (ang === 270) { ctx.translate(W0, 0); ctx.rotate(Math.PI / 2); }      // gira no sentido horário
+            else { ctx.translate(0, H0); ctx.rotate(-Math.PI / 2); }                   // gira no sentido anti-horário
+        }
+        ctx.drawImage(fonte, 0, 0, vw, vh);
+        ctx.restore();
+        desenharMarca(ctx, W0, H0, nome, local);
+        pdv.blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.95));
         const ag = new Date();
         const stamp = isoLocal(ag) + ' ' + String(ag.getHours()).padStart(2, '0') + '-' + String(ag.getMinutes()).padStart(2, '0') + '-' + String(ag.getSeconds()).padStart(2, '0');
         pdv.nomeArq = `Promotor Ajudante - foto pdv - ${stamp}.jpg`;
