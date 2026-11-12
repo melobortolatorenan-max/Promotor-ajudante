@@ -823,6 +823,13 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
         localStorage.setItem('altoContraste', ligado ? '0' : '1');
         aplicarContraste(); desenhar(false);
     }
+    // Marca ou desmarca um dia de visita da loja
+    function diaLoja(d) {
+        const l = lojas.find(x => x.id === d.loja); if (!l) return;
+        const dia = Number(d.dia), atual = diasDaLoja(l);
+        const novo = atual.includes(dia) ? atual.filter(x => x !== dia) : [...atual, dia].sort((a, b) => a - b);
+        updateDoc(doc(colLojas(), l.id), { diasVisita: novo, diaVisita: null }).catch(erroDb);
+    }
     function fecharLegal() { const box = $('#legal'); box.classList.add('hidden'); box.classList.remove('flex'); }
 
     /* ---- cobrança: acesso anual ---- */
@@ -1146,7 +1153,7 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
                 <button data-act="addMarca" data-id="${esc(l.id)}" class="bg-amber-500 text-gray-950 px-3 py-2 rounded-xl text-[10px] font-black uppercase">+ MARCA</button>
             </div>
             <div class="card-app p-3 mb-3"><label class="text-[9px] text-gray-500 font-black uppercase">Dias de visita</label>
-                <div class="grid grid-cols-2 gap-2 mt-2">${DIAS_SEMANA.map((d, i) => `<label class="flex items-center gap-2 text-[11px] font-bold text-gray-300"><input type="checkbox" class="accent-amber-500 l-dia-chk" data-loja="${esc(l.id)}" value="${i}" ${diasDaLoja(l).includes(i) ? 'checked' : ''}> ${d}</label>`).join('')}</div></div>
+                <div class="flex gap-1 mt-2">${DIAS_SEMANA.map((d, i) => `<button data-act="diaLoja" data-loja="${esc(l.id)}" data-dia="${i}" class="flex-1 py-2 rounded-xl border text-[10px] font-black ${diasDaLoja(l).includes(i) ? 'bg-amber-500 border-amber-500 text-gray-950' : 'border-gray-700 text-gray-400'}">${d.slice(0, 3)}</button>`).join('')}</div></div>
             ${cartoes}${cartaoSem}
             ${(!cartoes && !cartaoSem) ? '<div class="text-center opacity-20 py-10 font-black text-xs uppercase">Cadastre uma marca</div>' : ''}`;
     }
@@ -1760,6 +1767,7 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
         lerCodigo: () => lerCodigo(),
         scanFechar: () => leitorFechar(),
         excluirConta: () => confirmarExclusao(),
+        diaLoja: (d) => diaLoja(d),
         resgatarVoucher: () => resgatarVoucher(),
         enviarFeedback: (d) => enviarFeedback(d.nota),
         buscaAbrir: () => buscaAbrir(),
@@ -1821,11 +1829,6 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
         if (e.target.id === 'pl') refreshCampoMarca(e.target.value, '');
         if (e.target.id === 'pd') atualizarMotivoObrigatorio();
         if (e.target.id === 'f-setor') { filtroSetor = e.target.value; desenhar(false); }
-        if (e.target.classList.contains('l-dia-chk')) {
-            const lojaId = e.target.dataset.loja;
-            const marcados = [...document.querySelectorAll(`.l-dia-chk[data-loja="${lojaId}"]:checked`)].map(c => Number(c.value));
-            updateDoc(doc(colLojas(), lojaId), { diasVisita: marcados, diaVisita: null }).catch(erroDb);
-        }
         if (e.target.id === 'pq-semqtd') {
             const pq = $('#pq'); if (pq) { pq.disabled = e.target.checked; if (e.target.checked) pq.value = ''; pq.classList.toggle('opacity-40', e.target.checked); }
         }
