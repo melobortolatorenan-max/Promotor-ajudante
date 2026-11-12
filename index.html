@@ -524,6 +524,9 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
     const diasDaLoja = (l) => Array.isArray(l.diasVisita) ? l.diasVisita : (typeof l.diaVisita === 'number' ? [l.diaVisita] : []);
     let buscaHits = [];
     const DIAS_SEMANA = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+    const htmlAcaoCard = (rot, titulo, sub, act) => `<button data-act="${act}" class="card-app w-full p-4 mb-3 flex items-center justify-between text-left">
+        <div><div class="text-[9px] text-gray-500 font-black uppercase mb-1">${rot}</div><div class="text-white font-black italic uppercase text-sm">${titulo}</div><div class="text-gray-500 text-[11px]">${sub}</div></div>
+        <i data-lucide="chevron-right" class="w-5 h-5 text-amber-500"></i></button>`;
     const addDiasISO = (iso, n) => { const [y, m, d] = iso.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10); };
     let relAcao = 'imprimir';        // 'imprimir' ou 'compartilhar' (vale para o próximo relatório)
     let filtroSetor = '';            // filtro de setor na lista de produtos da marca
@@ -1463,6 +1466,8 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
                 </div>
                 <i data-lucide="chevron-right" class="w-5 h-5 text-amber-500"></i>
             </button>
+            ${htmlAcaoCard('Produtos', 'Código de barras cadastrados', produtos.filter(p => p.codigo).length + ' códigos', 'codigosAbrir')}
+            ${htmlAcaoCard('Dados', 'Exportar planilha', 'Produtos e vencidos em CSV', 'exportarDados')}
             <div class="card-app p-4 mb-3">
                 <div class="flex items-center gap-2 mb-1">
                     <i data-lucide="${n.ativo ? 'bell' : 'bell-off'}" class="w-4 h-4 ${n.ativo ? 'text-amber-500' : 'text-gray-500'}"></i>
@@ -1497,9 +1502,7 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
                 <i data-lucide="chevron-right" class="w-5 h-5 text-amber-500"></i>
             </button>
             ${htmlPlano()}
-            <button data-act="codigosAbrir" class="w-full py-3 text-[10px] font-black text-amber-500 uppercase">Código de barras cadastrados</button>
             <button data-act="toggleContraste" class="w-full py-3 text-[10px] font-black text-gray-400 uppercase">Alto contraste: ${localStorage.getItem('altoContraste') === '1' ? 'ligado' : 'desligado'}</button>
-            <button data-act="exportarDados" class="w-full py-3 text-[10px] font-black text-amber-500 uppercase">Exportar dados (planilha)</button>
             <button data-act="excluirConta" class="w-full py-3 text-[10px] font-black text-red-500 uppercase">EXCLUIR MINHA CONTA</button>
             <button data-act="legal" data-aba="termos" class="w-full py-3 text-[10px] font-black text-gray-500 uppercase">TERMOS, PRIVACIDADE E REEMBOLSO</button>
             <button data-act="sair" class="w-full py-4 rounded-xl border border-red-900/50 text-[10px] font-black uppercase text-red-500 mt-2">SAIR DA CONTA</button>
