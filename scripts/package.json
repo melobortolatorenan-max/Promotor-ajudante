@@ -1,8 +1,9 @@
 {
-  "name": "avisos-vencimento",
+  "name": "promotor-ajudante-scripts",
   "private": true,
-  "version": "1.0.0",
+  "description": "Scripts do Promotor Ajudante rodados pelo GitHub Actions",
   "dependencies": {
-    "firebase-admin": "^12.0.0"
+    "firebase-admin": "^12.7.0",
+    "nodemailer": "^6.9.0"
   }
 }
