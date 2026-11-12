@@ -1,0 +1,30 @@
+name: Limpar contas vencidas
+
+on:
+  schedule:
+    - cron: '0 12 * * *'      # todo dia, 09:00 de Brasília
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'true = só simular (padrão); false = enviar avisos e excluir de verdade'
+        default: 'true'
+
+jobs:
+  limpar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Instalar dependências
+        working-directory: scripts
+        run: npm install --omit=dev --no-audit --no-fund
+      - name: Avisos e limpeza de contas
+        working-directory: scripts
+        run: node limpar-contas.js
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          GMAIL_USER: melobortolato.renan@gmail.com
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'true' }}
