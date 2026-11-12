@@ -103,6 +103,12 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
+<style>
+html.alto-contraste .text-gray-500, html.alto-contraste .text-gray-600, html.alto-contraste .text-gray-700 { color: #d1d5db !important; }
+html.alto-contraste .text-gray-400 { color: #f3f4f6 !important; }
+html.alto-contraste .border-gray-800, html.alto-contraste .border-gray-700 { border-color: #6b7280 !important; }
+html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size: 11px !important; }
+</style>
 </head>
 <body>
 
@@ -125,8 +131,14 @@
     <section id="tela-carregando" class="secao ativa items-center justify-center p-6 text-center">
         <img src="logo.png" onerror="this.src='https://raw.githubusercontent.com/melobortolatorenan-max/Promotor-ajudante/main/logo.png'" class="w-16 h-16 mb-4" style="mix-blend-mode:lighten" alt="">
         <div id="carregando-txt" class="text-[10px] font-black uppercase tracking-widest text-gray-500">Carregando...</div>
-        <div class="text-[9px] text-gray-700 mt-3 font-bold">v43</div>
+        <div class="text-[9px] text-gray-700 mt-3 font-bold">v44</div>
     </section>
+
+    <!-- BUSCA -->
+    <div id="busca" class="hidden fixed inset-0 flex-col p-4 gap-3" style="z-index:94;background:#030712">
+        <div class="flex gap-2"><input id="busca-q" class="input-custom flex-1" placeholder="Buscar produto ou loja" autocomplete="off"><button data-act="buscaFechar" class="px-4 rounded-xl border border-gray-700 text-[10px] font-black uppercase text-gray-300">Fechar</button></div>
+        <div id="busca-res" class="flex-1 overflow-y-auto"></div>
+    </div>
 
     <!-- DESFAZER -->
     <div id="desfazer" class="hidden fixed left-4 right-4 bottom-6 items-center justify-between gap-3 p-4 rounded-2xl border border-gray-700 bg-gray-900 shadow-2xl" style="z-index:97">
@@ -239,6 +251,7 @@
                 <div class="flex items-center gap-1">
                     <button id="btn-venc" data-act="novoVencido" class="flex items-center gap-1.5 border border-red-500/50 text-red-500 px-2.5 py-2 rounded-xl text-[10px] font-black uppercase" aria-label="Registrar produto vencido"><i data-lucide="package-x" class="w-4 h-4"></i><span class="hidden sm:inline">Vencido</span></button>
                     <button id="btn-prod" data-act="novoProdutoTopo" class="flex items-center gap-1.5 border border-amber-500/50 text-amber-500 px-2.5 py-2 rounded-xl text-[10px] font-black uppercase" aria-label="Cadastrar produto"><i data-lucide="package-plus" class="w-4 h-4"></i><span class="hidden sm:inline">Produto</span></button>
+                    <button data-act="buscaAbrir" class="p-2 text-gray-500" aria-label="Buscar"><i data-lucide="search" class="w-5 h-5"></i></button>
                     <button id="btn-conta" data-act="tab" data-id="c" class="p-2 text-gray-500" aria-label="Minha conta e notificações"><i data-lucide="settings" class="w-5 h-5"></i></button>
                 </div>
             </div>
@@ -265,7 +278,7 @@
         from "https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging.js";
 
     /* ================= utilidades ================= */
-    const VERSAO_APP = 'v43';
+    const VERSAO_APP = 'v44';
     document.getElementById('versao-login').textContent = VERSAO_APP;
     const API_BASE = 'https://promotor-ajudante.vercel.app';
     const SETORES = ['Bebidas', 'Doces', 'Higiene', 'Laticínios', 'Leites', 'Limpeza', 'Massas congeladas', 'Molhos', 'Pães', 'Salgadinhos', 'Temperos'];
@@ -496,6 +509,11 @@
     }
 
     /* ---- leitura de código de barras e registro de códigos ---- */
+    aplicarContraste();
+    let criadaEm = null;
+    let buscaHits = [];
+    const DIAS_SEMANA = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+    const addDiasISO = (iso, n) => { const [y, m, d] = iso.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10); };
     let relAcao = 'imprimir';        // 'imprimir' ou 'compartilhar' (vale para o próximo relatório)
     let filtroSetor = '';            // filtro de setor na lista de produtos da marca
     let desfazerTimer = null, desfazerFn = null;
@@ -643,9 +661,9 @@
     // Exclusão de conta: apaga lojas, produtos, vencidos e tokens de notificação, depois o cadastro e o login.
     // O registro de pagamento fica guardado pelo prazo exigido por lei.
     function confirmarExclusao() {
-        aviso('Isto apaga suas lojas, produtos, vencidos e sua conta. Não é possível desfazer. Os registros de pagamento são mantidos pelo prazo exigido por lei.', {
-            titulo: 'EXCLUIR CONTA', okTexto: 'Excluir',
-            ok: () => excluirContaAgora() });
+        aviso('Isto apaga suas lojas, produtos, vencidos e sua conta. Não é possível desfazer. Os registros de pagamento são mantidos pelo prazo exigido por lei. Para confirmar, digite EXCLUIR.', {
+            titulo: 'EXCLUIR CONTA', okTexto: 'Excluir', input: '',
+            ok: (v) => { if (v !== 'EXCLUIR') return aviso('Digite EXCLUIR, em maiúsculas, para confirmar.', { soConfirmar: true }); excluirContaAgora(); } });
     }
     async function excluirContaAgora() {
         const user = auth.currentUser;
@@ -730,6 +748,79 @@
         const dias = diasAte(ate);
         if (dias < 0 || dias > 7) return '';
         return `<button data-act="tab" data-id="c" class="w-full mb-4 p-3 rounded-2xl border border-amber-500/60 text-left text-[11px] font-black text-amber-500 uppercase">${dias === 0 ? 'Seu acesso vence hoje.' : 'Seu acesso vence em ' + dias + ' dias.'} Toque para renovar.</button>`;
+    }
+    // ---- voucher de acesso grátis (30 dias) ----
+    function htmlVoucher() {
+        const fim = perfilAcesso.acessoAte;
+        const prazo = typeof fim === 'string' ? addDiasISO(fim, 45) : null;
+        const txt = `Seus dados ficam guardados por 45 dias após o fim do acesso${prazo ? ' (até ' + dataBR(prazo) + ')' : ''}. Pague nesse prazo para não perder nada. Depois desse prazo, a conta e todos os dados são excluídos.`;
+        return `<div class="card-app p-4 mb-3">
+            <div class="text-[9px] text-gray-500 font-black uppercase mb-2">Tem um voucher?</div>
+            <p class="text-[11px] text-amber-500 font-bold leading-snug mb-3">${txt}</p>
+            <div class="flex gap-2"><input id="vc-codigo" class="input-custom flex-1" maxlength="30" placeholder="CÓDIGO" autocomplete="off" style="text-transform:uppercase"><button data-act="resgatarVoucher" class="px-4 rounded-xl border border-amber-500 text-[10px] font-black uppercase text-amber-500">Ativar</button></div>
+            <p id="vc-status" class="text-[11px] font-bold mt-2" role="status"></p>
+        </div>`;
+    }
+    async function resgatarVoucher() {
+        const st = $('#vc-status');
+        const cod = ($('#vc-codigo').value || '').trim().toUpperCase();
+        const erro = (t) => { st.textContent = t; st.className = 'text-red-500 text-[11px] font-bold mt-2'; };
+        if (!cod) return erro('Digite o código.');
+        if (!navigator.onLine) return erro('Sem internet. Conecte-se e tente de novo.');
+        st.textContent = 'Verificando...'; st.className = 'text-gray-400 text-[11px] font-bold mt-2';
+        try {
+            const token = await auth.currentUser.getIdToken();
+            const r = await fetch(API_BASE + '/api/resgatar-voucher', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify({ codigo: cod }) });
+            const j = await r.json().catch(() => ({}));
+            if (r.ok && j.ok) { st.textContent = 'Voucher ativado! Acesso até ' + dataBR(j.acessoAte) + '.'; st.className = 'text-green-500 text-[11px] font-bold mt-2'; return; }
+            const msgs = { 'codigo-invalido': 'Código inválido.', 'ja-usado': 'Este voucher já foi usado nesta conta.', 'ja-tem-acesso': 'Sua conta já tem acesso ativo.' };
+            erro(msgs[j.erro] || 'Não foi possível ativar agora.');
+        } catch (e) { console.error('voucher:', e); erro('Não foi possível ativar agora. Tente de novo.'); }
+    }
+    // ---- feedback após 30 dias de uso (9) ----
+    function htmlFeedback() {
+        if (!criadaEm || perfilAcesso.feedbackEm || (Date.now() - criadaEm.getTime()) < 30 * 86400000) return '';
+        return `<div class="card-app p-4 mb-4"><div class="text-[9px] text-gray-500 font-black uppercase mb-2">Como está o Promotor Ajudante? (1 a 5)</div>
+            <div class="flex justify-between gap-2">${[1, 2, 3, 4, 5].map(n => `<button data-act="enviarFeedback" data-nota="${n}" class="flex-1 h-10 rounded-xl border border-amber-500/50 text-amber-500 font-black">${n}</button>`).join('')}</div></div>`;
+    }
+    async function enviarFeedback(nota) {
+        try {
+            await addDoc(collection(db, 'feedback'), { uid, nota: Number(nota), criadoEm: serverTimestamp() });
+            await setDoc(doc(db, 'users', uid), { feedbackEm: serverTimestamp() }, { merge: true });
+            aviso('Obrigado pela sua avaliação!', { soConfirmar: true });
+        } catch (e) { erroDb(e); }
+    }
+    // ---- dia de visita e lojas de hoje (6) ----
+    function htmlLojasHoje() {
+        const hoje = new Date().getDay();
+        const lista = lojas.filter(l => l.diaVisita === hoje);
+        if (!lista.length) return '';
+        return `<div class="card-app p-4 mb-4"><div class="text-[9px] text-gray-500 font-black uppercase mb-2">Lojas de hoje · ${DIAS_SEMANA[hoje]}</div>${lista.map(l => `<button data-act="verLoja" data-id="${esc(l.id)}" class="w-full text-left text-[12px] font-black text-white uppercase py-1">${esc(l.nome)}</button>`).join('')}</div>`;
+    }
+    // ---- alto contraste (8) ----
+    function aplicarContraste() { document.documentElement.classList.toggle('alto-contraste', localStorage.getItem('altoContraste') === '1'); }
+    // ---- busca global (7) ----
+    function buscaAbrir() { const b = $('#busca'); b.classList.remove('hidden'); b.classList.add('flex'); $('#busca-q').value = ''; buscaResultados(); setTimeout(() => $('#busca-q').focus(), 50); }
+    function buscaFechar() { const b = $('#busca'); b.classList.add('hidden'); b.classList.remove('flex'); }
+    function buscaResultados() {
+        const q = ($('#busca-q').value || '').trim().toLowerCase();
+        if (q.length < 2) { $('#busca-res').innerHTML = '<p class="text-gray-500 text-[11px]">Digite pelo menos 2 letras.</p>'; buscaHits = []; return; }
+        const hits = [];
+        lojas.forEach(l => { if ((l.nome || '').toLowerCase().includes(q)) hits.push({ t: 'Loja', n: l.nome, lojaId: l.id, marcaId: null }); });
+        produtos.forEach(p => { if ((p.nome || '').toLowerCase().includes(q)) hits.push({ t: 'Produto', n: p.nome, sub: nomeLoja(p.lojaId), lojaId: p.lojaId, marcaId: p.marcaId || null }); });
+        buscaHits = hits.slice(0, 40);
+        $('#busca-res').innerHTML = buscaHits.map((h, i) => `<button data-act="buscaIr" data-i="${i}" class="w-full text-left p-3 rounded-xl border border-gray-800 mb-2"><div class="text-[9px] text-gray-500 font-black uppercase">${h.t}${h.sub ? ' · ' + esc(h.sub) : ''}</div><div class="text-sm font-bold text-white">${esc(h.n)}</div></button>`).join('') || '<p class="text-gray-500 text-[11px]">Nada encontrado.</p>';
+    }
+    function buscaIr(i) {
+        const h = buscaHits[i]; if (!h) return;
+        buscaFechar();
+        view.tab = 'l'; view.lojaId = h.lojaId; view.marcaId = h.marcaId;
+        desenhar(true);
+    }
+    function toggleContraste() {
+        const ligado = localStorage.getItem('altoContraste') === '1';
+        localStorage.setItem('altoContraste', ligado ? '0' : '1');
+        aplicarContraste(); desenhar(false);
     }
     function fecharLegal() { const box = $('#legal'); box.classList.add('hidden'); box.classList.remove('flex'); }
 
@@ -968,6 +1059,8 @@
             </div>`;
         }).join('');
         return `
+            ${htmlLojasHoje()}
+            ${htmlFeedback()}
             ${htmlBannerPlano()}
             <button data-act="fotoPdv" class="w-full mb-4 flex items-center justify-center gap-2 py-3 rounded-2xl border border-amber-500 text-amber-500 text-[11px] font-black uppercase"><i data-lucide="camera" class="w-4 h-4"></i> Foto PDV</button>
             <div class="grid grid-cols-2 gap-3 mb-6">
@@ -1051,6 +1144,8 @@
                 </button>
                 <button data-act="addMarca" data-id="${esc(l.id)}" class="bg-amber-500 text-gray-950 px-3 py-2 rounded-xl text-[10px] font-black uppercase">+ MARCA</button>
             </div>
+            <div class="card-app p-3 mb-3"><label class="text-[9px] text-gray-500 font-black uppercase">Dia de visita</label>
+                <select id="l-dia" data-loja="${esc(l.id)}" class="input-custom mt-1"><option value="">Não definido</option>${DIAS_SEMANA.map((d, i) => `<option value="${i}" ${l.diaVisita === i ? 'selected' : ''}>${d}</option>`).join('')}</select></div>
             ${cartoes}${cartaoSem}
             ${(!cartoes && !cartaoSem) ? '<div class="text-center opacity-20 py-10 font-black text-xs uppercase">Cadastre uma marca</div>' : ''}`;
     }
@@ -1347,6 +1442,7 @@
                 <i data-lucide="chevron-right" class="w-5 h-5 text-amber-500"></i>
             </button>
             ${htmlPlano()}
+            <button data-act="toggleContraste" class="w-full py-3 text-[10px] font-black text-gray-400 uppercase">Alto contraste: ${localStorage.getItem('altoContraste') === '1' ? 'ligado' : 'desligado'}</button>
             <button data-act="exportarDados" class="w-full py-3 text-[10px] font-black text-amber-500 uppercase">Exportar dados (planilha)</button>
             <button data-act="excluirConta" class="w-full py-3 text-[10px] font-black text-red-500 uppercase">EXCLUIR MINHA CONTA</button>
             <button data-act="legal" data-aba="termos" class="w-full py-3 text-[10px] font-black text-gray-500 uppercase">TERMOS, PRIVACIDADE E REEMBOLSO</button>
@@ -1663,6 +1759,12 @@
         lerCodigo: () => lerCodigo(),
         scanFechar: () => leitorFechar(),
         excluirConta: () => confirmarExclusao(),
+        resgatarVoucher: () => resgatarVoucher(),
+        enviarFeedback: (d) => enviarFeedback(d.nota),
+        buscaAbrir: () => buscaAbrir(),
+        buscaFechar: () => buscaFechar(),
+        buscaIr: (d) => buscaIr(Number(d.i)),
+        toggleContraste: () => toggleContraste(),
         exportarDados: () => exportarCsv(),
         legal: (d) => abrirLegal(d.aba),
         legalFechar: () => fecharLegal(),
@@ -1718,6 +1820,7 @@
         if (e.target.id === 'pl') refreshCampoMarca(e.target.value, '');
         if (e.target.id === 'pd') atualizarMotivoObrigatorio();
         if (e.target.id === 'f-setor') { filtroSetor = e.target.value; desenhar(false); }
+        if (e.target.id === 'l-dia') { const v = e.target.value; updateDoc(doc(colLojas(), e.target.dataset.loja), { diaVisita: v === '' ? null : Number(v) }).catch(erroDb); }
         if (e.target.id === 'pq-semqtd') {
             const pq = $('#pq'); if (pq) { pq.disabled = e.target.checked; if (e.target.checked) pq.value = ''; pq.classList.toggle('opacity-40', e.target.checked); }
         }
@@ -1727,6 +1830,7 @@
         }
     });
     document.addEventListener('input', (e) => {
+        if (e.target.id === 'busca-q') buscaResultados();
         if (e.target.id === 'busca') atualizarBusca();
         if (e.target.id === 'pn') mostrarSugestoes();
         if (view.tab === 'v' && ['pn', 'pq', 'pd'].includes(e.target.id)) atualizarDicaBaixa();
@@ -2177,6 +2281,7 @@
                     ? 'Pagamento informado. Assim que for confirmado, o app libera sozinho (normalmente em até 1 dia útil).'
                     : 'Depois de pagar, toque em "Já paguei" para avisarmos.'}</p>
             </div>
+            ${htmlVoucher()}
             <button data-act="legal" data-aba="termos" class="w-full py-3 text-[10px] font-black text-gray-500 uppercase">TERMOS DE USO E PRIVACIDADE</button>
             <button data-act="sair" class="w-full py-4 rounded-xl border border-red-900/50 text-[10px] font-black uppercase text-red-500 mt-2">SAIR DA CONTA</button>
             <p class="text-center text-[9px] text-gray-700 mt-6 uppercase font-bold">Promotor Ajudante · ${VERSAO_APP}</p>`;
@@ -2186,6 +2291,7 @@
     function entrar(user) {
         uid = user.uid; userInfo = { displayName: user.displayName, email: user.email };
         const criada = user.metadata && user.metadata.creationTime ? new Date(user.metadata.creationTime) : null;
+        criadaEm = criada;
         contaAntiga = !!criada && criada < DATA_CORTE;
         perfilAcesso = {}; appAberto = false;
         setDoc(doc(db, 'users', uid), { nome: user.displayName || '', email: user.email || '' }, { merge: true }).catch(() => {});
