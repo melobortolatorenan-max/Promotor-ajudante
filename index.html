@@ -131,8 +131,14 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
     <section id="tela-carregando" class="secao ativa items-center justify-center p-6 text-center">
         <img src="logo.png" onerror="this.src='https://raw.githubusercontent.com/melobortolatorenan-max/Promotor-ajudante/main/logo.png'" class="w-16 h-16 mb-4" style="mix-blend-mode:lighten" alt="">
         <div id="carregando-txt" class="text-[10px] font-black uppercase tracking-widest text-gray-500">Carregando...</div>
-        <div class="text-[9px] text-gray-700 mt-3 font-bold">v44</div>
+        <div class="text-[9px] text-gray-700 mt-3 font-bold">v46</div>
     </section>
+
+    <!-- CÓDIGOS DE BARRAS CADASTRADOS -->
+    <div id="codigos" class="hidden fixed inset-0 flex-col p-4 gap-3" style="z-index:93;background:#030712">
+        <div class="flex items-center justify-between gap-2"><h2 class="text-amber-500 font-black italic uppercase text-sm">Códigos de barras cadastrados</h2><button data-act="codigosFechar" class="px-4 py-2 rounded-xl border border-gray-700 text-[10px] font-black uppercase text-gray-300">Fechar</button></div>
+        <div id="codigos-tab" class="flex-1 overflow-auto"></div>
+    </div>
 
     <!-- BUSCA -->
     <div id="busca" class="hidden fixed inset-0 flex-col p-4 gap-3" style="z-index:94;background:#030712">
@@ -278,7 +284,7 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
         from "https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging.js";
 
     /* ================= utilidades ================= */
-    const VERSAO_APP = 'v44';
+    const VERSAO_APP = 'v46';
     document.getElementById('versao-login').textContent = VERSAO_APP;
     const API_BASE = 'https://promotor-ajudante.vercel.app';
     const SETORES = ['Bebidas', 'Doces', 'Higiene', 'Laticínios', 'Leites', 'Limpeza', 'Massas congeladas', 'Molhos', 'Pães', 'Salgadinhos', 'Temperos'];
@@ -511,6 +517,10 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
     /* ---- leitura de código de barras e registro de códigos ---- */
     aplicarContraste();
     let criadaEm = null;
+    let marcaPendente = null;   // marca lida no código, aplicada quando a loja for escolhida
+    // motivo obrigatório: só quando o vencimento for mais de 2 dias depois da retirada
+    const motivoObrigatorio = (venc, ret) => { if (!venc || !ret) return false; return (Date.parse(venc + 'T00:00:00Z') - Date.parse(ret + 'T00:00:00Z')) / 86400000 > 2; };
+    const qtdInformada = (p) => p.semQtd === false || (p.semQtd === undefined && p.qtd != null && p.qtd !== '');
     const diasDaLoja = (l) => Array.isArray(l.diasVisita) ? l.diasVisita : (typeof l.diaVisita === 'number' ? [l.diaVisita] : []);
     let buscaHits = [];
     const DIAS_SEMANA = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
@@ -519,6 +529,7 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
     let filtroSetor = '';            // filtro de setor na lista de produtos da marca
     let desfazerTimer = null, desfazerFn = null;
     const leitor = { stream: null, timer: null, busy: false, detector: null };
+    let fotoCodigoAtual = null;   // { codigo, img } capturado na leitura do código
     function leitorFechar() {
         clearInterval(leitor.timer); leitor.timer = null; leitor.busy = false;
         if (leitor.stream) { leitor.stream.getTracks().forEach(t => t.stop()); leitor.stream = null; }
@@ -544,6 +555,12 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
                     const achados = await leitor.detector.detect(v);
                     if (achados.length) {
                         const cod = String(achados[0].rawValue || '').replace(/[^0-9A-Za-z]/g, '');
+                        try {
+                            const cv = document.createElement('canvas'), f = Math.min(1, 480 / v.videoWidth);
+                            cv.width = Math.round(v.videoWidth * f); cv.height = Math.round(v.videoHeight * f);
+                            cv.getContext('2d').drawImage(v, 0, 0, cv.width, cv.height);
+                            fotoCodigoAtual = { codigo: cod, img: cv.toDataURL('image/jpeg', 0.6) };
+                        } catch (e) { console.warn('foto do código:', e); }
                         leitorFechar();
                         if (cod) await codigoLido(cod);
                     }
@@ -577,18 +594,21 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
     function atualizarMotivoObrigatorio() {
         const pd = $('#pd'), ret = $('#pdret'), rot = $('#motivo-rotulo'), box = $('#venc-motivo-box');
         if (!pd || !ret) return;
-        const obrig = !!pd.value && pd.value > ret.value;
+        const obrig = !!pd.value && motivoObrigatorio(pd.value, ret.value);
         if (rot) rot.textContent = obrig ? '(obrigatório)' : '(opcional)';
         if (obrig && box) box.classList.remove('hidden');
+    }
+    function aplicarMarcaPendente() {
+        const pm = $('#pm');
+        if (!pm || !marcaPendente) return;
+        const op = [...pm.options].find(o => o.textContent.trim().toLowerCase() === marcaPendente.toLowerCase());
+        if (op) pm.value = op.value;
     }
     function preencherPorCodigo(d) {
         const pn = $('#pn'); if (pn && !pn.value.trim()) pn.value = d.nome;
         const ps = $('#psetor'); if (ps && !ps.value && d.setor) ps.value = d.setor;
-        const pm = $('#pm');
-        if (pm && !pm.value && d.marcaNome) {
-            const op = [...pm.options].find(o => o.textContent.trim().toLowerCase() === String(d.marcaNome).toLowerCase());
-            if (op) pm.value = op.value;
-        }
+        marcaPendente = d.marcaNome ? String(d.marcaNome) : null;
+        aplicarMarcaPendente();
         aviso(`Produto reconhecido: <b>${esc(d.nome)}</b>. Confira e informe a validade.`, { soConfirmar: true });
     }
     // Quem chega primeiro define o nome do código (setor e marca vêm junto)
@@ -830,6 +850,24 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
         const novo = atual.includes(dia) ? atual.filter(x => x !== dia) : [...atual, dia].sort((a, b) => a - b);
         updateDoc(doc(colLojas(), l.id), { diasVisita: novo, diaVisita: null }).catch(erroDb);
     }
+    // Tabela de códigos cadastrados: produto, marca, imagem do código e número (ordem alfabética)
+    function codigosAbrir() {
+        const b = $('#codigos'); b.classList.remove('hidden'); b.classList.add('flex');
+        $('#codigos-tab').innerHTML = htmlCodigos();
+        lucide.createIcons();
+    }
+    function codigosFechar() { const b = $('#codigos'); b.classList.add('hidden'); b.classList.remove('flex'); }
+    function htmlCodigos() {
+        const lista = produtos.filter(p => p.codigo).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+        if (!lista.length) return '<p class="text-gray-500 text-[11px]">Nenhum código cadastrado ainda.</p>';
+        const marcaDe = (p) => { const l = lojas.find(x => x.id === p.lojaId); const m = l && (l.marcas || []).find(x => x.id === p.marcaId); return m ? m.nome : '—'; };
+        return `<table class="w-full text-[11px]"><thead><tr class="text-left text-gray-500 uppercase text-[9px]"><th class="py-2 pr-2">Produto</th><th class="pr-2">Marca</th><th class="text-center pr-2">Imagem</th><th>Código</th></tr></thead><tbody>${lista.map(p => `<tr class="border-t border-gray-800"><td class="py-2 pr-2 text-white font-bold">${esc(p.nome)}</td><td class="pr-2 text-gray-400">${esc(marcaDe(p))}</td><td class="text-center pr-2">${p.fotoCodigo ? `<button data-act="verFotoCodigo" data-id="${esc(p.id)}" class="text-amber-500" aria-label="Ver imagem do código"><i data-lucide="image" class="w-4 h-4"></i></button>` : '<span class="text-gray-700">—</span>'}</td><td class="text-gray-400">${esc(p.codigo)}</td></tr>`).join('')}</tbody></table>`;
+    }
+    function verFotoCodigo(d) {
+        const p = produtos.find(x => x.id === d.id);
+        if (!p || !p.fotoCodigo) return;
+        aviso(`<img src="${p.fotoCodigo}" class="w-full rounded-xl" alt="Código de barras">`, { titulo: String(p.codigo), soConfirmar: true });
+    }
     function fecharLegal() { const box = $('#legal'); box.classList.add('hidden'); box.classList.remove('flex'); }
 
     /* ---- cobrança: acesso anual ---- */
@@ -1039,6 +1077,16 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
         const vazio = $('#busca-vazio'); if (vazio) vazio.classList.toggle('hidden', !(q && visiveis === 0));
     }
 
+    // Ordem da lista de vencimentos: lojas que atendem hoje primeiro; depois, as de menor frequência de visita
+    function ordemLoja(lojaId) {
+        const l = lojas.find(x => x.id === lojaId);
+        const dias = l ? diasDaLoja(l) : [];
+        return [dias.includes(new Date().getDay()) ? 0 : 1, dias.length || 99, l ? l.nome : ''];
+    }
+    function cmpAlerta(a, b) {
+        const ka = ordemLoja(a.lojaId), kb = ordemLoja(b.lojaId);
+        return ka[0] - kb[0] || ka[1] - kb[1] || ka[2].localeCompare(kb[2], 'pt-BR') || a.nome.localeCompare(b.nome, 'pt-BR');
+    }
     function htmlHome() {
         const alertas = produtos.filter(p => diasAte(p.data) <= 5)
             .sort((a, b) => a.data.localeCompare(b.data) || a.nome.localeCompare(b.nome));
@@ -1054,7 +1102,7 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
                     <i data-lucide="calendar" class="w-3 h-3"></i> ${rot}: ${fmt(data)}
                 </h3>
                 <div class="space-y-2">
-                    ${grupos[data].map(a => `
+                    ${[...grupos[data]].sort(cmpAlerta).map(a => `
                     <div class="card-app p-3 border-l-4 ${crit ? 'border-l-red-600' : 'border-l-amber-500'} flex justify-between items-center cursor-pointer" data-act="verLoja" data-id="${esc(a.lojaId)}">
                         <div class="flex-1 truncate mr-2">
                             <span class="text-[8px] text-gray-500 font-bold uppercase block leading-none mb-1">${rotuloLoja(a)}</span>
@@ -1067,7 +1115,6 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
             </div>`;
         }).join('');
         return `
-            ${htmlLojasHoje()}
             ${htmlFeedback()}
             ${htmlBannerPlano()}
             <button data-act="fotoPdv" class="w-full mb-4 flex items-center justify-center gap-2 py-3 rounded-2xl border border-amber-500 text-amber-500 text-[11px] font-black uppercase"><i data-lucide="camera" class="w-4 h-4"></i> Foto PDV</button>
@@ -1245,8 +1292,8 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
                 <button type="button" data-act="lerCodigo" class="px-4 rounded-xl border border-amber-500 text-[10px] font-black uppercase text-amber-500 whitespace-nowrap">LER</button></div></div>
                 <div class="flex gap-3">
                     <div class="flex-1"><label class="text-[9px] font-black text-gray-500 uppercase ml-2" for="pq">Quantidade</label>
-                    <input id="pq" type="number" inputmode="numeric" min="0" class="input-custom ${p.semQtd ? 'opacity-40' : ''}" placeholder="1" value="${p.semQtd ? '' : esc(p.qtd)}" ${p.semQtd ? 'disabled' : ''}>
-                    <label class="flex items-center gap-2 mt-2 ml-2 text-[10px] font-black text-gray-400 uppercase"><input id="pq-semqtd" type="checkbox" class="accent-amber-500" ${p.semQtd ? 'checked' : ''}> Não informar quantidade</label></div>
+                    <input id="pq" type="number" inputmode="numeric" min="0" class="input-custom ${qtdInformada(p) ? '' : 'opacity-40'}" placeholder="1" value="${qtdInformada(p) ? esc(p.qtd) : ''}" ${qtdInformada(p) ? '' : 'disabled'}>
+                    <label class="flex items-center gap-2 mt-2 ml-2 text-[10px] font-black text-gray-400 uppercase"><input id="pq-informar" type="checkbox" class="accent-amber-500" ${qtdInformada(p) ? 'checked' : ''}> Informar quantidade</label></div>
                     <div class="flex-[2]"><label class="text-[9px] font-black text-gray-500 uppercase ml-2" for="pd">Vencimento</label>
                     <input id="pd" type="date" class="input-custom" value="${esc(p.data)}"></div>
                 </div>
@@ -1335,7 +1382,7 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
                 <p id="dica-estoque" class="text-[10px] text-gray-400 ml-2 leading-snug min-h-[1rem]">${e ? 'Editar um registro não altera o estoque dos produtos.' : ''}</p>
                 <input type="hidden" id="pdret" value="${e ? e.dataRetirada : isoLocal(new Date())}">
                 <p class="text-[10px] text-gray-500 ml-2">Data da retirada: <b class="text-amber-500">${e ? dataBR(e.dataRetirada) : dataBR(isoLocal(new Date())) + ' (hoje)'}</b></p>
-                <button type="button" data-act="toggleMotivo" class="flex items-center gap-2 ml-2 text-[10px] font-black text-amber-500 uppercase"><i data-lucide="message-square-text" class="w-4 h-4"></i> Informar o motivo <span id="motivo-rotulo" class="normal-case font-bold text-gray-500">${e && e.dataVenc > e.dataRetirada ? '(obrigatório)' : '(opcional)'}</span></button>
+                <button type="button" data-act="toggleMotivo" class="flex items-center gap-2 ml-2 text-[10px] font-black text-amber-500 uppercase"><i data-lucide="message-square-text" class="w-4 h-4"></i> Informar o motivo <span id="motivo-rotulo" class="normal-case font-bold text-gray-500">${e && motivoObrigatorio(e.dataVenc, e.dataRetirada) ? '(obrigatório)' : '(opcional)'}</span></button>
                 <div id="venc-motivo-box" class="${v.motivo ? '' : 'hidden'} space-y-1">
                     <label class="text-[9px] font-black text-gray-500 uppercase ml-2" for="pmotivo">Motivo da retirada (produto que ainda não venceu)</label>
                     <textarea id="pmotivo" maxlength="200" rows="3" class="input-custom" placeholder="Ex: embalagem danificada, recall, produto avariado">${esc(v.motivo || '')}</textarea>
@@ -1450,6 +1497,7 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
                 <i data-lucide="chevron-right" class="w-5 h-5 text-amber-500"></i>
             </button>
             ${htmlPlano()}
+            <button data-act="codigosAbrir" class="w-full py-3 text-[10px] font-black text-amber-500 uppercase">Código de barras cadastrados</button>
             <button data-act="toggleContraste" class="w-full py-3 text-[10px] font-black text-gray-400 uppercase">Alto contraste: ${localStorage.getItem('altoContraste') === '1' ? 'ligado' : 'desligado'}</button>
             <button data-act="exportarDados" class="w-full py-3 text-[10px] font-black text-amber-500 uppercase">Exportar dados (planilha)</button>
             <button data-act="excluirConta" class="w-full py-3 text-[10px] font-black text-red-500 uppercase">EXCLUIR MINHA CONTA</button>
@@ -1521,15 +1569,16 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
             const codVenc = ($('#pcod') ? $('#pcod').value : '').replace(/[^0-9A-Za-z]/g, '');
             if (codVenc && !/^[0-9A-Za-z]{6,20}$/.test(codVenc)) return aviso('CÓDIGO DE BARRAS INVÁLIDO!', { soConfirmar: true });
             const marcaNomeVenc = ((lojas.flatMap(l => l.marcas || [])).find(m => m.id === marcaId) || {}).nome || null;
+            if (codVenc) registrarNomeCodigo(codVenc, { nome, setor: null, marcaNome: marcaNomeVenc });
             if (!nome || !dataVenc || !lojaId) return aviso('PREENCHA TODOS OS CAMPOS!', { soConfirmar: true });
             if (!marcaId) return aviso('ESCOLHA OU CADASTRE A MARCA!', { soConfirmar: true });
             if (!(qtd >= 1)) return aviso('INFORME A QUANTIDADE RETIRADA!', { soConfirmar: true });
             if (!/^\d{4}-\d{2}-\d{2}$/.test(dataVenc)) return aviso('DATA INVÁLIDA!', { soConfirmar: true });
             const dataRet = $('#pdret') ? $('#pdret').value : isoLocal(new Date());
-            if (dataVenc > dataRet && !motivo) {
+            if (motivoObrigatorio(dataVenc, dataRet) && !motivo) {
                 atualizarMotivoObrigatorio();
                 if ($('#pmotivo')) $('#pmotivo').focus();
-                return aviso('O MOTIVO É OBRIGATÓRIO: O PRODUTO AINDA NÃO VENCEU NA DATA DA RETIRADA.', { soConfirmar: true });
+                return aviso('O MOTIVO É OBRIGATÓRIO PARA VALIDADE A PARTIR DE 3 DIAS APÓS A RETIRADA.', { soConfirmar: true });
             }
             const dados = {
                 nome: nome.slice(0, 120), qtd, dataVenc, lojaId, marcaId, motivo, codigo: codVenc || null,
@@ -1641,7 +1690,7 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
         resolver: (d) => aviso('RESOLVIDO?', { ok: () => deleteDoc(refProd(d.id)).catch(erroDb) }),
         salvarProd: () => {
             const nome = $('#pn').value.trim(), data = $('#pd').value, lojaId = $('#pl').value, marcaId = $('#pm') ? $('#pm').value : '';
-            const semQtd = !!($('#pq-semqtd') && $('#pq-semqtd').checked);
+            const semQtd = !($('#pq-informar') && $('#pq-informar').checked);
             const qRaw = semQtd ? '' : $('#pq').value.trim();
             const qtd = semQtd ? null : (qRaw === '' ? 1 : Math.max(0, parseInt(qRaw, 10) || 0));
             if (!nome || !data || !lojaId) return aviso('PREENCHA TUDO!', { soConfirmar: true });
@@ -1655,7 +1704,11 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
             if (!original0 && !setor) return aviso('ESCOLHA O SETOR!', { soConfirmar: true });
             if (cod && !/^[0-9A-Za-z]{6,20}$/.test(cod)) return aviso('CÓDIGO DE BARRAS INVÁLIDO!', { soConfirmar: true });
             const marcaNome = ((lojas.flatMap(l => l.marcas || [])).find(m => m.id === marcaId) || {}).nome || null;
-            const dados = { nome: nome.slice(0, 120), qtd, semQtd, data, lojaId, marcaId, setor: setor || null, codigo: cod || null };
+            const duplicado = produtos.find(x => x.id !== (view.prod || '') && x.lojaId === lojaId && x.data === data && (x.nome || '').trim().toLowerCase() === nome.trim().toLowerCase());
+            if (duplicado) return aviso(`Este produto já está cadastrado nesta loja com validade em ${fmt(data)}.`, { soConfirmar: true });
+            const fotoCod = (cod && fotoCodigoAtual && fotoCodigoAtual.codigo === cod) ? fotoCodigoAtual.img : null;
+            const dados = { nome: nome.slice(0, 120), qtd, semQtd, data, lojaId, marcaId, setor: setor || null, codigo: cod || null, fotoCodigo: fotoCod };
+            if (fotoCod) fotoCodigoAtual = null;
             if (cod) registrarNomeCodigo(cod, { nome: dados.nome, setor: dados.setor, marcaNome });
             const voltar = view.origem ? { lojaId: view.origem, marcaId: view.origemMarca } : null;
             if (view.prod) updateDoc(refProd(view.prod), dados).catch(erroDb);
@@ -1767,6 +1820,9 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
         lerCodigo: () => lerCodigo(),
         scanFechar: () => leitorFechar(),
         excluirConta: () => confirmarExclusao(),
+        codigosAbrir: () => codigosAbrir(),
+        codigosFechar: () => codigosFechar(),
+        verFotoCodigo: (d) => verFotoCodigo(d),
         diaLoja: (d) => diaLoja(d),
         resgatarVoucher: () => resgatarVoucher(),
         enviarFeedback: (d) => enviarFeedback(d.nota),
@@ -1826,11 +1882,16 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
     document.addEventListener('change', (e) => {
         if (e.target.id === 'fm') { filtroVenc = e.target.value; desenhar(false); }
         if (view.tab === 'v' && ['pm', 'pd'].includes(e.target.id)) atualizarDicaBaixa();
-        if (e.target.id === 'pl') refreshCampoMarca(e.target.value, '');
+        if (e.target.id === 'pl') {
+            refreshCampoMarca(e.target.value, '');
+            const lUnica = lojas.find(x => x.id === e.target.value);
+            if (lUnica && (lUnica.marcas || []).length === 1) { const pm = $('#pm'); if (pm) pm.value = lUnica.marcas[0].id; }
+            aplicarMarcaPendente();
+        }
         if (e.target.id === 'pd') atualizarMotivoObrigatorio();
         if (e.target.id === 'f-setor') { filtroSetor = e.target.value; desenhar(false); }
-        if (e.target.id === 'pq-semqtd') {
-            const pq = $('#pq'); if (pq) { pq.disabled = e.target.checked; if (e.target.checked) pq.value = ''; pq.classList.toggle('opacity-40', e.target.checked); }
+        if (e.target.id === 'pq-informar') {
+            const pq = $('#pq'); if (pq) { pq.disabled = !e.target.checked; if (!e.target.checked) pq.value = ''; pq.classList.toggle('opacity-40', !e.target.checked); }
         }
         if (e.target.id === 'pm') {
             if (e.target.value === '__nova') { e.target.value = ultimaMarca; acoes.novaMarcaForm(); }
