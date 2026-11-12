@@ -2,11 +2,14 @@ name: Limpar contas vencidas
 
 on:
   schedule:
-    - cron: '0 12 * * *'      # todo dia, 09:00 de Brasília
+    - cron: '0 12 * * *'      # todo dia, 09:00 de Brasília: envia avisos e exclui contas com 45 dias vencidos
   workflow_dispatch:
     inputs:
       dry_run:
-        description: 'true = só simular (padrão); false = enviar avisos e excluir de verdade'
+        description: 'true = só simular (padrão); false = enviar avisos de verdade'
+        default: 'true'
+      excluir:
+        description: 'true = excluir as contas com prazo vencido (padrão); false = não excluir'
         default: 'true'
       email_teste:
         description: 'Opcional: e-mail para receber um aviso de TESTE (não altera contas)'
@@ -30,5 +33,6 @@ jobs:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           GMAIL_USER: melobortolato.renan@gmail.com
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
-          DRY_RUN: ${{ github.event.inputs.dry_run || 'true' }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+          EXCLUIR: ${{ github.event.inputs.excluir || 'true' }}
           EMAIL_TESTE: ${{ github.event.inputs.email_teste || '' }}
