@@ -1,13 +1,15 @@
 // Rotina diária (GitHub Actions):
-//  - dia 35 após o fim do acesso: e-mail avisando que a conta será excluída em 10 dias;
-//  - dia 40: notificação no celular (para quem tem o app instalado), avisando 5 dias;
-//  - dia 45: apaga a conta, os dados e o login. Contas livres (gratis) não são apagadas.
+//  - dia 36 após o fim do acesso (o acesso termina no dia 0): e-mail avisando que a conta será excluída em 10 dias;
+//  - dia 41: notificação no celular (para quem tem o app instalado), avisando 5 dias;
+//  - dia 46 (45 dias contados a partir do dia 1 após o fim do acesso): apaga a conta, os dados e o login.
+//    Contas livres (gratis) não são apagadas.
 // Começa em simulação (DRY_RUN=true): só mostra o que faria.
 // Modo de teste: se EMAIL_TESTE for informado, envia UM e-mail de exemplo para esse endereço e para.
 const admin = require('firebase-admin');
 const nodemailer = require('nodemailer');
 
-const DRY = String(process.env.DRY_RUN || 'true') !== 'false';
+const DRY = String(process.env.DRY_RUN || 'false') !== 'false';
+const EXCLUIR = String(process.env.EXCLUIR || 'true') === 'true';   // exclusão automática após 45 dias
 const EMAIL_TESTE = (process.env.EMAIL_TESTE || '').trim();
 const APP_URL = 'https://promotor-ajudante.vercel.app/';
 const mail = nodemailer.createTransport({
@@ -76,9 +78,12 @@ async function avisarPush(uid, faltam) {
     const dias = diasEntre(u.acessoAte, hoje);
 
     if (dias > 45) {
-      console.log(`${DRY ? '[simulação] ' : ''}excluir conta ${d.id} (acesso terminou em ${u.acessoAte})`);
       excluidas++;
-      if (DRY) continue;
+      if (!EXCLUIR || DRY) {
+        console.log(`${DRY ? '[simulação] ' : ''}aguardando sua revisão: conta ${d.id} (acesso terminou em ${u.acessoAte})`);
+        continue;
+      }
+      console.log(`excluindo conta ${d.id} (acesso terminou em ${u.acessoAte})`);
       for (const col of ['lojas', 'produtos', 'vencidos', 'tokens']) {
         const sub = await db.collection('users').doc(d.id).collection(col).get();
         for (const x of sub.docs) await x.ref.delete();
@@ -88,18 +93,18 @@ async function avisarPush(uid, faltam) {
       continue;
     }
 
-    if (dias >= 35 && u.avisoEmailPara !== u.acessoAte) {
-      if (await avisarEmail(u, 45 - dias)) {
+    if (dias >= 36 && u.avisoEmailPara !== u.acessoAte) {
+      if (await avisarEmail(u, 46 - dias)) {
         emails++;
         if (!DRY) await d.ref.set({ avisoEmailPara: u.acessoAte }, { merge: true });
       }
     }
-    if (dias >= 40 && u.avisoPushPara !== u.acessoAte) {
-      if (await avisarPush(d.id, 45 - dias)) {
+    if (dias >= 41 && u.avisoPushPara !== u.acessoAte) {
+      if (await avisarPush(d.id, 46 - dias)) {
         pushes++;
         if (!DRY) await d.ref.set({ avisoPushPara: u.acessoAte }, { merge: true });
       }
     }
   }
-  console.log(`${DRY ? 'Simulação: ' : ''}e-mails: ${emails} · notificações: ${pushes} · contas ${DRY ? 'a excluir' : 'excluídas'}: ${excluidas}`);
+  console.log(`${DRY ? 'Simulação: ' : ''}e-mails: ${emails} · notificações: ${pushes} · contas com prazo vencido: ${excluidas}${EXCLUIR && !DRY ? ' (excluídas)' : ' (aguardando sua revisão)'}`);
 })().catch(e => { console.error(e); process.exit(1); });
