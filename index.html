@@ -612,6 +612,12 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
         const pn = $('#pn'); if (pn && !pn.value.trim()) pn.value = d.nome;
         const ps = $('#psetor'); if (ps && !ps.value && d.setor) ps.value = d.setor;
         marcaPendente = d.marcaNome ? String(d.marcaNome) : null;
+        // se a loja ainda não foi escolhida e só uma loja tem essa marca, escolhe a loja automaticamente
+        const pl = $('#pl');
+        if (pl && !pl.value && marcaPendente) {
+            const candidatas = lojas.filter(l => (l.marcas || []).some(m => String(m.nome || '').trim().toLowerCase() === marcaPendente.toLowerCase()));
+            if (candidatas.length === 1) { pl.value = candidatas[0].id; refreshCampoMarca(candidatas[0].id, ''); }
+        }
         aplicarMarcaPendente();
         aviso(`Produto reconhecido: <b>${esc(d.nome)}</b>. Confira e informe a validade.`, { soConfirmar: true });
     }
