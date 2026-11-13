@@ -1,0 +1,28 @@
+name: Resumo do dia (18h)
+
+on:
+  schedule:
+    - cron: '0 21 * * *'      # 18:00 de Brasília
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'true = só simular (padrão); false = enviar as notificações'
+        default: 'true'
+
+jobs:
+  resumo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Instalar dependências
+        working-directory: scripts
+        run: npm install --omit=dev --no-audit --no-fund
+      - name: Enviar resumo do dia
+        working-directory: scripts
+        run: node resumo-diario.js
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
