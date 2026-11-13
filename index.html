@@ -131,7 +131,7 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
     <section id="tela-carregando" class="secao ativa items-center justify-center p-6 text-center">
         <img src="logo.png" onerror="this.src='https://raw.githubusercontent.com/melobortolatorenan-max/Promotor-ajudante/main/logo.png'" class="w-16 h-16 mb-4" style="mix-blend-mode:lighten" alt="">
         <div id="carregando-txt" class="text-[10px] font-black uppercase tracking-widest text-gray-500">Carregando...</div>
-        <div class="text-[9px] text-gray-700 mt-3 font-bold">v47</div>
+        <div class="text-[9px] text-gray-700 mt-3 font-bold">v48</div>
     </section>
 
     <!-- CÓDIGOS DE BARRAS CADASTRADOS -->
@@ -143,6 +143,7 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
     <!-- BUSCA -->
     <div id="busca" class="hidden fixed inset-0 flex-col p-4 gap-3" style="z-index:94;background:#030712">
         <div class="flex gap-2"><input id="busca-q" class="input-custom flex-1" placeholder="Buscar produto ou loja" autocomplete="off"><button data-act="buscaFechar" class="px-4 rounded-xl border border-gray-700 text-[10px] font-black uppercase text-gray-300">Fechar</button></div>
+        <button data-act="lerCodigoBusca" class="w-full py-3 rounded-xl border border-amber-500 text-[10px] font-black uppercase text-amber-500">Ler código de barras</button>
         <div id="busca-res" class="flex-1 overflow-y-auto"></div>
     </div>
 
@@ -284,7 +285,7 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
         from "https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging.js";
 
     /* ================= utilidades ================= */
-    const VERSAO_APP = 'v47';
+    const VERSAO_APP = 'v48';
     document.getElementById('versao-login').textContent = VERSAO_APP;
     const API_BASE = 'https://promotor-ajudante.vercel.app';
     const SETORES = ['Bebidas', 'Doces', 'Higiene', 'Laticínios', 'Leites', 'Limpeza', 'Massas congeladas', 'Molhos', 'Pães', 'Salgadinhos', 'Temperos'];
@@ -529,7 +530,9 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
         <div><div class="text-[9px] text-gray-500 font-black uppercase mb-1">${rot}</div><div class="text-white font-black italic uppercase text-sm">${titulo}</div><div class="text-gray-500 text-[11px]">${sub}</div></div>
         <i data-lucide="chevron-right" class="w-5 h-5 text-amber-500"></i></button>`;
     const addDiasISO = (iso, n) => { const [y, m, d] = iso.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10); };
-    let relAcao = 'imprimir';        // 'imprimir' ou 'compartilhar' (vale para o próximo relatório)
+    let relAcao = 'imprimir';
+    let relMotivo = '';          // filtro por motivo no relatório de vencidos
+    let scanDestino = null;      // 'busca' quando a leitura serve para a busca        // 'imprimir' ou 'compartilhar' (vale para o próximo relatório)
     let filtroSetor = '';            // filtro de setor na lista de produtos da marca
     let desfazerTimer = null, desfazerFn = null;
     const leitor = { stream: null, timer: null, busy: false, detector: null };
@@ -579,6 +582,7 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
     }
     // Ao identificar o código: registra o código no sistema (se ainda não existir) e preenche o que já for conhecido
     async function codigoLido(cod) {
+        if (scanDestino === 'busca') { scanDestino = null; const bq = $('#busca-q'); if (bq) { bq.value = cod; buscaResultados(); } return; }
         const campo = $('#pcod'); if (campo) campo.value = cod;
         const ref = doc(db, 'codigos', cod);
         try {
@@ -838,7 +842,7 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
         if (q.length < 2) { $('#busca-res').innerHTML = '<p class="text-gray-500 text-[11px]">Digite pelo menos 2 letras.</p>'; buscaHits = []; return; }
         const hits = [];
         lojas.forEach(l => { if ((l.nome || '').toLowerCase().includes(q)) hits.push({ t: 'Loja', n: l.nome, lojaId: l.id, marcaId: null }); });
-        produtos.forEach(p => { if ((p.nome || '').toLowerCase().includes(q)) hits.push({ t: 'Produto', n: p.nome, sub: nomeLoja(p.lojaId), lojaId: p.lojaId, marcaId: p.marcaId || null }); });
+        produtos.forEach(p => { if ((p.nome || '').toLowerCase().includes(q) || (p.codigo && p.codigo === q)) hits.push({ t: 'Produto', n: p.nome, sub: nomeLoja(p.lojaId), lojaId: p.lojaId, marcaId: p.marcaId || null }); });
         buscaHits = hits.slice(0, 40);
         $('#busca-res').innerHTML = buscaHits.map((h, i) => `<button data-act="buscaIr" data-i="${i}" class="w-full text-left p-3 rounded-xl border border-gray-800 mb-2"><div class="text-[9px] text-gray-500 font-black uppercase">${h.t}${h.sub ? ' · ' + esc(h.sub) : ''}</div><div class="text-sm font-bold text-white">${esc(h.n)}</div></button>`).join('') || '<p class="text-gray-500 text-[11px]">Nada encontrado.</p>';
     }
@@ -1719,6 +1723,7 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
             if (!box.classList.contains('hidden')) $('#pmotivo').focus();
         },
         relatorioVenc: () => {
+            const motivosRel = [...new Set(vencidos.map(v => (v.motivo || '').trim()).filter(Boolean))].sort().map(m => `<option value="${esc(m)}">${esc(m)}</option>`).join('');
             const marcas = new Map();
             vencMes().forEach(v => { const k = norm(v.marcaNome) || '_'; if (!marcas.has(k)) marcas.set(k, v.marcaNome || 'Sem marca'); });
             if (!marcas.size) return aviso('NÃO HÁ VENCIDOS REGISTRADOS NESTE MÊS PARA GERAR RELATÓRIO.', { soConfirmar: true });
@@ -1731,9 +1736,10 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
             const rot = 'class="block text-[9px] text-gray-500 font-black uppercase mt-4 mb-1"';
             aviso(`<label ${rot}>Marca</label><select id="rel-marca" class="input-custom">${opMarcas}</select>
                    <label ${rot}>Período</label><select id="rel-periodo" class="input-custom">${opPeriodos}</select>
-                   <label ${rot}>Ação</label><select id="rel-acao" class="input-custom"><option value="imprimir">Imprimir ou salvar PDF</option><option value="compartilhar">Compartilhar PDF (WhatsApp)</option></select>`, {
+                   <label ${rot}>Ação</label><select id="rel-acao" class="input-custom"><option value="imprimir">Imprimir ou salvar PDF</option><option value="compartilhar">Compartilhar PDF (WhatsApp)</option></select>
+                   <label ${rot}>Motivo</label><select id="rel-motivo" class="input-custom"><option value="">Todos os motivos</option>${motivosRel}</select>`, {
                 titulo: 'BAIXAR RELATÓRIO DE VENCIDOS',
-                ok: () => { const c = $('#rel-marca').value, per = $('#rel-periodo').value; relAcao = $('#rel-acao').value; if (per === 'datas') abrirCalendario(c); else imprimirVencidos(c, per); },
+                ok: () => { const c = $('#rel-marca').value, per = $('#rel-periodo').value; relAcao = $('#rel-acao').value; relMotivo = $('#rel-motivo').value; if (per === 'datas') abrirCalendario(c); else imprimirVencidos(c, per); },
             });
         },
         pickSug: (d) => {
@@ -1927,7 +1933,8 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
         pdvSalvar: () => pdvSalvar(),
         pdvFechar: () => pdvFechar(),
         lerCodigo: () => lerCodigo(),
-        scanFechar: () => leitorFechar(),
+        scanFechar: () => { scanDestino = null; leitorFechar(); },
+        lerCodigoBusca: () => { scanDestino = 'busca'; lerCodigo(); },
         excluirConta: () => confirmarExclusao(),
         avaliarApp: (d) => avaliarApp(d.nota),
         avaliarEnviar: () => avaliarEnviar(),
@@ -2267,7 +2274,7 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
     // cada produto lista suas retiradas com vencimento, retirada e quantidade.
     function imprimirVencidos(chave, periodo = 'mes', datas = []) {
         const intervalo = periodo === 'intervalo', f = intervalo ? null : faixaPeriodo(periodo);
-        const base = intervalo ? vencidos : vencMes();
+        const base = (intervalo ? vencidos : vencMes()).filter(v => !relMotivo || (v.motivo || '').trim() === relMotivo);
         const lista = base.filter(v => (norm(v.marcaNome) || '_') === chave && (intervalo ? (v.dataRetirada >= datas[0] && v.dataRetirada <= datas[1]) : (v.dataRetirada >= f.ini && v.dataRetirada <= f.fim)));
         if (!lista.length) return aviso('NÃO HÁ VENCIDOS DESTA MARCA NO PERÍODO ESCOLHIDO.', { soConfirmar: true });
         const nomeM = lista[0].marcaNome || 'Sem marca';
