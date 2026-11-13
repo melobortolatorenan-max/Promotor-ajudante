@@ -906,9 +906,8 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
     function verFotoCodigo(d) {
         const p = produtos.find(x => x.id === d.id);
         if (!p || !p.codigo) return;
-        const corpo = p.fotoCodigo
-            ? `<img src="${p.fotoCodigo}" class="w-full rounded-xl" alt="Código de barras">`
-            : `<div class="bg-white rounded-xl p-3">${gerarBarrasSvg(p.codigo) || `<p class="text-black text-center">${esc(p.codigo)}</p>`}</div>`;
+        // mesmo desenho para todos os itens: código de barras gerado a partir do número
+        const corpo = `<div class="bg-white rounded-xl p-3">${gerarBarrasSvg(p.codigo) || `<p class="text-black text-center">${esc(p.codigo)}</p>`}</div>`;
         aviso(corpo, { titulo: String(p.codigo), soConfirmar: true });
     }
     // ---- avaliação do app (fica nas Configurações e pode ser alterada a qualquer momento) ----
