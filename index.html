@@ -131,7 +131,7 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
     <section id="tela-carregando" class="secao ativa items-center justify-center p-6 text-center">
         <img src="logo.png" onerror="this.src='https://raw.githubusercontent.com/melobortolatorenan-max/Promotor-ajudante/main/logo.png'" class="w-16 h-16 mb-4" style="mix-blend-mode:lighten" alt="">
         <div id="carregando-txt" class="text-[10px] font-black uppercase tracking-widest text-gray-500">Carregando...</div>
-        <div class="text-[9px] text-gray-700 mt-3 font-bold">v46</div>
+        <div class="text-[9px] text-gray-700 mt-3 font-bold">v47</div>
     </section>
 
     <!-- CÓDIGOS DE BARRAS CADASTRADOS -->
@@ -284,7 +284,7 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
         from "https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging.js";
 
     /* ================= utilidades ================= */
-    const VERSAO_APP = 'v46';
+    const VERSAO_APP = 'v47';
     document.getElementById('versao-login').textContent = VERSAO_APP;
     const API_BASE = 'https://promotor-ajudante.vercel.app';
     const SETORES = ['Bebidas', 'Doces', 'Higiene', 'Laticínios', 'Leites', 'Limpeza', 'Massas congeladas', 'Molhos', 'Pães', 'Salgadinhos', 'Temperos'];
@@ -517,7 +517,8 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
     /* ---- leitura de código de barras e registro de códigos ---- */
     aplicarContraste();
     let criadaEm = null;
-    let marcaPendente = null;   // marca lida no código, aplicada quando a loja for escolhida
+    let marcaPendente = null;
+    let avalPendente = null;   // nota de 1 a 4 aguardando a resposta escrita   // marca lida no código, aplicada quando a loja for escolhida
     // motivo obrigatório: só quando o vencimento for mais de 2 dias depois da retirada
     const motivoObrigatorio = (venc, ret) => { if (!venc || !ret) return false; return (Date.parse(venc + 'T00:00:00Z') - Date.parse(ret + 'T00:00:00Z')) / 86400000 > 2; };
     const qtdInformada = (p) => p.semQtd === false || (p.semQtd === undefined && p.qtd != null && p.qtd !== '');
@@ -904,6 +905,66 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
             : `<div class="bg-white rounded-xl p-3">${gerarBarrasSvg(p.codigo) || `<p class="text-black text-center">${esc(p.codigo)}</p>`}</div>`;
         aviso(corpo, { titulo: String(p.codigo), soConfirmar: true });
     }
+    // ---- avaliação do app (fica nas Configurações e pode ser alterada a qualquer momento) ----
+    function htmlAvaliacao() {
+        const salva = perfilAcesso.avaliacao && perfilAcesso.avaliacao.nota;
+        const marcada = avalPendente || salva;
+        const botoes = [1, 2, 3, 4, 5].map(n => `<button data-act="avaliarApp" data-nota="${n}" class="flex-1 h-10 rounded-xl border font-black ${marcada === n ? 'bg-amber-500 border-amber-500 text-gray-950' : 'border-amber-500/50 text-amber-500'}">${n}</button>`).join('');
+        const pergunta = avalPendente !== null && avalPendente <= 2 ? 'O que podemos melhorar?' : 'O que falta para ser 5 estrelas?';
+        const caixa = avalPendente !== null ? `<div class="mt-3"><p class="text-[11px] text-gray-400 mb-2">${pergunta}</p>
+            <textarea id="aval-texto" rows="3" maxlength="500" class="input-custom w-full"></textarea>
+            <button data-act="avaliarEnviar" class="btn-amarelo mt-2">Enviar avaliação</button></div>` : '';
+        return `<div class="card-app p-4 mb-3"><div class="text-[9px] text-gray-500 font-black uppercase mb-2">Avaliação do app</div>
+            <div class="flex gap-2">${botoes}</div>${caixa}</div>`;
+    }
+    async function avaliarApp(n) {
+        n = Number(n);
+        if (n === 5) { await salvarAvaliacao(5, ''); confete(); aviso('Muito obrigado pela avaliação!', { soConfirmar: true }); return; }
+        avalPendente = n;
+        desenhar(false);
+    }
+    async function avaliarEnviar() {
+        const texto = ($('#aval-texto').value || '').trim();
+        if (!texto) return aviso('Escreva uma resposta, por favor.', { soConfirmar: true });
+        await salvarAvaliacao(avalPendente, texto);
+        avalPendente = null;
+        desenhar(false);
+        aviso('Muito obrigado pela avaliação!', { soConfirmar: true });
+    }
+    async function salvarAvaliacao(nota, texto) {
+        try {
+            await setDoc(doc(db, 'users', uid), { avaliacao: { nota, texto, atualizadoEm: serverTimestamp() } }, { merge: true });
+            await enviarEmailAvaliacao(nota, texto);
+        } catch (e) { erroDb(e); }
+    }
+    async function enviarEmailAvaliacao(nota, texto) {
+        const nome = (userInfo && userInfo.displayName) || '-', emailConta = (userInfo && userInfo.email) || '-';
+        const pergunta = nota === 5 ? '' : (nota <= 2 ? 'O que podemos melhorar?' : 'O que falta para ser 5 estrelas?');
+        const corpo = `Nota: ${nota}/5\nUsuário: ${nome}\nE-mail: ${emailConta}\nID: ${uid}\nVersão do app: ${VERSAO_APP}\n` +
+            (pergunta ? `${pergunta}\n` : '') + `Resposta: ${texto || '(sem texto)'}`;
+        const chave = window.CAP_WEB3FORMS_KEY || CAP_WEB3FORMS_KEY;
+        const r = await fetch('https://api.web3forms.com/submit', {
+            method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify({ access_key: chave, subject: 'Avaliação app promotor', from_name: 'Promotor Ajudante - ' + nome, email: emailConta !== '-' ? emailConta : undefined, message: corpo }),
+        });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok || !j.success) console.warn('avaliação não enviada por e-mail', j);
+    }
+    // confete animado (sem arquivo externo)
+    function confete() {
+        const c = document.createElement('canvas'); c.width = innerWidth; c.height = innerHeight;
+        c.style.cssText = 'position:fixed;inset:0;z-index:99;pointer-events:none';
+        document.body.appendChild(c);
+        const g = c.getContext('2d');
+        const cores = ['#f59e0b', '#fbbf24', '#ef4444', '#22c55e', '#3b82f6', '#a855f7'];
+        const pecas = Array.from({ length: 140 }, () => ({ x: Math.random() * c.width, y: -20 - Math.random() * c.height * 0.3, vx: (Math.random() - 0.5) * 4, vy: 2 + Math.random() * 4, r: Math.random() * 6 + 4, cor: cores[Math.floor(Math.random() * cores.length)], rot: Math.random() * 6 }));
+        const t0 = Date.now();
+        (function quadro() {
+            g.clearRect(0, 0, c.width, c.height);
+            pecas.forEach(p => { p.x += p.vx; p.y += p.vy; p.vy += 0.05; p.rot += 0.1; g.save(); g.translate(p.x, p.y); g.rotate(p.rot); g.fillStyle = p.cor; g.fillRect(-p.r / 2, -p.r / 4, p.r, p.r / 2); g.restore(); });
+            if (Date.now() - t0 < 3000) requestAnimationFrame(quadro); else c.remove();
+        })();
+    }
     function fecharLegal() { const box = $('#legal'); box.classList.add('hidden'); box.classList.remove('flex'); }
 
     /* ---- cobrança: acesso anual ---- */
@@ -1151,7 +1212,6 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
             </div>`;
         }).join('');
         return `
-            ${htmlFeedback()}
             ${htmlBannerPlano()}
             <button data-act="fotoPdv" class="w-full mb-4 flex items-center justify-center gap-2 py-3 rounded-2xl border border-amber-500 text-amber-500 text-[11px] font-black uppercase"><i data-lucide="camera" class="w-4 h-4"></i> Foto PDV</button>
             <div class="grid grid-cols-2 gap-3 mb-6">
@@ -1501,6 +1561,7 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
             </button>
             ${htmlAcaoCard('Produtos', 'Código de barras cadastrados', produtos.filter(p => p.codigo).length + ' códigos', 'codigosAbrir')}
             ${htmlAcaoCard('Dados', 'Exportar planilha', 'Produtos e vencidos em CSV', 'exportarDados')}
+            ${htmlAvaliacao()}
             <div class="card-app p-4 mb-3">
                 <div class="flex items-center gap-2 mb-1">
                     <i data-lucide="${n.ativo ? 'bell' : 'bell-off'}" class="w-4 h-4 ${n.ativo ? 'text-amber-500' : 'text-gray-500'}"></i>
@@ -1856,6 +1917,8 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
         lerCodigo: () => lerCodigo(),
         scanFechar: () => leitorFechar(),
         excluirConta: () => confirmarExclusao(),
+        avaliarApp: (d) => avaliarApp(d.nota),
+        avaliarEnviar: () => avaliarEnviar(),
         codigosAbrir: () => codigosAbrir(),
         codigosFechar: () => codigosFechar(),
         verFotoCodigo: (d) => verFotoCodigo(d),
