@@ -14,15 +14,18 @@ const dataDe = (ts) => (ts && ts.toDate) ? new Intl.DateTimeFormat('en-CA', { ti
   let enviadas = 0;
   for (const u of users.docs) {
     const base = db.collection('users').doc(u.id);
-    const [venc, prod] = await Promise.all([base.collection('vencidos').get(), base.collection('produtos').get()]);
-    const retiradas = venc.docs.map(d => d.data()).filter(v => v.dataRetirada === hoje).reduce((t, v) => t + (Number(v.qtd) || 0), 0);
-    const retiradasReg = venc.docs.map(d => d.data()).filter(v => v.dataRetirada === hoje).length;
+    const [venc, prod, vis] = await Promise.all([
+      base.collection('vencidos').get(), base.collection('produtos').get(), base.collection('visitas').get(),
+    ]);
+    const retiradasDia = venc.docs.map(d => d.data()).filter(v => v.dataRetirada === hoje);
+    const retiradas = retiradasDia.reduce((t, v) => t + (Number(v.qtd) || 0), 0);
     const cadastros = prod.docs.map(d => d.data()).filter(p => dataDe(p.criadoEm) === hoje).length;
-    if (!retiradasReg && !cadastros) continue;
+    const visitasHoje = new Set(vis.docs.map(d => d.data()).filter(v => v.data === hoje).map(v => v.lojaId)).size;
+    if (!retiradasDia.length && !cadastros && !visitasHoje) continue;
 
     const tokens = (await base.collection('tokens').get()).docs.map(d => d.data().token).filter(Boolean);
     if (!tokens.length) continue;
-    const corpo = `Hoje: ${retiradas} unidades retiradas em ${retiradasReg} registros e ${cadastros} produtos cadastrados. Veja em Configurações > Resumo do dia.`;
+    const corpo = `Hoje: ${visitasHoje} lojas visitadas, ${retiradas} unidades retiradas em ${retiradasDia.length} registros e ${cadastros} produtos cadastrados. Veja em Configurações > Resumo do dia.`;
     if (DRY) { console.log(`[simulação] ${u.id}: ${corpo}`); continue; }
     const r = await messaging.sendEachForMulticast({
       tokens,
