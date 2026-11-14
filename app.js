@@ -1043,6 +1043,62 @@ document.addEventListener('error', (e) => {
         if (dias.length) for (let k = 1; k <= 7; k++) { const d = (diaSemana + k) % 7; if (dias.includes(d)) { proximo = { k, d }; break; } }
         return { visitouHoje, atendeHoje, dias, proximo, nomes };
     }
+    /* ---- endereço da loja: sugestões do Google Maps enquanto digita ---- */
+    const MAPS_KEY = 'COLE_A_CHAVE_DO_GOOGLE_MAPS_AQUI';
+    let mapsPronto = null, sessaoPlaces = null, sugestoesAtuais = [], enderecoEscolhido = null, timerSug = null;
+    function carregarMaps() {
+        if (mapsPronto) return mapsPronto;
+        mapsPronto = new Promise((ok, erro) => {
+            const s = document.createElement('script');
+            s.src = `https://maps.googleapis.com/maps/api/js?key=${MAPS_KEY}&libraries=places&v=weekly`;
+            s.async = true;
+            s.onload = () => ok();
+            s.onerror = () => { mapsPronto = null; erro(new Error('mapas indisponíveis')); };
+            document.head.appendChild(s);
+        });
+        return mapsPronto;
+    }
+    function agendarSugestoes(texto) {
+        clearTimeout(timerSug);
+        timerSug = setTimeout(() => buscarSugestoes(texto), 300);
+    }
+    async function buscarSugestoes(texto) {
+        const box = $('#l-sugestoes'); if (!box) return;
+        const t = String(texto || '').trim();
+        // sem chave do Google Maps, as sugestões ficam desligadas (o endereço é digitado normalmente)
+        if (MAPS_KEY.startsWith('COLE') || t.length < 3) { box.innerHTML = ''; sugestoesAtuais = []; return; }
+        try {
+            await carregarMaps();
+            const { AutocompleteSuggestion, AutocompleteSessionToken } = await google.maps.importLibrary('places');
+            if (!sessaoPlaces) sessaoPlaces = new AutocompleteSessionToken();
+            const { suggestions } = await AutocompleteSuggestion.fetchAutocompleteSuggestions({
+                input: t, includedRegionCodes: ['br'], language: 'pt-BR', sessionToken: sessaoPlaces,
+            });
+            sugestoesAtuais = suggestions.filter(x => x.placePrediction).map(x => x.placePrediction);
+            box.innerHTML = sugestoesAtuais.map((p, i) => `<button data-act="enderecoEscolher" data-i="${i}" class="w-full text-left p-3 rounded-xl border border-gray-800 bg-[#111827] text-xs text-gray-200">${esc(p.text.toString())}</button>`).join('')
+                || '<div class="text-[10px] text-gray-500 p-2">Nenhuma sugestão encontrada.</div>';
+        } catch (e) {
+            console.error('sugestões de endereço:', e);
+            box.innerHTML = '<div class="text-[10px] text-amber-500 p-2">Não consegui buscar sugestões agora. Você pode digitar o endereço completo.</div>';
+        }
+    }
+    async function escolherSugestao(i) {
+        const pred = sugestoesAtuais[i]; if (!pred) return;
+        try {
+            const lugar = pred.toPlace();
+            await lugar.fetchFields({ fields: ['formattedAddress', 'location'] });
+            const texto = lugar.formattedAddress || pred.text.toString();
+            const loc = lugar.location;
+            enderecoEscolhido = { texto, lat: loc.lat(), lng: loc.lng() };
+            $('#l-endereco').value = texto;
+            $('#l-sugestoes').innerHTML = '';
+            sessaoPlaces = null;   // a sessão de busca termina ao escolher
+            toast('Endereço selecionado. Toque em Salvar endereço.');
+        } catch (e) {
+            console.error('escolher endereço:', e);
+            aviso('Não consegui pegar esse endereço. Tente de novo.', { soConfirmar: true });
+        }
+    }
     function fecharLegal() { const box = $('#legal'); box.classList.add('hidden'); box.classList.remove('flex'); }
 
     /* ---- cobrança: acesso anual ---- */
@@ -1397,8 +1453,10 @@ document.addEventListener('error', (e) => {
                 return `<div class="card-app p-3 mb-3"><div class="flex items-center justify-between gap-2"><div class="text-[10px] text-gray-400">${ultTxt}</div>${acao}</div>${aviso}</div>`;
             })()}
             <div class="card-app p-3 mb-3"><label class="text-[9px] text-gray-500 font-black uppercase">Endereço da loja (para a rota)</label>
-                <input id="l-endereco" class="input-custom w-full mt-1" value="${esc(l.endereco || '')}" placeholder="Rua, número, bairro, cidade">
-                <button data-act="enderecoSalvar" data-id="${esc(l.id)}" class="btn-amarelo mt-2">Salvar endereço</button></div>
+                <input id="l-endereco" autocomplete="off" class="input-custom w-full mt-1" value="${esc(l.endereco || '')}" placeholder="Digite o nome da loja ou o endereço">
+                <div id="l-sugestoes" class="mt-1 space-y-1"></div>
+                <button data-act="enderecoSalvar" data-id="${esc(l.id)}" class="btn-amarelo mt-2">Salvar endereço</button>
+                <button data-act="enderecoAqui" data-id="${esc(l.id)}" class="w-full py-3 mt-2 rounded-xl border border-amber-500 text-amber-500 text-[10px] font-black uppercase">Usar minha localização aqui (estando na loja)</button></div>
             <div class="card-app p-3 mb-3"><label class="text-[9px] text-gray-500 font-black uppercase">Dias de visita</label>
                 <div class="flex gap-1 mt-2">${DIAS_SEMANA.map((d, i) => `<button data-act="diaLoja" data-loja="${esc(l.id)}" data-dia="${i}" class="flex-1 py-2 rounded-xl border text-[10px] font-black ${diasDaLoja(l).includes(i) ? 'bg-amber-500 border-amber-500 text-gray-950' : 'border-gray-700 text-gray-400'}">${d.slice(0, 3)}</button>`).join('')}</div></div>
             ${cartoes}${cartaoSem}
@@ -2051,7 +2109,21 @@ document.addEventListener('error', (e) => {
         resumoAbrir: () => resumoAbrir(),
         enderecoSalvar: (d) => {
             const v = ($('#l-endereco').value || '').trim().slice(0, 200);
-            updateDoc(doc(colLojas(), d.id), { endereco: v }).then(() => toast('Endereço salvo.')).catch(erroDb);
+            const c = enderecoEscolhido && enderecoEscolhido.texto === v ? enderecoEscolhido : null;
+            // só mexe nas coordenadas quando o endereço veio da lista do Google; senão mantém o ponto salvo
+            const dadosEnd = c ? { endereco: v, enderecoLat: c.lat, enderecoLng: c.lng } : { endereco: v };
+            updateDoc(doc(colLojas(), d.id), dadosEnd)
+                .then(() => { enderecoEscolhido = null; toast('Endereço salvo.'); }).catch(erroDb);
+        },
+        enderecoEscolher: (d) => escolherSugestao(Number(d.i)),
+        enderecoAqui: (d) => {
+            if (!navigator.geolocation) return aviso('Este aparelho não informa a localização.', { soConfirmar: true });
+            navigator.geolocation.getCurrentPosition(
+                (p) => updateDoc(doc(colLojas(), d.id), { enderecoLat: p.coords.latitude, enderecoLng: p.coords.longitude })
+                    .then(() => toast('Localização da loja salva. A rota vai usar este ponto.')).catch(erroDb),
+                () => aviso('Permita a localização no navegador e tente de novo, estando na loja.', { soConfirmar: true }),
+                { enableHighAccuracy: true, timeout: 15000 }
+            );
         },
         abrirRota: () => { location.href = 'rota.html'; },
         resumoFechar: () => resumoFechar(),
@@ -2136,6 +2208,7 @@ document.addEventListener('error', (e) => {
         }
         if (e.target.id === 'pd') atualizarMotivoObrigatorio();
         if (e.target.id === 'f-setor') { filtroSetor = e.target.value; desenhar(false); }
+        if (e.target.id === 'l-endereco') agendarSugestoes(e.target.value);
         if (e.target.id === 'plan-file') planogramaSalvarFoto(e.target.files[0]);
         if (e.target.id === 'pq-informar') {
             const pq = $('#pq'); if (pq) { pq.disabled = !e.target.checked; if (!e.target.checked) pq.value = ''; pq.classList.toggle('opacity-40', !e.target.checked); }
