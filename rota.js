@@ -23,19 +23,38 @@ function distancia(a, b) {
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 
+// variações do mesmo endereço, do mais exato ao mais genérico
+function variantes(e) {
+  const base = e.trim();
+  const sem = base.split(' - ')[0];
+  const exp = (t) => t
+    .replace(/^Av\.?\s+/i, 'Avenida ')
+    .replace(/^R\.\s+/i, 'Rua ')
+    .replace(/\bGov\.\s*/i, 'Governador ')
+    .replace(/\bPres\.\s*/i, 'Presidente ');
+  const lista = [base, sem, exp(base), exp(sem), exp(sem).replace(/,\s*\d+[^,]*/, '')];
+  const comCidade = lista.map(x => /florian/i.test(x) ? x : x + ', Florianópolis, SC');
+  return [...new Set([...lista, ...comCidade].map(x => x.trim()).filter(Boolean))].slice(0, 8);
+}
+
 // endereço -> coordenadas, pelo OpenStreetMap (gratuito); guarda no aparelho para não repetir
 async function coordenadas(endereco) {
   const chave = 'geo:' + endereco.toLowerCase();
   const guardado = localStorage.getItem(chave);
   if (guardado) return JSON.parse(guardado);
-  await pausa(1100); // o serviço pede no máximo 1 pedido por segundo
-  const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&q=' + encodeURIComponent(endereco);
-  const r = await fetch(url, { headers: { Accept: 'application/json' } });
-  const j = await r.json();
-  if (!j.length) return null;
-  const pt = { lat: +j[0].lat, lng: +j[0].lon };
-  localStorage.setItem(chave, JSON.stringify(pt));
-  return pt;
+  for (const t of variantes(endereco)) {
+    await pausa(1100); // o serviço pede no máximo 1 pedido por segundo
+    const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&q=' + encodeURIComponent(t);
+    const r = await fetch(url, { headers: { Accept: 'application/json' } });
+    if (!r.ok) continue;
+    const j = await r.json();
+    if (j.length) {
+      const pt = { lat: +j[0].lat, lng: +j[0].lon };
+      localStorage.setItem(chave, JSON.stringify(pt));
+      return pt;
+    }
+  }
+  return null;
 }
 
 function localizacao() {
@@ -101,7 +120,8 @@ onAuthStateChanged(auth, async (user) => {
 
     const paradas = [], naoEncontradas = [];
     for (const l of comEndereco) {
-      const pt = await coordenadas(l.endereco.trim());
+      // coordenadas escolhidas na lista do Google Maps são usadas direto; senão, procura pelo texto
+      const pt = (l.enderecoLat != null && l.enderecoLng != null) ? { lat: l.enderecoLat, lng: l.enderecoLng } : await coordenadas(l.endereco.trim());
       if (pt) paradas.push({ nome: l.nome, endereco: l.endereco.trim(), pt });
       else naoEncontradas.push(l.nome);
     }
@@ -111,7 +131,7 @@ onAuthStateChanged(auth, async (user) => {
     let html = `<div class="text-[11px] text-gray-500 mb-1">${NOMES[DIA].toUpperCase()} · ${origem ? 'ordenado pela sua localização' : 'localização indisponível: ordem alfabética'}</div>`;
     html += rota.map((p, i) => cartao(p, i, origem)).join('');
     if (!origem) html += '<p class="text-xs text-gray-500">Permita a localização no navegador para a rota sair da sua posição atual.</p>';
-    if (naoEncontradas.length) html += `<p class="text-xs text-red-400">Não encontrei o endereço de: ${naoEncontradas.map(esc).join(', ')}. Confira o endereço na tela da loja.</p>`;
+    if (naoEncontradas.length) html += `<p class="text-xs text-red-400">Sem ponto no mapa para: ${naoEncontradas.map(esc).join(', ')}. Abra a loja no app, estando nela, e toque em <b>Usar minha localização aqui</b>.</p>`;
     if (semEndereco.length) html += `<p class="text-xs text-amber-500">Sem endereço cadastrado: ${semEndereco.map(l => esc(l.nome)).join(', ')}. Cadastre no app, na tela de cada loja.</p>`;
     mostrar(html);
   } catch (e) {

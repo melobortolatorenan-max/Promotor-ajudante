@@ -1456,6 +1456,7 @@ document.addEventListener('error', (e) => {
                 <input id="l-endereco" autocomplete="off" class="input-custom w-full mt-1" value="${esc(l.endereco || '')}" placeholder="Digite o nome da loja ou o endereço">
                 <div id="l-sugestoes" class="mt-1 space-y-1"></div>
                 <button data-act="enderecoSalvar" data-id="${esc(l.id)}" class="btn-amarelo mt-2">Salvar endereço</button>
+                <div class="text-[10px] mt-2 ${l.enderecoLat != null ? 'text-green-400' : 'text-gray-500'}">${l.enderecoLat != null ? '✓ Ponto da loja salvo para a rota' : 'Ponto da loja ainda não salvo: toque abaixo estando na loja'}</div>
                 <button data-act="enderecoAqui" data-id="${esc(l.id)}" class="w-full py-3 mt-2 rounded-xl border border-amber-500 text-amber-500 text-[10px] font-black uppercase">Usar minha localização aqui (estando na loja)</button></div>
             <div class="card-app p-3 mb-3"><label class="text-[9px] text-gray-500 font-black uppercase">Dias de visita</label>
                 <div class="flex gap-1 mt-2">${DIAS_SEMANA.map((d, i) => `<button data-act="diaLoja" data-loja="${esc(l.id)}" data-dia="${i}" class="flex-1 py-2 rounded-xl border text-[10px] font-black ${diasDaLoja(l).includes(i) ? 'bg-amber-500 border-amber-500 text-gray-950' : 'border-gray-700 text-gray-400'}">${d.slice(0, 3)}</button>`).join('')}</div></div>
