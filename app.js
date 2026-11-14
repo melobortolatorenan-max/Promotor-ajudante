@@ -1045,6 +1045,7 @@ document.addEventListener('error', (e) => {
     }
     /* ---- endereço da loja: sugestões do Google Maps enquanto digita ---- */
     const MAPS_KEY = 'COLE_A_CHAVE_DO_GOOGLE_MAPS_AQUI';
+    let enderecoEditando = null;   // loja cujo endereço está aberto para edição
     let mapsPronto = null, sessaoPlaces = null, sugestoesAtuais = [], enderecoEscolhido = null, timerSug = null;
     function carregarMaps() {
         if (mapsPronto) return mapsPronto;
@@ -1450,14 +1451,20 @@ document.addEventListener('error', (e) => {
                     const dt = new Date(Date.now() + i.proximo.k * 86400000);
                     aviso = `<div class="text-[11px] text-amber-500 font-bold mt-2">Hoje não é dia de atendimento. Próximo: ${i.nomes[i.proximo.d]}, ${dataBR(isoLocal(dt))}</div>`;
                 }
-                return `<div class="card-app p-3 mb-3"><div class="flex items-center justify-between gap-2"><div class="text-[10px] text-gray-400">${ultTxt}</div>${acao}</div>${aviso}</div>`;
+                const endTxt = l.endereco
+                    ? `<div class="flex items-center gap-2 text-[10px] text-gray-400 mb-2"><span class="flex-1">${esc(l.endereco)}</span><button data-act="enderecoEditar" data-id="${esc(l.id)}" class="text-amber-500 p-1" aria-label="Editar endereço"><i data-lucide="pencil" class="w-3 h-3"></i></button></div>`
+                    : '';
+                return `<div class="card-app p-3 mb-3">${endTxt}<div class="flex items-center justify-between gap-2"><div class="text-[10px] text-gray-400">${ultTxt}</div>${acao}</div>${aviso}</div>`;
             })()}
+${(!l.endereco || enderecoEditando === l.id) ? `
             <div class="card-app p-3 mb-3"><label class="text-[9px] text-gray-500 font-black uppercase">Endereço da loja (para a rota)</label>
                 <input id="l-endereco" autocomplete="off" class="input-custom w-full mt-1" value="${esc(l.endereco || '')}" placeholder="Digite o nome da loja ou o endereço">
                 <div id="l-sugestoes" class="mt-1 space-y-1"></div>
                 <button data-act="enderecoSalvar" data-id="${esc(l.id)}" class="btn-amarelo mt-2">Salvar endereço</button>
+                ${l.endereco ? `<button data-act="enderecoCancelar" class="w-full py-2 mt-2 text-[10px] font-black uppercase text-gray-400">Cancelar</button>` : ''}
                 <div class="text-[10px] mt-2 ${l.enderecoLat != null ? 'text-green-400' : 'text-gray-500'}">${l.enderecoLat != null ? '✓ Ponto da loja salvo para a rota' : 'Ponto da loja ainda não salvo: toque abaixo estando na loja'}</div>
                 <button data-act="enderecoAqui" data-id="${esc(l.id)}" class="w-full py-3 mt-2 rounded-xl border border-amber-500 text-amber-500 text-[10px] font-black uppercase">Usar minha localização aqui (estando na loja)</button></div>
+            ` : ''}
             <div class="card-app p-3 mb-3"><label class="text-[9px] text-gray-500 font-black uppercase">Dias de visita</label>
                 <div class="flex gap-1 mt-2">${DIAS_SEMANA.map((d, i) => `<button data-act="diaLoja" data-loja="${esc(l.id)}" data-dia="${i}" class="flex-1 py-2 rounded-xl border text-[10px] font-black ${diasDaLoja(l).includes(i) ? 'bg-amber-500 border-amber-500 text-gray-950' : 'border-gray-700 text-gray-400'}">${d.slice(0, 3)}</button>`).join('')}</div></div>
             ${cartoes}${cartaoSem}
@@ -2114,9 +2121,11 @@ document.addEventListener('error', (e) => {
             // só mexe nas coordenadas quando o endereço veio da lista do Google; senão mantém o ponto salvo
             const dadosEnd = c ? { endereco: v, enderecoLat: c.lat, enderecoLng: c.lng } : { endereco: v };
             updateDoc(doc(colLojas(), d.id), dadosEnd)
-                .then(() => { enderecoEscolhido = null; toast('Endereço salvo.'); }).catch(erroDb);
+                .then(() => { enderecoEscolhido = null; enderecoEditando = null; toast('Endereço salvo.'); }).catch(erroDb);
         },
         enderecoEscolher: (d) => escolherSugestao(Number(d.i)),
+        enderecoEditar: (d) => { enderecoEditando = d.id; desenhar(false); },
+        enderecoCancelar: () => { enderecoEditando = null; desenhar(false); },
         enderecoAqui: (d) => {
             if (!navigator.geolocation) return aviso('Este aparelho não informa a localização.', { soConfirmar: true });
             navigator.geolocation.getCurrentPosition(
