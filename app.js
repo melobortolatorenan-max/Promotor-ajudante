@@ -645,7 +645,7 @@ document.addEventListener('error', (e) => {
             const norm = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
             produtos.forEach(p => {
                 const palavras = norm(p.nome).split(/\s+/);
-                if (palavras.some(w => distancia(w, norm(q)) <= tol)) hits.push({ t: 'Produto', n: p.nome, sub: nomeLoja(p.lojaId), lojaId: p.lojaId, marcaId: p.marcaId });
+                if (palavras.some(w => distancia(w.slice(0, norm(q).length), norm(q)) <= tol)) hits.push({ t: 'Produto', n: p.nome, sub: nomeLoja(p.lojaId), lojaId: p.lojaId, marcaId: p.marcaId });
             });
         }
         buscaHits = hits.slice(0, 40);
