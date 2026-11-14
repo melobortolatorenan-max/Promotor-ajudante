@@ -13,7 +13,7 @@ function iniciar() {
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   // libera o app (também dentro do aplicativo Android, que tem outra origem)
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Origin', 'https://promotor-ajudante.vercel.app');
   res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   if (req.method === 'OPTIONS') return res.status(204).end();
