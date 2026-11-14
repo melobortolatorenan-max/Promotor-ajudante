@@ -1396,6 +1396,9 @@ document.addEventListener('error', (e) => {
                 }
                 return `<div class="card-app p-3 mb-3"><div class="flex items-center justify-between gap-2"><div class="text-[10px] text-gray-400">${ultTxt}</div>${acao}</div>${aviso}</div>`;
             })()}
+            <div class="card-app p-3 mb-3"><label class="text-[9px] text-gray-500 font-black uppercase">Endereço da loja (para a rota)</label>
+                <input id="l-endereco" class="input-custom w-full mt-1" value="${esc(l.endereco || '')}" placeholder="Rua, número, bairro, cidade">
+                <button data-act="enderecoSalvar" data-id="${esc(l.id)}" class="btn-amarelo mt-2">Salvar endereço</button></div>
             <div class="card-app p-3 mb-3"><label class="text-[9px] text-gray-500 font-black uppercase">Dias de visita</label>
                 <div class="flex gap-1 mt-2">${DIAS_SEMANA.map((d, i) => `<button data-act="diaLoja" data-loja="${esc(l.id)}" data-dia="${i}" class="flex-1 py-2 rounded-xl border text-[10px] font-black ${diasDaLoja(l).includes(i) ? 'bg-amber-500 border-amber-500 text-gray-950' : 'border-gray-700 text-gray-400'}">${d.slice(0, 3)}</button>`).join('')}</div></div>
             ${cartoes}${cartaoSem}
@@ -1666,6 +1669,7 @@ document.addEventListener('error', (e) => {
             ${htmlAcaoCard('Dados', 'Exportar planilha', 'Produtos e vencidos em CSV', 'exportarDados')}
             ${htmlAcaoCard('Lojas', 'Planograma lojas', lojas.length + ' lojas', 'planogramaAbrir')}
             ${htmlAcaoCard('Resumo', 'Resumo do dia', 'Retiradas e cadastros por dia', 'resumoAbrir')}
+            ${htmlAcaoCard('Rota', 'Rota do dia', 'Ordem das lojas de hoje, pela distância', 'abrirRota')}
             ${htmlAcaoCard('Relatório', 'Superiores e relatório semanal', superiores.length + ' superiores', 'superioresAbrir')}
             ${htmlAvaliacao()}
             <div class="card-app p-4 mb-3">
@@ -2045,6 +2049,11 @@ document.addEventListener('error', (e) => {
         vozAbrir: () => vozAbrir(),
         desfazerUltimo: () => desfazerUltimo(),
         resumoAbrir: () => resumoAbrir(),
+        enderecoSalvar: (d) => {
+            const v = ($('#l-endereco').value || '').trim().slice(0, 200);
+            updateDoc(doc(colLojas(), d.id), { endereco: v }).then(() => toast('Endereço salvo.')).catch(erroDb);
+        },
+        abrirRota: () => { location.href = 'rota.html'; },
         resumoFechar: () => resumoFechar(),
         resumoMes: (d) => resumoMudarMes(Number(d.n)),
         resumoDia: (d) => resumoRender(d.dia),

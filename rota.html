@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Rota do dia · Promotor Ajudante</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+</head>
+<body class="bg-[#030712] text-white min-h-screen p-4" style="padding-top:calc(env(safe-area-inset-top,0px) + 16px)">
+  <div class="max-w-md mx-auto">
+    <div class="flex items-center justify-between mb-1">
+      <h1 class="text-amber-500 font-black italic uppercase text-xl">Rota do dia</h1>
+      <a href="index.html" class="text-[10px] font-black uppercase text-gray-400 border border-gray-700 rounded-xl px-3 py-2">Voltar ao app</a>
+    </div>
+    <p class="text-gray-500 text-xs mb-4">Lojas de atendimento de hoje, da mais próxima de você para a mais distante.</p>
+    <div id="rota-corpo" class="space-y-3 text-sm text-gray-400">Carregando...</div>
+    <button id="rota-atualizar" class="mt-5 w-full py-3 rounded-xl border border-amber-500 text-amber-500 font-black uppercase text-xs">Atualizar</button>
+    <p class="text-[10px] text-gray-600 mt-4">A distância é em linha reta. O trânsito e o caminho exato são calculados pelo Google Maps ou pelo Waze, ao abrir a parada.</p>
+  </div>
+  <script src="firebase-config.js"></script>
+  <script type="module" src="rota.js"></script>
+</body>
+</html>
