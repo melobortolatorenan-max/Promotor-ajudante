@@ -7,6 +7,7 @@ document.addEventListener('error', (e) => {
   }
 }, true);
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+    import { normaliza, distancia, motivoObrigatorio, parseValidade } from "./regras.mjs";
     import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app-check.js";
     import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendPasswordResetEmail, updateProfile, GoogleAuthProvider, signInWithPopup, deleteUser }
         from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
@@ -303,7 +304,6 @@ document.addEventListener('error', (e) => {
     let marcaPendente = null;
     let avalPendente = null;   // nota de 1 a 4 aguardando a resposta escrita   // marca lida no código, aplicada quando a loja for escolhida
     // motivo obrigatório: só quando o vencimento for mais de 2 dias depois da retirada
-    const motivoObrigatorio = (venc, ret) => { if (!venc || !ret) return false; return (Date.parse(venc + 'T00:00:00Z') - Date.parse(ret + 'T00:00:00Z')) / 86400000 > 2; };
     const qtdInformada = (p) => p.semQtd === false || (p.semQtd === undefined && p.qtd != null && p.qtd !== '');
     const diasDaLoja = (l) => Array.isArray(l.diasVisita) ? l.diasVisita : (typeof l.diaVisita === 'number' ? [l.diaVisita] : []);
     let buscaHits = [];
@@ -634,13 +634,6 @@ document.addEventListener('error', (e) => {
         setTimeout(() => t.remove(), 3200);
     }
     // distância de edição (para aceitar pequenos erros de digitação na busca)
-    function distancia(a, b) {
-        const m = a.length, n = b.length, d = Array.from({ length: m + 1 }, (_, i) => [i, ...Array(n).fill(0)]);
-        for (let j = 1; j <= n; j++) d[0][j] = j;
-        for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++)
-            d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
-        return d[m][n];
-    }
     function buscaResultados() {
         const q = ($('#busca-q').value || '').trim().toLowerCase();
         if (q.length < 2) { $('#busca-res').innerHTML = '<p class="text-gray-500 text-[11px]">Digite pelo menos 2 letras.</p>'; buscaHits = []; return; }
@@ -855,28 +848,6 @@ document.addEventListener('error', (e) => {
         aviso('Excluir esta foto do planograma?', { ok: () => deleteDoc(doc(db, 'users', uid, 'planogramas', d.id)).then(planogramaCarregarFotos).catch(erroDb) });
     }
     /* ---- cadastro por voz ---- */
-    const normaliza = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
-    const MESES = ['janeiro', 'fevereiro', 'marco', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
-    function parseValidade(txt) {
-        const t = normaliza(txt), hoje = isoLocal(new Date());
-        if (!t) return null;
-        if (/\bhoje\b/.test(t)) return hoje;
-        if (/\bamanha\b/.test(t)) return addDiasISO(hoje, 1);
-        let d, m, a = null, r = t.match(/(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?/);
-        if (r) { d = +r[1]; m = +r[2]; if (r[3]) a = +r[3]; }
-        else {
-            r = t.match(/(\d{1,2})\s*(?:de\s+)?([a-z]+)(?:\s+(?:de\s+)?(\d{4}))?/);
-            if (!r) return null;
-            const idx = MESES.findIndex(x => r[2].startsWith(x.slice(0, 3)));
-            if (idx < 0) return null;
-            d = +r[1]; m = idx + 1; if (r[3]) a = +r[3];
-        }
-        if (a && a < 100) a += 2000;
-        const ano = a || Number(hoje.slice(0, 4));
-        let iso = `${ano}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-        if (!a && iso < hoje) iso = `${ano + 1}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-        return /^\d{4}-\d{2}-\d{2}$/.test(iso) && !isNaN(Date.parse(iso + 'T00:00:00Z')) && m >= 1 && m <= 12 && d >= 1 && d <= 31 ? iso : null;
-    }
     function vozAbrir() {
         const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SR) return aviso('Este navegador não tem comando de voz. Use o Chrome.', { soConfirmar: true });
@@ -889,7 +860,7 @@ document.addEventListener('error', (e) => {
         const t = String(texto || '').trim();
         const m = t.match(/^(.*?)[,\s]+em\s+(?:a\s+)?loja\s+(.+?)[,\s]+(?:com\s+)?validade\s+(?:de\s+|para\s+)?(.+)$/i);
         if (!m) return aviso(`Não entendi: <b>${esc(t)}</b>.<br><br>Diga assim: <b>produto, em loja 11, validade dia 20 de novembro</b>.`, { soConfirmar: true });
-        const nome = m[1].trim().slice(0, 120), lojaFala = normaliza(m[2]).replace(/^loja\s+/, ''), data = parseValidade(m[3]);
+        const nome = m[1].trim().slice(0, 120), lojaFala = normaliza(m[2]).replace(/^loja\s+/, ''), data = parseValidade(m[3], isoLocal(new Date()));
         if (!nome) return aviso('Diga o nome do produto.', { soConfirmar: true });
         if (!data) return aviso(`Não entendi a validade: <b>${esc(m[3])}</b>.`, { soConfirmar: true });
         const padrao = new RegExp('(^|\\s)' + lojaFala.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(\\s|$)');
