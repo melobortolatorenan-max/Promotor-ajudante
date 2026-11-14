@@ -17,7 +17,7 @@ document.addEventListener('error', (e) => {
         from "https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging.js";
 
     /* ================= utilidades ================= */
-    const VERSAO_APP = 'v54';
+    const VERSAO_APP = 'v55';
     document.getElementById('versao-login').textContent = VERSAO_APP;
     const API_BASE = 'https://promotor-ajudante.vercel.app';
     const SETORES = ['Bebidas', 'Doces', 'Higiene', 'Laticínios', 'Leites', 'Limpeza', 'Massas congeladas', 'Molhos', 'Pães', 'Salgadinhos', 'Temperos'];
@@ -1027,6 +1027,15 @@ document.addEventListener('error', (e) => {
         }
         gravar();
     }
+    // Situação da loja no dia: se já foi visitada hoje e se hoje é dia de atendimento
+    function infoDiaLoja(l) {
+        const hoje = isoLocal(new Date()), dias = diasDaLoja(l), diaSemana = new Date().getDay();
+        const nomes = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+        const visitouHoje = visitas.filter(v => v.lojaId === l.id && v.data === hoje).sort((x, y) => x.hora.localeCompare(y.hora))[0];
+        let proximo = null;
+        if (dias.length) for (let k = 1; k <= 7; k++) { const d = (diaSemana + k) % 7; if (dias.includes(d)) { proximo = { k, d }; break; } }
+        return { visitouHoje, atendeHoje: dias.includes(diaSemana), dias, proximo, nomes };
+    }
     function fecharLegal() { const box = $('#legal'); box.classList.add('hidden'); box.classList.remove('flex'); }
 
     /* ---- cobrança: acesso anual ---- */
@@ -1361,10 +1370,21 @@ document.addEventListener('error', (e) => {
                 </button>
                 <button data-act="addMarca" data-id="${esc(l.id)}" class="bg-amber-500 text-gray-950 px-3 py-2 rounded-xl text-[10px] font-black uppercase">+ MARCA</button>
             </div>
-            <div class="card-app p-3 mb-3 flex items-center justify-between gap-2">
-                <div class="text-[10px] text-gray-400">${(() => { const u = visitas.filter(v => v.lojaId === l.id).sort((a, b) => (b.data + b.hora).localeCompare(a.data + a.hora))[0]; return u ? `Última visita: <b class="text-gray-200">${dataBR(u.data)} às ${u.hora}</b>` : 'Nenhuma visita registrada'; })()}</div>
-                <button data-act="visitaRegistrar" data-id="${esc(l.id)}" class="px-3 py-2 rounded-xl bg-amber-500 text-gray-950 text-[10px] font-black uppercase">Registrar visita</button>
-            </div>
+            ${(() => {
+                const i = infoDiaLoja(l);
+                const ult = visitas.filter(v => v.lojaId === l.id).sort((x, y) => (y.data + y.hora).localeCompare(x.data + x.hora))[0];
+                const ultTxt = ult ? `Última visita: <b class="text-gray-200">${dataBR(ult.data)} às ${ult.hora}</b>` : 'Nenhuma visita registrada';
+                const acao = i.visitouHoje
+                    ? `<span class="px-3 py-2 rounded-xl border border-green-500/60 text-green-400 text-[10px] font-black uppercase">✓ Visitada hoje às ${i.visitouHoje.hora}</span>`
+                    : `<button data-act="visitaRegistrar" data-id="${esc(l.id)}" class="px-3 py-2 rounded-xl bg-amber-500 text-gray-950 text-[10px] font-black uppercase">Registrar visita</button>`;
+                let aviso = '';
+                if (!i.dias.length) aviso = '<div class="text-[10px] text-gray-500 mt-2">Defina os dias de visita abaixo.</div>';
+                else if (!i.atendeHoje && i.proximo) {
+                    const dt = new Date(Date.now() + i.proximo.k * 86400000);
+                    aviso = `<div class="text-[11px] text-amber-500 font-bold mt-2">Hoje não é dia de atendimento. Próximo: ${i.nomes[i.proximo.d]}, ${dataBR(isoLocal(dt))}</div>`;
+                }
+                return `<div class="card-app p-3 mb-3"><div class="flex items-center justify-between gap-2"><div class="text-[10px] text-gray-400">${ultTxt}</div>${acao}</div>${aviso}</div>`;
+            })()}
             <div class="card-app p-3 mb-3"><label class="text-[9px] text-gray-500 font-black uppercase">Dias de visita</label>
                 <div class="flex gap-1 mt-2">${DIAS_SEMANA.map((d, i) => `<button data-act="diaLoja" data-loja="${esc(l.id)}" data-dia="${i}" class="flex-1 py-2 rounded-xl border text-[10px] font-black ${diasDaLoja(l).includes(i) ? 'bg-amber-500 border-amber-500 text-gray-950' : 'border-gray-700 text-gray-400'}">${d.slice(0, 3)}</button>`).join('')}</div></div>
             ${cartoes}${cartaoSem}
