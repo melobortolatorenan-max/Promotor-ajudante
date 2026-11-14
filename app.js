@@ -69,6 +69,7 @@ document.addEventListener('error', (e) => {
     function registrarVisitaAuto(lojaId) {
         const l = lojas.find(x => x.id === lojaId);
         if (!l || !uid) return;
+        if (!infoDiaLoja(l).atendeHoje) return;   // fora do dia de atendimento não conta como visita
         const hoje = isoLocal(new Date()), chave = `${lojaId}|${hoje}`;
         if (visitasMarcadasSessao.has(chave) || visitas.some(v => v.lojaId === lojaId && v.data === hoje)) return;
         visitasMarcadasSessao.add(chave);
@@ -1018,6 +1019,7 @@ document.addEventListener('error', (e) => {
     async function visitaRegistrar(lojaId) {
         const l = lojas.find(x => x.id === lojaId);
         if (!l) return;
+        if (!infoDiaLoja(l).atendeHoje) return aviso('Hoje não é dia de atendimento desta loja.', { soConfirmar: true });
         const agora = new Date(), data = isoLocal(agora), hora = `${String(agora.getHours()).padStart(2, '0')}:${String(agora.getMinutes()).padStart(2, '0')}`;
         const gravar = () => addDoc(collection(db, 'users', uid, 'visitas'), { lojaId, lojaNome: l.nome, data, hora, criadoEm: serverTimestamp() })
             .then(() => aviso(`Visita registrada em <b>${esc(l.nome)}</b> às ${hora}.`, { soConfirmar: true }))
@@ -1031,10 +1033,11 @@ document.addEventListener('error', (e) => {
     function infoDiaLoja(l) {
         const hoje = isoLocal(new Date()), dias = diasDaLoja(l), diaSemana = new Date().getDay();
         const nomes = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
-        const visitouHoje = visitas.filter(v => v.lojaId === l.id && v.data === hoje).sort((x, y) => x.hora.localeCompare(y.hora))[0];
+        const atendeHoje = dias.includes(diaSemana);
+        const visitouHoje = atendeHoje ? visitas.filter(v => v.lojaId === l.id && v.data === hoje).sort((x, y) => x.hora.localeCompare(y.hora))[0] : undefined;
         let proximo = null;
         if (dias.length) for (let k = 1; k <= 7; k++) { const d = (diaSemana + k) % 7; if (dias.includes(d)) { proximo = { k, d }; break; } }
-        return { visitouHoje, atendeHoje: dias.includes(diaSemana), dias, proximo, nomes };
+        return { visitouHoje, atendeHoje, dias, proximo, nomes };
     }
     function fecharLegal() { const box = $('#legal'); box.classList.add('hidden'); box.classList.remove('flex'); }
 
@@ -1372,11 +1375,15 @@ document.addEventListener('error', (e) => {
             </div>
             ${(() => {
                 const i = infoDiaLoja(l);
-                const ult = visitas.filter(v => v.lojaId === l.id).sort((x, y) => (y.data + y.hora).localeCompare(x.data + x.hora))[0];
+                const dd = diasDaLoja(l);
+                // só conta visita feita em dia de atendimento da loja
+                const validas = visitas.filter(v => v.lojaId === l.id && dd.includes(new Date(v.data + 'T12:00:00').getDay()))
+                    .sort((x, y) => (y.data + y.hora).localeCompare(x.data + x.hora));
+                const ult = validas[0];
                 const ultTxt = ult ? `Última visita: <b class="text-gray-200">${dataBR(ult.data)} às ${ult.hora}</b>` : 'Nenhuma visita registrada';
-                const acao = i.visitouHoje
-                    ? `<span class="px-3 py-2 rounded-xl border border-green-500/60 text-green-400 text-[10px] font-black uppercase">✓ Visitada hoje às ${i.visitouHoje.hora}</span>`
-                    : `<button data-act="visitaRegistrar" data-id="${esc(l.id)}" class="px-3 py-2 rounded-xl bg-amber-500 text-gray-950 text-[10px] font-black uppercase">Registrar visita</button>`;
+                let acao = '';
+                if (i.visitouHoje) acao = `<span class="px-3 py-2 rounded-xl border border-green-500/60 text-green-400 text-[10px] font-black uppercase">✓ Visitada hoje às ${i.visitouHoje.hora}</span>`;
+                else if (i.atendeHoje) acao = `<button data-act="visitaRegistrar" data-id="${esc(l.id)}" class="px-3 py-2 rounded-xl bg-amber-500 text-gray-950 text-[10px] font-black uppercase">Registrar visita</button>`;
                 let aviso = '';
                 if (!i.dias.length) aviso = '<div class="text-[10px] text-gray-500 mt-2">Defina os dias de visita abaixo.</div>';
                 else if (!i.atendeHoje && i.proximo) {
