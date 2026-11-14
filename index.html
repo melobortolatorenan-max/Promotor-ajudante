@@ -304,7 +304,7 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
     <script src="firebase-config.js"></script>
     <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-    import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app-check.js";
+    import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app-check.js";
     import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendPasswordResetEmail, updateProfile, GoogleAuthProvider, signInWithPopup, deleteUser }
         from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
     import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, where, writeBatch, serverTimestamp, getDoc, getDocs, runTransaction }
@@ -2927,10 +2927,10 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
         }
         registrarSW();
         app = initializeApp(cfg);
-        // App Check: envia uma prova de que a requisição vem do app (reCAPTCHA v3).
+        // App Check: envia uma prova de que a requisição vem do app (reCAPTCHA Enterprise).
         // Chave do site é pública. No console, deixar o Firestore em "Monitorar" até validar.
         try {
-            initializeAppCheck(app, { provider: new ReCaptchaV3Provider('6Lfi_h8uAAAAADGtuB2dIfs7F2_la0CkvsvDTNiB'), isTokenAutoRefreshEnabled: true });
+            initializeAppCheck(app, { provider: new ReCaptchaEnterpriseProvider('6LcP7h8uAAAAAEiq9TNzUbJVIsWf9t4R_lIbhv2h'), isTokenAutoRefreshEnabled: true });
         } catch (e) { console.warn('App Check indisponível:', e); }
         auth = getAuth(app);
         try {
