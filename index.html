@@ -131,7 +131,7 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
     <section id="tela-carregando" class="secao ativa items-center justify-center p-6 text-center">
         <img src="logo.png" onerror="this.src='https://raw.githubusercontent.com/melobortolatorenan-max/Promotor-ajudante/main/logo.png'" class="w-16 h-16 mb-4" style="mix-blend-mode:lighten" alt="">
         <div id="carregando-txt" class="text-[10px] font-black uppercase tracking-widest text-gray-500">Carregando...</div>
-        <div class="text-[9px] text-gray-700 mt-3 font-bold">v50</div>
+        <div class="text-[9px] text-gray-700 mt-3 font-bold">v53</div>
     </section>
 
     <!-- CÓDIGOS DE BARRAS CADASTRADOS -->
@@ -153,10 +153,23 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
         <div id="resumo-corpo" class="flex-1 overflow-auto"></div>
     </div>
 
+    <!-- SUPERIORES E RELATÓRIO SEMANAL -->
+    <div id="superiores" class="hidden fixed inset-0 flex-col p-4 gap-3" style="z-index:93;background:#030712">
+        <div class="flex items-center justify-between gap-2"><h2 class="text-amber-500 font-black italic uppercase text-sm">Superiores e relatório</h2><button data-act="superioresFechar" class="px-4 py-2 rounded-xl border border-gray-700 text-[10px] font-black uppercase text-gray-300">Fechar</button></div>
+        <div id="superiores-corpo" class="flex-1 overflow-auto"></div>
+    </div>
+
+    <!-- LOJA DA FOTO PDV -->
+    <div id="pdv-loja" class="hidden fixed inset-0 flex-col p-4 gap-3" style="z-index:97;background:#030712">
+        <div class="flex items-center justify-between gap-2"><h2 class="text-amber-500 font-black italic uppercase text-sm">Em qual loja você está?</h2><button data-act="pdvLojaFechar" class="px-4 py-2 rounded-xl border border-gray-700 text-[10px] font-black uppercase text-gray-300">Cancelar</button></div>
+        <div id="pdv-loja-lista" class="flex-1 overflow-auto"></div>
+    </div>
+
     <!-- BUSCA -->
     <div id="busca" class="hidden fixed inset-0 flex-col p-4 gap-3" style="z-index:94;background:#030712">
         <div class="flex gap-2"><input id="busca-q" class="input-custom flex-1" placeholder="Buscar produto ou loja" autocomplete="off"><button data-act="buscaFechar" class="px-4 rounded-xl border border-gray-700 text-[10px] font-black uppercase text-gray-300">Fechar</button></div>
-        <button data-act="lerCodigoBusca" class="w-full py-3 rounded-xl border border-amber-500 text-[10px] font-black uppercase text-amber-500">Ler código de barras</button>
+        <div class="flex gap-2"><button data-act="lerCodigoBusca" class="flex-1 py-3 rounded-xl border border-amber-500 text-[10px] font-black uppercase text-amber-500">Ler código de barras</button>
+        <button data-act="vozAbrir" class="px-4 rounded-xl border border-gray-700 text-gray-300 flex items-center justify-center" aria-label="Cadastro por voz"><i data-lucide="mic" class="w-4 h-4"></i></button></div>
         <div id="busca-res" class="flex-1 overflow-y-auto"></div>
     </div>
 
@@ -175,6 +188,7 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
             <label class="text-[9px] font-black text-gray-400 uppercase ml-2" for="pdv-nome">Seu nome (aparece na foto)</label>
             <input id="pdv-nome" class="input-custom" maxlength="40" autocomplete="name">
         </div>
+        <div class="w-full max-w-sm flex justify-end"><button id="pdv-trocar" data-act="pdvTrocarLoja" class="hidden w-9 h-9 rounded-full border border-amber-500 text-amber-500 flex items-center justify-center" aria-label="Trocar loja"><i data-lucide="store" class="w-4 h-4"></i></button></div>
         <video id="pdv-video" playsinline muted autoplay class="w-full max-w-sm rounded-2xl bg-black" style="aspect-ratio:3/4;object-fit:cover"></video>
         <canvas id="pdv-canvas" class="hidden"></canvas>
         <div class="w-full max-w-sm flex items-center justify-between px-4">
@@ -271,7 +285,6 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
                 <div class="flex items-center gap-1">
                     <button id="btn-venc" data-act="novoVencido" class="flex items-center gap-1.5 border border-red-500/50 text-red-500 px-2.5 py-2 rounded-xl text-[10px] font-black uppercase" aria-label="Registrar produto vencido"><i data-lucide="package-x" class="w-4 h-4"></i><span class="hidden sm:inline">Vencido</span></button>
                     <button id="btn-prod" data-act="novoProdutoTopo" class="flex items-center gap-1.5 border border-amber-500/50 text-amber-500 px-2.5 py-2 rounded-xl text-[10px] font-black uppercase" aria-label="Cadastrar produto"><i data-lucide="package-plus" class="w-4 h-4"></i><span class="hidden sm:inline">Produto</span></button>
-                    <button data-act="vozAbrir" class="p-2 text-gray-500" aria-label="Cadastro por voz"><i data-lucide="mic" class="w-4 h-4"></i></button>
                     <button data-act="buscaAbrir" class="p-2 text-gray-500" aria-label="Buscar"><i data-lucide="search" class="w-5 h-5"></i></button>
                     <button id="btn-conta" data-act="tab" data-id="c" class="p-2 text-gray-500" aria-label="Minha conta e notificações"><i data-lucide="settings" class="w-5 h-5"></i></button>
                 </div>
@@ -299,7 +312,7 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
         from "https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging.js";
 
     /* ================= utilidades ================= */
-    const VERSAO_APP = 'v50';
+    const VERSAO_APP = 'v53';
     document.getElementById('versao-login').textContent = VERSAO_APP;
     const API_BASE = 'https://promotor-ajudante.vercel.app';
     const SETORES = ['Bebidas', 'Doces', 'Higiene', 'Laticínios', 'Leites', 'Limpeza', 'Massas congeladas', 'Molhos', 'Pães', 'Salgadinhos', 'Temperos'];
@@ -346,6 +359,34 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
 
 
 
+    /* ---- loja da foto PDV: vale 30 min a partir da primeira informação ---- */
+    let pdvLoja = null, pdvDepois = null;
+    const PDV_JANELA = 30 * 60 * 1000;
+    const pdvLojaValida = () => !!pdvLoja && (Date.now() - pdvLoja.ts) < PDV_JANELA;
+    function pdvListaLojas(depois) {
+        pdvDepois = depois;
+        const box = $('#pdv-loja'); box.classList.remove('hidden'); box.classList.add('flex');
+        const lista = [...lojas].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+        $('#pdv-loja-lista').innerHTML = lista.length
+            ? lista.map(l => `<button data-act="pdvEscolherLoja" data-id="${esc(l.id)}" class="card-app w-full p-4 mb-3 text-left text-white font-black italic uppercase text-sm">${esc(l.nome)}</button>`).join('')
+            : '<p class="text-gray-500 text-[11px]">Cadastre uma loja antes de tirar a foto.</p>';
+    }
+    function pdvListaFechar() { const box = $('#pdv-loja'); box.classList.add('hidden'); box.classList.remove('flex'); }
+    function pdvLojaCancelar() { pdvListaFechar(); pdvDepois = null; }
+    function pdvEscolherLoja(id) {
+        const l = lojas.find(x => x.id === id); if (!l) return;
+        pdvLoja = { lojaId: l.id, nome: l.nome, ts: Date.now() };
+        const hoje = isoLocal(new Date());
+        if (!visitas.some(v => v.lojaId === l.id && v.data === hoje)) {
+            const ag = new Date();
+            addDoc(collection(db, 'users', uid, 'visitas'), { lojaId: l.id, lojaNome: l.nome, data: hoje, hora: `${String(ag.getHours()).padStart(2, '0')}:${String(ag.getMinutes()).padStart(2, '0')}`, criadoEm: serverTimestamp() }).catch(erroDb);
+        }
+        const depois = pdvDepois;
+        pdvDepois = null;
+        pdvListaFechar();
+        if (depois) depois();
+    }
+
     /* ---- foto PDV: foto com data, hora, nome e marca d'água ---- */
     const pdv = { stream: null, blob: null, nomeArq: '' };
     let logoPdv = null;
@@ -356,7 +397,7 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
         while (t.length > 3 && ctx.measureText(t + '…').width > max) t = t.slice(0, -1);
         return t + '…';
     }
-    function desenharMarca(ctx, W, H, nome, local) {
+    function desenharMarca(ctx, W, H, nome, local, lojaNome) {
         const ag = new Date();
         const dataHora = ag.toLocaleDateString('pt-BR') + ' ' + String(ag.getHours()).padStart(2, '0') + ':' + String(ag.getMinutes()).padStart(2, '0');
         const pad = Math.round(W * 0.025), fs = Math.round(W * 0.03), fsMenor = Math.round(W * 0.022);
@@ -375,6 +416,14 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
             ctx.fillText(cortarTexto(ctx, local, W * 0.62), W - pad, y);
         }
         ctx.restore();
+        if (lojaNome) {
+            ctx.save();
+            ctx.shadowColor = 'rgba(0,0,0,.75)'; ctx.shadowBlur = fs * 0.4;
+            ctx.fillStyle = '#f59e0b'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+            ctx.font = `800 ${fsMenor * 1.1}px Arial, sans-serif`;
+            ctx.fillText(cortarTexto(ctx, String(lojaNome).toUpperCase(), W * 0.34), W / 2, H - pad);
+            ctx.restore();
+        }
         const logo = logoSemFundo();
         const hL = fs * 1.25 + fsMenor * 1.1;          // altura do bloco de texto (PROMOTOR até AJUDANTE)
         const lh = hL, lw = logo ? hL * logo.width / logo.height : 0;
@@ -459,7 +508,8 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
             aviso('Não consegui acessar a câmera. Confira a permissão do navegador.', { soConfirmar: true });
         }
     }
-    async function pdvAbrir() {
+    async function pdvAbrirCamera() {
+        $('#pdv-trocar').classList.toggle('hidden', !pdvLojaValida());
         const box = $('#pdv'); box.classList.remove('hidden'); box.classList.add('flex');
         const temNome = !!(userInfo && userInfo.displayName);
         $('#pdv-nome-box').classList.toggle('hidden', temNome);
@@ -469,6 +519,10 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
         logoParaMarca();
         await pdvIniciarCamera();
     }
+    async function pdvAbrir() {
+        if (!pdvLojaValida()) return pdvListaLojas(() => pdvAbrirCamera());
+        await pdvAbrirCamera();
+    }
     function pdvFechar() {
         if (pdv.stream) { pdv.stream.getTracks().forEach(t => t.stop()); pdv.stream = null; }
         pdv.blob = null;
@@ -476,6 +530,7 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
         const box = $('#pdv'); box.classList.add('hidden'); box.classList.remove('flex');
     }
     async function pdvCapturar() {
+        if (!pdvLojaValida()) { pdvListaLojas(null); return; }   // janela de 30 min terminou: pergunta a loja de novo
         const campoNome = $('#pdv-nome-box').classList.contains('hidden') ? '' : $('#pdv-nome').value.trim();
         const nome = (campoNome || (userInfo && userInfo.displayName) || '').slice(0, 40);
         if (!nome) return aviso('Informe seu nome para aparecer na foto.', { soConfirmar: true });
@@ -506,7 +561,7 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
         }
         ctx.drawImage(fonte, 0, 0, vw, vh);
         ctx.restore();
-        desenharMarca(ctx, W0, H0, nome, local);
+        desenharMarca(ctx, W0, H0, nome, local, pdvLoja ? pdvLoja.nome : '');
         pdv.blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.95));
         const ag = new Date();
         const stamp = isoLocal(ag) + ' ' + String(ag.getHours()).padStart(2, '0') + '-' + String(ag.getMinutes()).padStart(2, '0') + '-' + String(ag.getSeconds()).padStart(2, '0');
@@ -548,7 +603,10 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
     let relMotivo = '';          // filtro por motivo no relatório de vencidos
     let scanDestino = null;
     let planoLoja = null;
-    let ultimoRegistro = null;   // último cadastro de produto feito nesta sessão (para desfazer)        // loja aberta no planograma      // 'busca' quando a leitura serve para a busca        // 'imprimir' ou 'compartilhar' (vale para o próximo relatório)
+    let ultimoRegistro = null;
+    let superiores = [];         // superiores cadastrados (recebem o relatório semanal)
+    let supEdit = null;          // null = lista; 'novo' ou id = formulário
+    let visitas = [];            // visitas registradas (loja, data e hora)   // último cadastro de produto feito nesta sessão (para desfazer)        // loja aberta no planograma      // 'busca' quando a leitura serve para a busca        // 'imprimir' ou 'compartilhar' (vale para o próximo relatório)
     let filtroSetor = '';            // filtro de setor na lista de produtos da marca
     let desfazerTimer = null, desfazerFn = null;
     const leitor = { stream: null, timer: null, busy: false, detector: null };
@@ -1146,6 +1204,7 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
         const ativos = new Set();
         vencidos.forEach(v => { if (v.dataRetirada) ativos.add(v.dataRetirada); });
         produtos.forEach(p => { const d = diaDoCadastro(p); if (d) ativos.add(d); });
+        visitas.forEach(v => { if (v.data) ativos.add(v.data); });
         const ano = resumoMes.getFullYear(), mes = resumoMes.getMonth();
         const primeiro = new Date(ano, mes, 1).getDay(), total = new Date(ano, mes + 1, 0).getDate();
         const nomeMes = resumoMes.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
@@ -1160,11 +1219,13 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
         if (diaSel) {
             const rets = vencidos.filter(v => v.dataRetirada === diaSel);
             const cads = produtos.filter(p => diaDoCadastro(p) === diaSel);
+            const vis = visitas.filter(v => v.data === diaSel);
             const linha = (t, s2) => `<div class="card-app p-3 mb-2"><div class="text-white font-bold text-[12px]">${esc(t)}</div><div class="text-gray-500 text-[10px]">${esc(s2)}</div></div>`;
             detalhe = `<div class="mt-4"><div class="text-[9px] text-gray-500 font-black uppercase mb-2">${dataBR(diaSel)}</div>
                 ${rets.map(v => linha(`Retirada: ${v.nome} · ${v.qtd} un`, `${nomeLoja(v.lojaId)} · validade ${dataBR(v.dataVenc)}${v.motivo ? ' · ' + v.motivo : ''}`)).join('')}
+                ${vis.map(v => linha(`Visita: ${v.lojaNome}`, `às ${v.hora}`)).join('')}
                 ${cads.map(p => linha(`Cadastro: ${p.nome}`, `${nomeLoja(p.lojaId)} · validade ${dataBR(p.data)}`)).join('')}
-                ${!rets.length && !cads.length ? '<p class="text-gray-500 text-[11px]">Nada registrado neste dia.</p>' : ''}</div>`;
+                ${!rets.length && !cads.length && !vis.length ? '<p class="text-gray-500 text-[11px]">Nada registrado neste dia.</p>' : ''}</div>`;
         }
         $('#resumo-corpo').innerHTML = `<div class="flex items-center justify-between mb-3">
                 <button data-act="resumoMes" data-n="-1" class="text-amber-500 font-black px-3 text-lg">‹</button>
@@ -1172,6 +1233,90 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
                 <button data-act="resumoMes" data-n="1" class="text-amber-500 font-black px-3 text-lg">›</button></div>
             <div class="grid grid-cols-7 gap-1 text-center text-[9px] text-gray-600 font-black mb-1">${['D','S','T','Q','Q','S','S'].map(x => `<div>${x}</div>`).join('')}</div>
             <div class="grid grid-cols-7 gap-1">${celulas}</div>${detalhe}`;
+    }
+    /* ---- superiores e relatório semanal ---- */
+    const marcasUnicas = () => {
+        const mapa = new Map();
+        lojas.flatMap(l => l.marcas || []).forEach(m => { const n = String(m.nome || '').trim(); if (n && !mapa.has(n.toLowerCase())) mapa.set(n.toLowerCase(), n); });
+        return [...mapa.values()].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    };
+    const DIAS_RELATORIO = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+    function superioresAbrir() { const b = $('#superiores'); b.classList.remove('hidden'); b.classList.add('flex'); supEdit = null; superioresRender(); }
+    function superioresFechar() { const b = $('#superiores'); b.classList.add('hidden'); b.classList.remove('flex'); }
+    function superioresRender() {
+        const corpo = $('#superiores-corpo');
+        if (supEdit !== null) {
+            const s = supEdit === 'novo' ? {} : (superiores.find(x => x.id === supEdit) || {});
+            const sel = (s.marcas || []).map(x => x.toLowerCase());
+            const marcas = marcasUnicas();
+            corpo.innerHTML = `<button data-act="superiorCancelar" class="text-amber-500 font-black text-[11px] uppercase mb-3">← Voltar</button>
+                <div class="card-app p-4 mb-3">
+                    <label class="text-[9px] text-gray-500 font-black uppercase">Nome do superior</label><input id="sup-nome" class="input-custom w-full mb-3" value="${esc(s.nome || '')}">
+                    <label class="text-[9px] text-gray-500 font-black uppercase">E-mail</label><input id="sup-email" type="email" class="input-custom w-full mb-3" value="${esc(s.email || '')}">
+                    <label class="text-[9px] text-gray-500 font-black uppercase">WhatsApp (opcional)</label><input id="sup-whats" inputmode="tel" class="input-custom w-full mb-3" value="${esc(s.whatsapp || '')}">
+                    <div class="text-[9px] text-gray-500 font-black uppercase mb-2">Marcas que ele acompanha</div>
+                    ${marcas.length ? marcas.map(m => `<label class="flex items-center gap-2 text-[11px] font-bold text-gray-300 mb-2"><input type="checkbox" class="accent-amber-500 sup-marca" value="${esc(m)}" ${sel.includes(m.toLowerCase()) ? 'checked' : ''}> ${esc(m)}</label>`).join('') : '<p class="text-[11px] text-gray-500">Nenhuma marca cadastrada ainda.</p>'}
+                    <p class="text-[10px] text-gray-500 mt-2">Se houver só um superior cadastrado, ele recebe todas as marcas.</p>
+                    <button data-act="superiorSalvar" class="btn-amarelo mt-3">Salvar superior</button>
+                </div>`;
+            return;
+        }
+        const rel = perfilAcesso.relatorio || { dia: 5, hora: 18 };
+        corpo.innerHTML = `<div class="card-app p-4 mb-3">
+                <div class="text-[9px] text-gray-500 font-black uppercase mb-2">Envio automático do relatório semanal</div>
+                <div class="flex gap-2">
+                    <select id="rel-dia" class="input-custom flex-1">${DIAS_RELATORIO.map((n, i) => `<option value="${i}" ${rel.dia === i ? 'selected' : ''}>${n}</option>`).join('')}</select>
+                    <select id="rel-hora" class="input-custom w-24">${Array.from({ length: 24 }, (_, h) => `<option value="${h}" ${rel.hora === h ? 'selected' : ''}>${String(h).padStart(2, '0')}:00</option>`).join('')}</select>
+                </div>
+                <button data-act="relatorioSalvar" class="btn-amarelo mt-2">Salvar horário</button>
+                <p class="text-[10px] text-gray-500 mt-2">O relatório dos últimos 7 dias vai por e-mail para cada superior cadastrado.</p>
+            </div>
+            <button data-act="superiorNovo" class="btn-amarelo mb-3">+ Novo superior</button>
+            ${superiores.length ? superiores.map(s => `<div class="card-app p-4 mb-3 flex items-center justify-between gap-2">
+                    <button data-act="superiorEditar" data-id="${esc(s.id)}" class="text-left flex-1">
+                        <div class="text-white font-black italic uppercase text-sm">${esc(s.nome)}</div>
+                        <div class="text-gray-500 text-[11px]">${esc(s.email)}</div>
+                        <div class="text-gray-600 text-[10px]">${(s.marcas || []).length ? esc(s.marcas.join(', ')) : 'Todas as marcas'}</div>
+                    </button>
+                    <button data-act="superiorExcluir" data-id="${esc(s.id)}" class="text-red-500 p-2" aria-label="Excluir">✕</button>
+                </div>`).join('') : '<p class="text-gray-500 text-[11px]">Nenhum superior cadastrado.</p>'}`;
+    }
+    async function superiorSalvar() {
+        const nome = $('#sup-nome').value.trim(), email = $('#sup-email').value.trim(), whatsapp = $('#sup-whats').value.trim();
+        const marcas = [...document.querySelectorAll('.sup-marca:checked')].map(c => c.value);
+        if (!nome) return aviso('Informe o nome do superior.', { soConfirmar: true });
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return aviso('E-mail inválido.', { soConfirmar: true });
+        const total = superiores.filter(x => x.id !== supEdit).length + 1;
+        if (total > 1 && !marcas.length && marcasUnicas().length) return aviso('Com mais de um superior, escolha pelo menos uma marca para ele.', { soConfirmar: true });
+        const dados = { nome: nome.slice(0, 80), email: email.slice(0, 120), whatsapp: whatsapp.slice(0, 30), marcas };
+        try {
+            if (supEdit === 'novo') await addDoc(collection(db, 'users', uid, 'superiores'), dados);
+            else await setDoc(doc(db, 'users', uid, 'superiores', supEdit), dados, { merge: true });
+            supEdit = null;
+            superioresRender();
+        } catch (e) { erroDb(e); }
+    }
+    function superiorExcluir(id) {
+        aviso('Excluir este superior? Ele deixa de receber o relatório.', { ok: () => deleteDoc(doc(db, 'users', uid, 'superiores', id)).catch(erroDb) });
+    }
+    function relatorioSalvar() {
+        const dia = Number($('#rel-dia').value), hora = Number($('#rel-hora').value);
+        setDoc(doc(db, 'users', uid), { relatorio: { dia, hora } }, { merge: true })
+            .then(() => aviso(`Relatório programado para ${DIAS_RELATORIO[dia]} às ${String(hora).padStart(2, '0')}:00.`, { soConfirmar: true }))
+            .catch(erroDb);
+    }
+    /* ---- registro de visita ---- */
+    async function visitaRegistrar(lojaId) {
+        const l = lojas.find(x => x.id === lojaId);
+        if (!l) return;
+        const agora = new Date(), data = isoLocal(agora), hora = `${String(agora.getHours()).padStart(2, '0')}:${String(agora.getMinutes()).padStart(2, '0')}`;
+        const gravar = () => addDoc(collection(db, 'users', uid, 'visitas'), { lojaId, lojaNome: l.nome, data, hora, criadoEm: serverTimestamp() })
+            .then(() => aviso(`Visita registrada em <b>${esc(l.nome)}</b> às ${hora}.`, { soConfirmar: true }))
+            .catch(erroDb);
+        if (visitas.some(v => v.lojaId === lojaId && v.data === data)) {
+            return aviso(`Você já registrou visita nesta loja hoje. Registrar outra?`, { titulo: 'VISITA', okTexto: 'Registrar', ok: gravar });
+        }
+        gravar();
     }
     function fecharLegal() { const box = $('#legal'); box.classList.add('hidden'); box.classList.remove('flex'); }
 
@@ -1503,6 +1648,10 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
                 </button>
                 <button data-act="addMarca" data-id="${esc(l.id)}" class="bg-amber-500 text-gray-950 px-3 py-2 rounded-xl text-[10px] font-black uppercase">+ MARCA</button>
             </div>
+            <div class="card-app p-3 mb-3 flex items-center justify-between gap-2">
+                <div class="text-[10px] text-gray-400">${(() => { const u = visitas.filter(v => v.lojaId === l.id).sort((a, b) => (b.data + b.hora).localeCompare(a.data + a.hora))[0]; return u ? `Última visita: <b class="text-gray-200">${dataBR(u.data)} às ${u.hora}</b>` : 'Nenhuma visita registrada'; })()}</div>
+                <button data-act="visitaRegistrar" data-id="${esc(l.id)}" class="px-3 py-2 rounded-xl bg-amber-500 text-gray-950 text-[10px] font-black uppercase">Registrar visita</button>
+            </div>
             <div class="card-app p-3 mb-3"><label class="text-[9px] text-gray-500 font-black uppercase">Dias de visita</label>
                 <div class="flex gap-1 mt-2">${DIAS_SEMANA.map((d, i) => `<button data-act="diaLoja" data-loja="${esc(l.id)}" data-dia="${i}" class="flex-1 py-2 rounded-xl border text-[10px] font-black ${diasDaLoja(l).includes(i) ? 'bg-amber-500 border-amber-500 text-gray-950' : 'border-gray-700 text-gray-400'}">${d.slice(0, 3)}</button>`).join('')}</div></div>
             ${cartoes}${cartaoSem}
@@ -1772,6 +1921,7 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
             ${htmlAcaoCard('Dados', 'Exportar planilha', 'Produtos e vencidos em CSV', 'exportarDados')}
             ${htmlAcaoCard('Lojas', 'Planograma lojas', lojas.length + ' lojas', 'planogramaAbrir')}
             ${htmlAcaoCard('Resumo', 'Resumo do dia', 'Retiradas e cadastros por dia', 'resumoAbrir')}
+            ${htmlAcaoCard('Relatório', 'Superiores e relatório semanal', superiores.length + ' superiores', 'superioresAbrir')}
             ${htmlAvaliacao()}
             <div class="card-app p-4 mb-3">
                 <div class="flex items-center gap-2 mb-1">
@@ -1808,7 +1958,7 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
             </button>
             ${htmlPlano()}
             <button data-act="toggleContraste" class="w-full py-3 text-[10px] font-black text-gray-400 uppercase">Alto contraste: ${localStorage.getItem('altoContraste') === '1' ? 'ligado' : 'desligado'}</button>
-            <p class="text-center text-[10px] text-gray-600 py-2">Lojas previstas hoje: ${lojas.filter(l => diasDaLoja(l).includes(new Date().getDay())).length}</p>
+            <p class="text-center text-[10px] text-gray-600 py-2">Visitas hoje: ${new Set(visitas.filter(v => v.data === isoLocal(new Date())).map(v => v.lojaId)).size} de ${lojas.filter(l => diasDaLoja(l).includes(new Date().getDay())).length} previstas</p>
             <button data-act="desfazerUltimo" class="w-full py-3 text-[10px] font-black text-gray-400 uppercase">Desfazer último cadastro</button>
             <button data-act="excluirConta" class="w-full py-3 text-[10px] font-black text-red-500 uppercase">EXCLUIR MINHA CONTA</button>
             <button data-act="legal" data-aba="termos" class="w-full py-3 text-[10px] font-black text-gray-500 uppercase">TERMOS, PRIVACIDADE E REEMBOLSO</button>
@@ -2134,6 +2284,18 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
         scanFechar: () => { scanDestino = null; leitorFechar(); },
         lerCodigoBusca: () => { scanDestino = 'busca'; lerCodigo(); },
         excluirConta: () => confirmarExclusao(),
+        pdvEscolherLoja: (d) => pdvEscolherLoja(d.id),
+        pdvLojaFechar: () => pdvLojaCancelar(),
+        pdvTrocarLoja: () => pdvListaLojas(null),
+        visitaRegistrar: (d) => visitaRegistrar(d.id),
+        superioresAbrir: () => superioresAbrir(),
+        superioresFechar: () => superioresFechar(),
+        superiorNovo: () => { supEdit = 'novo'; superioresRender(); },
+        superiorEditar: (d) => { supEdit = d.id; superioresRender(); },
+        superiorCancelar: () => { supEdit = null; superioresRender(); },
+        superiorSalvar: () => superiorSalvar(),
+        superiorExcluir: (d) => superiorExcluir(d.id),
+        relatorioSalvar: () => relatorioSalvar(),
         vozAbrir: () => vozAbrir(),
         desfazerUltimo: () => desfazerUltimo(),
         resumoAbrir: () => resumoAbrir(),
@@ -2719,6 +2881,15 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
             aplicarAcesso();
         }, (e) => { console.warn('perfil:', e); aplicarAcesso(); }));
         vencErro = '';
+        unsubs.push(onSnapshot(collection(db, 'users', uid, 'visitas'), (snap) => {
+            visitas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            if (view.tab === 'l' || view.tab === 'c') desenhar(false);
+        }));
+        unsubs.push(onSnapshot(collection(db, 'users', uid, 'superiores'), (snap) => {
+            superiores = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            if (!$('#superiores').classList.contains('hidden')) superioresRender();
+            if (view.tab === 'c') desenhar(false);
+        }));
         unsubs.push(onSnapshot(query(colVenc(), orderBy('dataRetirada')), { includeMetadataChanges: true }, (snap) => {
             vencErro = '';
             vencidos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
