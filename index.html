@@ -131,7 +131,7 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
     <section id="tela-carregando" class="secao ativa items-center justify-center p-6 text-center">
         <img src="logo.png" onerror="this.src='https://raw.githubusercontent.com/melobortolatorenan-max/Promotor-ajudante/main/logo.png'" class="w-16 h-16 mb-4" style="mix-blend-mode:lighten" alt="">
         <div id="carregando-txt" class="text-[10px] font-black uppercase tracking-widest text-gray-500">Carregando...</div>
-        <div class="text-[9px] text-gray-700 mt-3 font-bold">v53</div>
+        <div class="text-[9px] text-gray-700 mt-3 font-bold">v54</div>
     </section>
 
     <!-- CÓDIGOS DE BARRAS CADASTRADOS -->
@@ -312,7 +312,7 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
         from "https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging.js";
 
     /* ================= utilidades ================= */
-    const VERSAO_APP = 'v53';
+    const VERSAO_APP = 'v54';
     document.getElementById('versao-login').textContent = VERSAO_APP;
     const API_BASE = 'https://promotor-ajudante.vercel.app';
     const SETORES = ['Bebidas', 'Doces', 'Higiene', 'Laticínios', 'Leites', 'Limpeza', 'Massas congeladas', 'Molhos', 'Pães', 'Salgadinhos', 'Temperos'];
@@ -359,6 +359,19 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
 
 
 
+    /* ---- visita automática: qualquer registro na loja conta como visita do dia ---- */
+    const visitasMarcadasSessao = new Set();
+    function registrarVisitaAuto(lojaId) {
+        const l = lojas.find(x => x.id === lojaId);
+        if (!l || !uid) return;
+        const hoje = isoLocal(new Date()), chave = `${lojaId}|${hoje}`;
+        if (visitasMarcadasSessao.has(chave) || visitas.some(v => v.lojaId === lojaId && v.data === hoje)) return;
+        visitasMarcadasSessao.add(chave);
+        const ag = new Date();
+        addDoc(collection(db, 'users', uid, 'visitas'), { lojaId, lojaNome: l.nome, data: hoje, hora: `${String(ag.getHours()).padStart(2, '0')}:${String(ag.getMinutes()).padStart(2, '0')}`, criadoEm: serverTimestamp() })
+            .catch(e => { visitasMarcadasSessao.delete(chave); erroDb(e); });
+    }
+
     /* ---- loja da foto PDV: vale 30 min a partir da primeira informação ---- */
     let pdvLoja = null, pdvDepois = null;
     const PDV_JANELA = 30 * 60 * 1000;
@@ -376,11 +389,7 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
     function pdvEscolherLoja(id) {
         const l = lojas.find(x => x.id === id); if (!l) return;
         pdvLoja = { lojaId: l.id, nome: l.nome, ts: Date.now() };
-        const hoje = isoLocal(new Date());
-        if (!visitas.some(v => v.lojaId === l.id && v.data === hoje)) {
-            const ag = new Date();
-            addDoc(collection(db, 'users', uid, 'visitas'), { lojaId: l.id, lojaNome: l.nome, data: hoje, hora: `${String(ag.getHours()).padStart(2, '0')}:${String(ag.getMinutes()).padStart(2, '0')}`, criadoEm: serverTimestamp() }).catch(erroDb);
-        }
+        registrarVisitaAuto(l.id);
         const depois = pdvDepois;
         pdvDepois = null;
         pdvListaFechar();
@@ -1171,7 +1180,7 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
     function salvarProdutoVoz(p) {
         const dados = { nome: p.nome, qtd: null, semQtd: true, data: p.data, lojaId: p.lojaId, marcaId: p.marcaId, setor: null, codigo: null, fotoCodigo: null };
         addDoc(colProd(), { ...dados, criadoEm: serverTimestamp() })
-            .then(r => { ultimoRegistro = { colecao: 'produtos', id: r.id, nome: p.nome }; aviso(`Produto cadastrado: <b>${esc(p.nome)}</b>.`, { soConfirmar: true }); })
+            .then(r => { ultimoRegistro = { colecao: 'produtos', id: r.id, nome: p.nome }; registrarVisitaAuto(p.lojaId); aviso(`Produto cadastrado: <b>${esc(p.nome)}</b>.`, { soConfirmar: true }); })
             .catch(erroDb);
     }
 
@@ -2055,6 +2064,7 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
                 bt => bt.set(doc(colVenc()), { ...dados, dataRetirada: isoLocal(new Date()), criadoEm: serverTimestamp() }),
                 ...baixa.ops,
             ]).catch(erroVenc);
+            registrarVisitaAuto(lojaId);
             const outro = d.outro === '1';
             if (outro) limparFormVenc(); else ir('r');
             const nm = `<b>${esc(dados.nome)}</b>`;
@@ -2175,7 +2185,7 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
             if (cod) registrarNomeCodigo(cod, { nome: dados.nome, setor: dados.setor, marcaNome });
             const voltar = view.origem ? { lojaId: view.origem, marcaId: view.origemMarca } : null;
             if (view.prod) updateDoc(refProd(view.prod), dados).catch(erroDb);
-            else addDoc(colProd(), { ...dados, criadoEm: serverTimestamp() }).then(r => { ultimoRegistro = { colecao: 'produtos', id: r.id, nome: dados.nome }; }).catch(erroDb);
+            else addDoc(colProd(), { ...dados, criadoEm: serverTimestamp() }).then(r => { ultimoRegistro = { colecao: 'produtos', id: r.id, nome: dados.nome }; registrarVisitaAuto(lojaId); }).catch(erroDb);
             if (voltar) ir('l', voltar); else ir('h');
         },
         authModo: () => {
