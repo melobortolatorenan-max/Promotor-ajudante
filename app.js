@@ -1643,7 +1643,8 @@ document.addEventListener('error', (e) => {
     function htmlConta() {
         const n = notifEstado();
         return `
-            <h2 class="text-amber-500 font-black italic uppercase text-lg mb-6">Minha Conta</h2>
+            <h2 class="text-amber-500 font-black italic uppercase text-lg mb-2">Minha Conta</h2>
+            <p class="text-[11px] font-bold text-white mb-4">Visitas hoje: ${(() => { const hoje = isoLocal(new Date()), dia = new Date().getDay(); const previstas = lojas.filter(l => diasDaLoja(l).includes(dia)); return new Set(visitas.filter(v => v.data === hoje && previstas.some(l => l.id === v.lojaId)).map(v => v.lojaId)).size; })()} de ${lojas.filter(l => diasDaLoja(l).includes(new Date().getDay())).length} previstas</p>
             <div class="card-app p-4 mb-3">
                 <div class="text-[9px] text-gray-500 font-black uppercase mb-1">Promotor</div>
                 <div class="text-white font-black italic uppercase text-sm truncate">${esc((userInfo && userInfo.displayName) || 'Sem nome')}</div>
@@ -1698,7 +1699,7 @@ document.addEventListener('error', (e) => {
             </button>
             ${htmlPlano()}
             <button data-act="toggleContraste" class="w-full py-3 text-[10px] font-black text-gray-400 uppercase">Alto contraste: ${localStorage.getItem('altoContraste') === '1' ? 'ligado' : 'desligado'}</button>
-            <p class="text-center text-[10px] text-gray-600 py-2">Visitas hoje: ${(() => { const hoje = isoLocal(new Date()), dia = new Date().getDay(); const previstas = lojas.filter(l => diasDaLoja(l).includes(dia)); return new Set(visitas.filter(v => v.data === hoje && previstas.some(l => l.id === v.lojaId)).map(v => v.lojaId)).size; })()} de ${lojas.filter(l => diasDaLoja(l).includes(new Date().getDay())).length} previstas</p>
+            
             <button data-act="desfazerUltimo" class="w-full py-3 text-[10px] font-black text-gray-400 uppercase">Desfazer último cadastro</button>
             <button data-act="excluirConta" class="w-full py-3 text-[10px] font-black text-red-500 uppercase">EXCLUIR MINHA CONTA</button>
             <button data-act="legal" data-aba="termos" class="w-full py-3 text-[10px] font-black text-gray-500 uppercase">TERMOS, PRIVACIDADE E REEMBOLSO</button>
