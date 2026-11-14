@@ -1698,7 +1698,7 @@ document.addEventListener('error', (e) => {
             </button>
             ${htmlPlano()}
             <button data-act="toggleContraste" class="w-full py-3 text-[10px] font-black text-gray-400 uppercase">Alto contraste: ${localStorage.getItem('altoContraste') === '1' ? 'ligado' : 'desligado'}</button>
-            <p class="text-center text-[10px] text-gray-600 py-2">Visitas hoje: ${new Set(visitas.filter(v => v.data === isoLocal(new Date())).map(v => v.lojaId)).size} de ${lojas.filter(l => diasDaLoja(l).includes(new Date().getDay())).length} previstas</p>
+            <p class="text-center text-[10px] text-gray-600 py-2">Visitas hoje: ${(() => { const hoje = isoLocal(new Date()), dia = new Date().getDay(); const previstas = lojas.filter(l => diasDaLoja(l).includes(dia)); return new Set(visitas.filter(v => v.data === hoje && previstas.some(l => l.id === v.lojaId)).map(v => v.lojaId)).size; })()} de ${lojas.filter(l => diasDaLoja(l).includes(new Date().getDay())).length} previstas</p>
             <button data-act="desfazerUltimo" class="w-full py-3 text-[10px] font-black text-gray-400 uppercase">Desfazer último cadastro</button>
             <button data-act="excluirConta" class="w-full py-3 text-[10px] font-black text-red-500 uppercase">EXCLUIR MINHA CONTA</button>
             <button data-act="legal" data-aba="termos" class="w-full py-3 text-[10px] font-black text-gray-500 uppercase">TERMOS, PRIVACIDADE E REEMBOLSO</button>
