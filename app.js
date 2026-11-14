@@ -624,12 +624,37 @@ document.addEventListener('error', (e) => {
     // ---- busca global (7) ----
     function buscaAbrir() { const b = $('#busca'); b.classList.remove('hidden'); b.classList.add('flex'); $('#busca-q').value = ''; buscaResultados(); setTimeout(() => $('#busca-q').focus(), 50); }
     function buscaFechar() { const b = $('#busca'); b.classList.add('hidden'); b.classList.remove('flex'); }
+    // aviso verde que some sozinho (não bloqueia a tela)
+    function toast(msg) {
+        const t = document.createElement('div');
+        t.innerHTML = msg;
+        t.className = 'fixed left-4 right-4 bottom-6 mx-auto max-w-sm z-[120] rounded-2xl px-4 py-3 text-[12px] font-bold text-gray-950 shadow-lg';
+        t.style.background = '#22c55e';
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), 3200);
+    }
+    // distância de edição (para aceitar pequenos erros de digitação na busca)
+    function distancia(a, b) {
+        const m = a.length, n = b.length, d = Array.from({ length: m + 1 }, (_, i) => [i, ...Array(n).fill(0)]);
+        for (let j = 1; j <= n; j++) d[0][j] = j;
+        for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++)
+            d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+        return d[m][n];
+    }
     function buscaResultados() {
         const q = ($('#busca-q').value || '').trim().toLowerCase();
         if (q.length < 2) { $('#busca-res').innerHTML = '<p class="text-gray-500 text-[11px]">Digite pelo menos 2 letras.</p>'; buscaHits = []; return; }
         const hits = [];
         lojas.forEach(l => { if ((l.nome || '').toLowerCase().includes(q)) hits.push({ t: 'Loja', n: l.nome, lojaId: l.id, marcaId: null }); });
         produtos.forEach(p => { if ((p.nome || '').toLowerCase().includes(q) || (p.codigo && p.codigo === q)) hits.push({ t: 'Produto', n: p.nome, sub: nomeLoja(p.lojaId), lojaId: p.lojaId, marcaId: p.marcaId || null }); });
+        if (!hits.length && q.length >= 3) {
+            const tol = q.length > 5 ? 2 : 1;
+            const norm = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+            produtos.forEach(p => {
+                const palavras = norm(p.nome).split(/\s+/);
+                if (palavras.some(w => distancia(w, norm(q)) <= tol)) hits.push({ t: 'Produto', n: p.nome, sub: nomeLoja(p.lojaId), lojaId: p.lojaId, marcaId: p.marcaId });
+            });
+        }
         buscaHits = hits.slice(0, 40);
         $('#busca-res').innerHTML = buscaHits.map((h, i) => `<button data-act="buscaIr" data-i="${i}" class="w-full text-left p-3 rounded-xl border border-gray-800 mb-2"><div class="text-[9px] text-gray-500 font-black uppercase">${h.t}${h.sub ? ' · ' + esc(h.sub) : ''}</div><div class="text-sm font-bold text-white">${esc(h.n)}</div></button>`).join('') || '<p class="text-gray-500 text-[11px]">Nada encontrado.</p>';
     }
@@ -884,7 +909,7 @@ document.addEventListener('error', (e) => {
     function salvarProdutoVoz(p) {
         const dados = { nome: p.nome, qtd: null, semQtd: true, data: p.data, lojaId: p.lojaId, marcaId: p.marcaId, setor: null, codigo: null, fotoCodigo: null };
         addDoc(colProd(), { ...dados, criadoEm: serverTimestamp() })
-            .then(r => { ultimoRegistro = { colecao: 'produtos', id: r.id, nome: p.nome }; registrarVisitaAuto(p.lojaId); aviso(`Produto cadastrado: <b>${esc(p.nome)}</b>.`, { soConfirmar: true }); })
+            .then(r => { ultimoRegistro = { colecao: 'produtos', id: r.id, nome: p.nome }; registrarVisitaAuto(p.lojaId); toast(`Produto cadastrado: <b>${esc(p.nome)}</b>.`); })
             .catch(erroDb);
     }
 
@@ -1279,6 +1304,10 @@ document.addEventListener('error', (e) => {
         }).join('');
         return `
             ${htmlBannerPlano()}
+            <div class="grid grid-cols-2 gap-2 mb-3">
+                <button data-act="novoVencido" class="py-3 rounded-2xl border border-red-500/50 text-red-500 text-[10px] font-black uppercase">+ Vencido</button>
+                <button data-act="novoProdutoTopo" class="py-3 rounded-2xl border border-amber-500/50 text-amber-500 text-[10px] font-black uppercase">+ Produto</button>
+            </div>
             <button data-act="fotoPdv" class="w-full mb-4 flex items-center justify-center gap-2 py-3 rounded-2xl border border-amber-500 text-amber-500 text-[11px] font-black uppercase"><i data-lucide="camera" class="w-4 h-4"></i> Foto PDV</button>
             <div class="grid grid-cols-2 gap-3 mb-6">
                 <div class="bg-gray-900/50 p-3 rounded-2xl border border-gray-800 text-center">
@@ -1777,7 +1806,7 @@ document.addEventListener('error', (e) => {
             else if (baixa.excedente > 0) msg = `Vencido registrado.<br><br>Havia só <b>${baixa.cadastrado} un</b> de ${nm} cadastradas neste vencimento. Todas foram retiradas do cadastro (você informou ${qtd} un).`;
             else if (baixa.cadastrado === qtd) msg = `Vencido registrado.<br><br>As <b>${qtd} un</b> de ${nm} foram retiradas e o item saiu do cadastro, porque o estoque deste vencimento zerou.`;
             else msg = `Vencido registrado.<br><br>Foram descontadas <b>${qtd} un</b> de ${nm}. Restam <b>${baixa.cadastrado - qtd} un</b> neste vencimento.`;
-            aviso(msg, { titulo: 'ESTOQUE ATUALIZADO', soConfirmar: true });
+            toast(msg);
         },
         toggleMotivo: () => {
             const box = $('#venc-motivo-box'); if (!box) return;
