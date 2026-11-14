@@ -419,7 +419,11 @@ document.addEventListener('error', (e) => {
         try {
             await runTransaction(db, async (t) => {
                 const snap = await t.get(ref);
-                if (snap.exists() && snap.data().nome) return;
+                if (snap.exists() && snap.data().nome) {
+                    // nome já definido: só completa a marca, se ainda estiver vazia
+                    if (!snap.data().marcaNome && dados.marcaNome) t.update(ref, { marcaNome: dados.marcaNome });
+                    return;
+                }
                 if (snap.exists()) {
                     t.update(ref, { nome: dados.nome, setor: dados.setor || null, marcaNome: dados.marcaNome || null, definidoPor: uid, definidoEm: serverTimestamp() });
                 } else {
