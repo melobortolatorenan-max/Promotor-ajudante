@@ -1330,6 +1330,32 @@ document.addEventListener('error', (e) => {
         const ka = ordemLoja(a.lojaId), kb = ordemLoja(b.lojaId);
         return ka[0] - kb[0] || ka[1] - kb[1] || ka[2].localeCompare(kb[2], 'pt-BR') || a.nome.localeCompare(b.nome, 'pt-BR');
     }
+    // cartão único da tela inicial: próximo vencimento e visitas do dia (barra acompanha as lojas atendidas)
+    function htmlResumoTopo() {
+        const hoje = isoLocal(new Date()), dia = new Date().getDay();
+        const futuros = produtos.filter(p => p.data && p.data >= hoje).sort((a, b) => a.data.localeCompare(b.data));
+        const prox = futuros[0];
+        const dias = prox ? Math.round((Date.parse(prox.data + 'T00:00:00Z') - Date.parse(hoje + 'T00:00:00Z')) / 86400000) : null;
+        const qtdProx = prox ? futuros.filter(p => p.data === prox.data).length : 0;
+        const titulo = dias === null ? 'SEM VENCIMENTOS' : dias === 0 ? 'VENCE HOJE' : dias === 1 ? 'VENCE AMANHÃ' : `VENCE EM ${dias} DIAS`;
+        const previstas = lojas.filter(l => diasDaLoja(l).includes(dia));
+        const feitas = previstas.filter(l => visitas.some(v => v.lojaId === l.id && v.data === hoje)).length;
+        const pct = previstas.length ? Math.round(feitas / previstas.length * 100) : 0;
+        return `<div class="card-app mb-4 grid grid-cols-2 rounded-[22px]">
+            <div class="p-4">
+                <div class="text-[9px] font-black uppercase text-amber-500">${titulo}</div>
+                <div class="text-3xl font-black text-white leading-none mt-1">${qtdProx}</div>
+                <div class="text-[11px] font-bold text-white">produtos</div>
+                ${prox ? `<div class="text-[9px] text-gray-500 truncate mt-1">${esc(prox.nome)}</div>` : ''}
+            </div>
+            <div class="p-4 border-l border-amber-500/30">
+                <div class="text-[9px] font-black uppercase text-gray-500">Visitas hoje</div>
+                <div class="text-2xl font-black text-white leading-none mt-1">${feitas} de ${previstas.length}</div>
+                <div class="text-[11px] font-bold text-white">previstas</div>
+                <div class="mt-3 h-1.5 rounded-full bg-gray-900 overflow-hidden"><div class="h-1.5 rounded-full bg-amber-500 transition-all duration-500" style="width:${pct}%"></div></div>
+            </div>
+        </div>`;
+    }
     function htmlHome() {
         const alertas = produtos.filter(p => diasAte(p.data) <= 5)
             .sort((a, b) => a.data.localeCompare(b.data) || a.nome.localeCompare(b.nome));
@@ -1359,6 +1385,7 @@ document.addEventListener('error', (e) => {
         }).join('');
         return `
             ${htmlBannerPlano()}
+            ${htmlResumoTopo()}
             <div class="grid grid-cols-2 gap-2 mb-3">
                 <button data-act="novoVencido" class="py-3 rounded-2xl border border-red-500/50 text-red-500 text-[10px] font-black uppercase">+ Vencido</button>
                 <button data-act="novoProdutoTopo" class="py-3 rounded-2xl border border-amber-500/50 text-amber-500 text-[10px] font-black uppercase">+ Produto</button>
@@ -2732,7 +2759,7 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
         vencErro = '';
         unsubs.push(onSnapshot(collection(db, 'users', uid, 'visitas'), (snap) => {
             visitas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-            if (view.tab === 'l' || view.tab === 'c') desenhar(false);
+            if (view.tab === 'l' || view.tab === 'c' || view.tab === 'h') desenhar(false);
         }));
         unsubs.push(onSnapshot(collection(db, 'users', uid, 'superiores'), (snap) => {
             superiores = snap.docs.map(d => ({ id: d.id, ...d.data() }));
