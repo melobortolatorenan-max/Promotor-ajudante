@@ -112,12 +112,13 @@ document.addEventListener('error', (e) => {
         while (t.length > 3 && ctx.measureText(t + '…').width > max) t = t.slice(0, -1);
         return t + '…';
     }
-    function desenharMarca(ctx, W, H, nome, local, lojaNome) {
+    function desenharMarca(ctx, W, H, nome, local, lojaNome, lojaEnd) {
         const ag = new Date();
         const dataHora = ag.toLocaleDateString('pt-BR') + ' ' + String(ag.getHours()).padStart(2, '0') + ':' + String(ag.getMinutes()).padStart(2, '0');
         const pad = Math.round(W * 0.025), fs = Math.round(W * 0.03), fsMenor = Math.round(W * 0.022);
         // faixa escura atrás do logo, do nome e da data: começa no final da foto e tem a altura do texto
-        const bandH = fs * 1.25 + fsMenor * 1.1 + pad * 1.6 + (local ? fsMenor * 1.35 : 0);
+        const addrFs = fsMenor * 0.95, addrLine = addrFs * 1.3;
+        const bandH = fs * 1.25 + fsMenor * 1.1 + pad * 1.6 + (local ? fsMenor * 1.35 : 0) + (lojaNome && lojaEnd ? addrLine : 0);
         ctx.save(); ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0, H - bandH, W, bandH); ctx.restore();
         ctx.save();
         ctx.shadowColor = 'rgba(0,0,0,.75)'; ctx.shadowBlur = fs * 0.4;
@@ -132,12 +133,21 @@ document.addEventListener('error', (e) => {
         }
         ctx.restore();
         if (lojaNome) {
+            const baseEnd = H - pad - (lojaEnd ? addrLine : 0);
             ctx.save();
             ctx.shadowColor = 'rgba(0,0,0,.75)'; ctx.shadowBlur = fs * 0.4;
             ctx.fillStyle = '#f59e0b'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
             ctx.font = `800 ${fsMenor * 1.1}px Arial, sans-serif`;
-            ctx.fillText(cortarTexto(ctx, String(lojaNome).toUpperCase(), W * 0.34), W / 2, H - pad);
+            ctx.fillText(cortarTexto(ctx, String(lojaNome).toUpperCase(), W * 0.34), W / 2, baseEnd);
             ctx.restore();
+            if (lojaEnd) {
+                ctx.save();
+                ctx.shadowColor = 'rgba(0,0,0,.75)'; ctx.shadowBlur = fs * 0.4;
+                ctx.fillStyle = '#e5e7eb'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+                ctx.font = `600 ${addrFs}px Arial, sans-serif`;
+                ctx.fillText(cortarTexto(ctx, String(lojaEnd), W * 0.9), W / 2, H - pad);
+                ctx.restore();
+            }
         }
         const logo = logoSemFundo();
         const hL = fs * 1.25 + fsMenor * 1.1;          // altura do bloco de texto (PROMOTOR até AJUDANTE)
@@ -276,7 +286,8 @@ document.addEventListener('error', (e) => {
         }
         ctx.drawImage(fonte, 0, 0, vw, vh);
         ctx.restore();
-        desenharMarca(ctx, W0, H0, nome, local, pdvLoja ? pdvLoja.nome : '');
+        const lojaDaFoto = pdvLoja ? lojas.find(x => x.id === pdvLoja.lojaId) : null;
+        desenharMarca(ctx, W0, H0, nome, local, pdvLoja ? pdvLoja.nome : '', lojaDaFoto && lojaDaFoto.endereco ? lojaDaFoto.endereco : '');
         pdv.blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.95));
         const ag = new Date();
         const stamp = isoLocal(ag) + ' ' + String(ag.getHours()).padStart(2, '0') + '-' + String(ag.getMinutes()).padStart(2, '0') + '-' + String(ag.getSeconds()).padStart(2, '0');
