@@ -1364,8 +1364,8 @@ document.addEventListener('error', (e) => {
         const n = previstas.length, feitas = feitasIds.size, faltam = n - feitas;
         // posição de cada caixa na linha; a casa fica no fim (100%)
         const pos = (i) => ((i + 1) / (n + 1)) * 100;
-        let maxIdx = -1; previstas.forEach((l, i) => { if (feitasIds.has(l.id)) maxIdx = i; });
-        const progresso = n === 0 ? 0 : feitas === n ? 100 : (maxIdx >= 0 ? pos(maxIdx) : 0);
+        // a linha cresce em sequência: após k check-ins, fica amarela até a k-ésima posição (sem buracos)
+        const progresso = n === 0 ? 0 : feitas === n ? 100 : (feitas > 0 ? pos(feitas - 1) : 0);
         const caixas = previstas.map((l, i) => `<div class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-[3px] ${feitasIds.has(l.id) ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]' : 'bg-gray-800 border border-gray-600'}" style="left:${pos(i)}%"></div>`).join('');
         return `<div class="card-app mb-4 p-4 rounded-[22px]">
             <div class="flex items-center justify-between gap-3">
