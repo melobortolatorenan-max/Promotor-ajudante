@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <script src="vigia.js"></script>
-    <meta name="theme-color" content="#030712">
+    <meta name="theme-color" content="#000000">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="logo.png">
     <title>Promotor Ajudante Pro</title>
@@ -15,7 +15,7 @@
 
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #030712;
+            background-color: #000000;
             color: white;
             margin: 0;
             overflow: hidden;
@@ -31,7 +31,7 @@
             border-radius: 0.8rem;
         }
 
-        .nav-aba.ativa { background-color: #f59e0b !important; color: #030712 !important; }
+        .nav-aba.ativa { background-color: #f59e0b !important; color: #000000 !important; }
 
         .input-custom {
             width: 100%;
@@ -47,7 +47,7 @@
 
         .btn-amarelo {
             background-color: #f59e0b;
-            color: #030712;
+            color: #000000;
             font-weight: 900;
             padding: 1rem;
             border-radius: 0.8rem;
@@ -94,6 +94,7 @@ html.alto-contraste .text-gray-400 { color: #f3f4f6 !important; }
 html.alto-contraste .border-gray-800, html.alto-contraste .border-gray-700 { border-color: #6b7280 !important; }
 html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size: 11px !important; }
 </style>
+<style>.bg-gray-950,.bg-gray-950\/80,.bg-gray-950\/30,.bg-gray-950\/50{background-color:#000000 !important}</style>
 </head>
 <body>
 
@@ -120,38 +121,38 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
     </section>
 
     <!-- CÓDIGOS DE BARRAS CADASTRADOS -->
-    <div id="codigos" class="hidden fixed inset-0 flex-col p-4 gap-3" style="z-index:93;background:#030712">
+    <div id="codigos" class="hidden fixed inset-0 flex-col p-4 gap-3" style="z-index:93;background:#000000">
         <div class="flex items-center justify-between gap-2"><h2 class="text-amber-500 font-black italic uppercase text-sm">Códigos de barras cadastrados</h2><button data-act="codigosFechar" class="px-4 py-2 rounded-xl border border-gray-700 text-[10px] font-black uppercase text-gray-300">Fechar</button></div>
         <div id="codigos-tab" class="flex-1 overflow-auto"></div>
     </div>
 
     <!-- PLANOGRAMA DAS LOJAS -->
-    <div id="planograma" class="hidden fixed inset-0 flex-col p-4 gap-3" style="z-index:93;background:#030712">
+    <div id="planograma" class="hidden fixed inset-0 flex-col p-4 gap-3" style="z-index:93;background:#000000">
         <div class="flex items-center justify-between gap-2"><h2 class="text-amber-500 font-black italic uppercase text-sm">Planograma lojas</h2><button data-act="planogramaFechar" class="px-4 py-2 rounded-xl border border-gray-700 text-[10px] font-black uppercase text-gray-300">Fechar</button></div>
         <div id="planograma-corpo" class="flex-1 overflow-auto"></div>
         <input id="plan-file" type="file" accept="image/*" capture="environment" class="hidden">
     </div>
 
     <!-- RESUMO DO DIA -->
-    <div id="resumo" class="hidden fixed inset-0 flex-col p-4 gap-3" style="z-index:93;background:#030712">
+    <div id="resumo" class="hidden fixed inset-0 flex-col p-4 gap-3" style="z-index:93;background:#000000">
         <div class="flex items-center justify-between gap-2"><h2 class="text-amber-500 font-black italic uppercase text-sm">Resumo do dia</h2><button data-act="resumoFechar" class="px-4 py-2 rounded-xl border border-gray-700 text-[10px] font-black uppercase text-gray-300">Fechar</button></div>
         <div id="resumo-corpo" class="flex-1 overflow-auto"></div>
     </div>
 
     <!-- SUPERIORES E RELATÓRIO SEMANAL -->
-    <div id="superiores" class="hidden fixed inset-0 flex-col p-4 gap-3" style="z-index:93;background:#030712">
+    <div id="superiores" class="hidden fixed inset-0 flex-col p-4 gap-3" style="z-index:93;background:#000000">
         <div class="flex items-center justify-between gap-2"><h2 class="text-amber-500 font-black italic uppercase text-sm">Superiores e relatório</h2><button data-act="superioresFechar" class="px-4 py-2 rounded-xl border border-gray-700 text-[10px] font-black uppercase text-gray-300">Fechar</button></div>
         <div id="superiores-corpo" class="flex-1 overflow-auto"></div>
     </div>
 
     <!-- LOJA DA FOTO PDV -->
-    <div id="pdv-loja" class="hidden fixed inset-0 flex-col p-4 gap-3" style="z-index:97;background:#030712">
+    <div id="pdv-loja" class="hidden fixed inset-0 flex-col p-4 gap-3" style="z-index:97;background:#000000">
         <div class="flex items-center justify-between gap-2"><h2 class="text-amber-500 font-black italic uppercase text-sm">Em qual loja você está?</h2><button data-act="pdvLojaFechar" class="px-4 py-2 rounded-xl border border-gray-700 text-[10px] font-black uppercase text-gray-300">Cancelar</button></div>
         <div id="pdv-loja-lista" class="flex-1 overflow-auto"></div>
     </div>
 
     <!-- BUSCA -->
-    <div id="busca" class="hidden fixed inset-0 flex-col p-4 gap-3" style="z-index:94;background:#030712">
+    <div id="busca" class="hidden fixed inset-0 flex-col p-4 gap-3" style="z-index:94;background:#000000">
         <div class="flex gap-2"><input id="busca-q" class="input-custom flex-1" placeholder="Buscar produto ou loja" autocomplete="off"><button data-act="buscaFechar" class="px-4 rounded-xl border border-gray-700 text-[10px] font-black uppercase text-gray-300">Fechar</button></div>
         <div class="flex gap-2"><button data-act="lerCodigoBusca" class="flex-1 py-3 rounded-xl border border-amber-500 text-[10px] font-black uppercase text-amber-500">Ler código de barras</button>
         <button data-act="vozAbrir" class="px-4 rounded-xl border border-gray-700 text-gray-300 flex items-center justify-center" aria-label="Cadastro por voz"><i data-lucide="mic" class="w-4 h-4"></i></button></div>
@@ -191,7 +192,7 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
     </div>
 
     <!-- TERMOS / PRIVACIDADE / REEMBOLSO -->
-    <div id="legal" class="hidden fixed inset-0 flex-col" style="z-index:90;background:#030712" role="dialog" aria-modal="true" aria-labelledby="legal-titulo">
+    <div id="legal" class="hidden fixed inset-0 flex-col" style="z-index:90;background:#000000" role="dialog" aria-modal="true" aria-labelledby="legal-titulo">
         <div class="flex items-center justify-between px-4 pb-3 border-b border-gray-800" style="padding-top:max(1rem, env(safe-area-inset-top))">
             <h2 id="legal-titulo" class="text-amber-500 font-black italic uppercase text-base">Termos</h2>
             <button data-act="legalFechar" class="px-4 py-2 rounded-xl border border-gray-700 text-[10px] font-black uppercase text-gray-300" aria-label="Fechar">FECHAR</button>
