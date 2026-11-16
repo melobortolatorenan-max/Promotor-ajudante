@@ -17,7 +17,7 @@ document.addEventListener('error', (e) => {
         from "https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging.js";
 
     /* ================= utilidades ================= */
-    const VERSAO_APP = 'v55';
+    const VERSAO_APP = 'v56';
     document.getElementById('versao-login').textContent = VERSAO_APP;
     const API_BASE = 'https://promotor-ajudante.vercel.app';
     const SETORES = ['Bebidas', 'Doces', 'Higiene', 'Laticínios', 'Leites', 'Limpeza', 'Massas congeladas', 'Molhos', 'Pães', 'Salgadinhos', 'Temperos'];
@@ -1366,7 +1366,7 @@ document.addEventListener('error', (e) => {
         const pos = (i) => ((i + 1) / (n + 1)) * 100;
         // a linha cresce em sequência: após k check-ins, fica amarela até a k-ésima posição (sem buracos)
         const progresso = n === 0 ? 0 : feitas === n ? 100 : (feitas > 0 ? pos(feitas - 1) : 0);
-        const caixas = previstas.map((l, i) => `<div class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-[3px] ${feitasIds.has(l.id) ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]' : 'bg-gray-800 border border-gray-600'}" style="left:${pos(i)}%"></div>`).join('');
+        const caixas = previstas.map((l, i) => `<div class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-[3px] ${i < feitas ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]' : 'bg-gray-800 border border-gray-600'}" style="left:${pos(i)}%"></div>`).join('');
         return `<div class="card-app mb-4 p-4 rounded-[22px]">
             <div class="flex items-center justify-between gap-3">
                 <div class="flex items-center gap-3">
@@ -1376,7 +1376,7 @@ document.addEventListener('error', (e) => {
                     </div>
                     <div>
                         <div class="text-3xl font-black text-amber-500 leading-none">${qtdProx}</div>
-                        <div class="text-[9px] text-gray-500 truncate max-w-[120px]">${prox ? esc(prox.nome) : 'sem vencimentos'}</div>
+                        <div class="text-[9px] text-gray-500">produtos</div>
                     </div>
                 </div>
                 <div class="text-right">
