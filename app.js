@@ -145,7 +145,7 @@ document.addEventListener('error', (e) => {
                 ctx.shadowColor = 'rgba(0,0,0,.75)'; ctx.shadowBlur = fs * 0.4;
                 ctx.fillStyle = '#e5e7eb'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
                 ctx.font = `600 ${addrFs}px Arial, sans-serif`;
-                ctx.fillText(cortarTexto(ctx, String(lojaEnd), W * 0.9), W / 2, H - pad);
+                ctx.fillText(cortarTexto(ctx, String(lojaEnd), W * 0.4), W / 2, H - pad);
                 ctx.restore();
             }
         }
@@ -388,8 +388,18 @@ document.addEventListener('error', (e) => {
             const snap = await getDoc(ref);
             if (!snap.exists()) {
                 await setDoc(ref, { codigo: cod, nome: null, setor: null, marcaNome: null, criadoPor: uid, criadoEm: serverTimestamp() });
-            } else if (snap.data().nome) {
-                preencherPorCodigo(snap.data());
+            }
+            const base = snap.exists() ? snap.data() : null;
+            if (base && base.nome) {
+                preencherPorCodigo(base);
+            } else {
+                // base sem nome: usa um produto já cadastrado por você com esse código (em qualquer loja)
+                const pr = produtos.find(p => p.codigo === cod && p.nome);
+                if (pr) {
+                    const l = lojas.find(x => x.id === pr.lojaId);
+                    const m = l && (l.marcas || []).find(x => x.id === pr.marcaId);
+                    preencherPorCodigo({ nome: pr.nome, setor: pr.setor || null, marcaNome: m ? m.nome : null });
+                }
             }
         } catch (e) {
             console.error('codigo lido:', e);
@@ -717,16 +727,27 @@ document.addEventListener('error', (e) => {
         return `<svg viewBox="-4 -4 103 104" xmlns="http://www.w3.org/2000/svg" class="w-full"><g fill="#000">${rects}</g><text x="51" y="95" text-anchor="middle" font-size="9" font-family="monospace" fill="#000">${c}</text></svg>`;
     }
     function htmlCodigos() {
-        // um código por linha (sem repetir), ordem alfabética pelo nome do produto
+        // um código por linha (sem repetir)
         const porCodigo = new Map();
         produtos.filter(p => p.codigo).forEach(p => {
             const atual = porCodigo.get(p.codigo);
             if (!atual || (p.fotoCodigo && !atual.fotoCodigo)) porCodigo.set(p.codigo, p);
         });
-        const lista = [...porCodigo.values()].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+        const marcaDe = (p) => { const l = lojas.find(x => x.id === p.lojaId); const m = l && (l.marcas || []).find(x => x.id === p.marcaId); return m ? String(m.nome).trim() : '—'; };
+        // ordem: marca (alfabética) e, dentro da marca, nome (alfabética)
+        const lista = [...porCodigo.values()].sort((a, b) => marcaDe(a).localeCompare(marcaDe(b), 'pt-BR') || a.nome.localeCompare(b.nome, 'pt-BR'));
         if (!lista.length) return '<p class="text-gray-500 text-[11px]">Nenhum código cadastrado ainda.</p>';
-        const marcaDe = (p) => { const l = lojas.find(x => x.id === p.lojaId); const m = l && (l.marcas || []).find(x => x.id === p.marcaId); return m ? m.nome : '—'; };
-        return `<table class="w-full text-[11px]"><thead><tr class="text-left text-gray-500 uppercase text-[9px]"><th class="py-2 pr-2">Produto</th><th class="pr-2">Marca</th><th class="text-center pr-2">Imagem</th><th>Código</th></tr></thead><tbody>${lista.map(p => `<tr class="border-t border-gray-800"><td class="py-2 pr-2 text-white font-bold">${esc(p.nome)}</td><td class="pr-2 text-gray-400">${esc(marcaDe(p))}</td><td class="text-center pr-2"><button data-act="verFotoCodigo" data-id="${esc(p.id)}" class="text-amber-500" aria-label="Ver imagem do código"><i data-lucide="image" class="w-4 h-4"></i></button></td><td class="text-gray-400">${esc(p.codigo)}</td></tr>`).join('')}</tbody></table>`;
+        let html = '<table class="w-full text-[11px]"><thead><tr class="text-left text-gray-500 uppercase text-[9px]"><th class="py-2 pr-2">Produto</th><th class="pr-2">Marca</th><th class="text-center pr-2">Imagem</th><th>Código</th></tr></thead><tbody>';
+        let marcaAtual = null;
+        for (const p of lista) {
+            const m = marcaDe(p), chave = m.toLowerCase();
+            if (chave !== marcaAtual) {
+                marcaAtual = chave;
+                html += `<tr><td colspan="4" class="pt-5 pb-2 text-amber-500 font-black uppercase tracking-wider text-[11px] border-b border-amber-500/40">${esc(m)}</td></tr>`;
+            }
+            html += `<tr class="border-t border-gray-800"><td class="py-2 pr-2 text-white font-bold">${esc(p.nome)}</td><td class="pr-2 text-gray-400">${esc(m)}</td><td class="text-center pr-2"><button data-act="verFotoCodigo" data-id="${esc(p.id)}" class="text-amber-500" aria-label="Ver imagem do código"><i data-lucide="image" class="w-4 h-4"></i></button></td><td class="text-gray-400">${esc(p.codigo)}</td></tr>`;
+        }
+        return html + '</tbody></table>';
     }
     function verFotoCodigo(d) {
         const p = produtos.find(x => x.id === d.id);
@@ -1330,29 +1351,48 @@ document.addEventListener('error', (e) => {
         const ka = ordemLoja(a.lojaId), kb = ordemLoja(b.lojaId);
         return ka[0] - kb[0] || ka[1] - kb[1] || ka[2].localeCompare(kb[2], 'pt-BR') || a.nome.localeCompare(b.nome, 'pt-BR');
     }
-    // cartão único da tela inicial: próximo vencimento e visitas do dia (barra acompanha as lojas atendidas)
+    // cartão da tela inicial (foto 4): vencimento, visitas do dia e a linha com as lojas (caixas) até a casa
     function htmlResumoTopo() {
         const hoje = isoLocal(new Date()), dia = new Date().getDay();
         const futuros = produtos.filter(p => p.data && p.data >= hoje).sort((a, b) => a.data.localeCompare(b.data));
         const prox = futuros[0];
         const dias = prox ? Math.round((Date.parse(prox.data + 'T00:00:00Z') - Date.parse(hoje + 'T00:00:00Z')) / 86400000) : null;
         const qtdProx = prox ? futuros.filter(p => p.data === prox.data).length : 0;
-        const titulo = dias === null ? 'SEM VENCIMENTOS' : dias === 0 ? 'VENCE HOJE' : dias === 1 ? 'VENCE AMANHÃ' : `VENCE EM ${dias} DIAS`;
-        const previstas = lojas.filter(l => diasDaLoja(l).includes(dia));
-        const feitas = previstas.filter(l => visitas.some(v => v.lojaId === l.id && v.data === hoje)).length;
-        const pct = previstas.length ? Math.round(feitas / previstas.length * 100) : 0;
-        return `<div class="card-app mb-4 grid grid-cols-2 rounded-[22px]">
-            <div class="p-4">
-                <div class="text-[9px] font-black uppercase text-amber-500">${titulo}</div>
-                <div class="text-3xl font-black text-white leading-none mt-1">${qtdProx}</div>
-                <div class="text-[11px] font-bold text-white">produtos</div>
-                ${prox ? `<div class="text-[9px] text-gray-500 truncate mt-1">${esc(prox.nome)}</div>` : ''}
+        const rotulo = dias === null ? '—' : dias === 0 ? 'HOJE' : dias === 1 ? 'AMANHÃ' : `${dias} DIAS`;
+        const previstas = lojas.filter(l => diasDaLoja(l).includes(dia)).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+        const feitasIds = new Set(previstas.filter(l => visitas.some(v => v.lojaId === l.id && v.data === hoje)).map(l => l.id));
+        const n = previstas.length, feitas = feitasIds.size, faltam = n - feitas;
+        // posição de cada caixa na linha; a casa fica no fim (100%)
+        const pos = (i) => ((i + 1) / (n + 1)) * 100;
+        let maxIdx = -1; previstas.forEach((l, i) => { if (feitasIds.has(l.id)) maxIdx = i; });
+        const progresso = n === 0 ? 0 : feitas === n ? 100 : (maxIdx >= 0 ? pos(maxIdx) : 0);
+        const caixas = previstas.map((l, i) => `<div class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-[3px] ${feitasIds.has(l.id) ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]' : 'bg-gray-800 border border-gray-600'}" style="left:${pos(i)}%"></div>`).join('');
+        return `<div class="card-app mb-4 p-4 rounded-[22px]">
+            <div class="flex items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-11 rounded-lg bg-gray-100 overflow-hidden text-center">
+                        <div class="bg-gray-600 text-[7px] font-black text-white py-0.5 uppercase">${rotulo}</div>
+                        <div class="text-gray-700 text-[7px] font-black uppercase py-1">vence</div>
+                    </div>
+                    <div>
+                        <div class="text-3xl font-black text-amber-500 leading-none">${qtdProx}</div>
+                        <div class="text-[9px] text-gray-500 truncate max-w-[120px]">${prox ? esc(prox.nome) : 'sem vencimentos'}</div>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <div class="flex items-baseline justify-end gap-2 leading-none">
+                        <span class="text-3xl font-black text-amber-500">${feitas}</span>
+                        <span class="text-3xl font-black text-gray-700">${faltam}</span>
+                    </div>
+                    <div class="text-[9px] text-gray-500 mt-1">visitas realizadas de ${n} metas</div>
+                </div>
             </div>
-            <div class="p-4 border-l border-amber-500/30">
-                <div class="text-[9px] font-black uppercase text-gray-500">Visitas hoje</div>
-                <div class="text-2xl font-black text-white leading-none mt-1">${feitas} de ${previstas.length}</div>
-                <div class="text-[11px] font-bold text-white">previstas</div>
-                <div class="mt-3 h-1.5 rounded-full bg-gray-900 overflow-hidden"><div class="h-1.5 rounded-full bg-amber-500 transition-all duration-500" style="width:${pct}%"></div></div>
+            <div class="relative h-10 mt-4 mb-4">
+                <div class="absolute left-0 right-8 top-1/2 h-1 -translate-y-1/2 rounded-full bg-gray-800"></div>
+                <div class="absolute left-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-amber-500 transition-all duration-500" style="width:${progresso}%"></div>
+                ${caixas}
+                <div class="absolute right-0 top-1/2 -translate-y-1/2 ${n > 0 && feitas === n ? 'text-amber-500' : 'text-gray-600'}"><i data-lucide="house" class="w-6 h-6"></i></div>
+                <div class="absolute -bottom-4 right-0 text-[9px] text-gray-500">Meta: ${feitas}</div>
             </div>
         </div>`;
     }
@@ -2257,6 +2297,11 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
         if (e.target.id === 'pd') atualizarMotivoObrigatorio();
         if (e.target.id === 'f-setor') { filtroSetor = e.target.value; desenhar(false); }
         if (e.target.id === 'l-endereco') agendarSugestoes(e.target.value);
+        // código digitado à mão: busca nome, marca e setor, como na leitura pela câmera
+        if (e.target.id === 'pcod') {
+            const cod = String(e.target.value || '').replace(/[^0-9A-Za-z]/g, '');
+            if (/^\d{8,14}$/.test(cod)) codigoLido(cod);
+        }
         if (e.target.id === 'plan-file') planogramaSalvarFoto(e.target.files[0]);
         if (e.target.id === 'pq-informar') {
             const pq = $('#pq'); if (pq) { pq.disabled = !e.target.checked; if (!e.target.checked) pq.value = ''; pq.classList.toggle('opacity-40', !e.target.checked); }
