@@ -32,9 +32,11 @@
         }
 
         .nav-aba.ativa { background-color: #f59e0b !important; color: #000000 !important; }
-        .menu-item .menu-icone { transition: transform .35s ease, background-color .35s ease, box-shadow .35s ease; }
-        .menu-item.ativa .menu-icone { background:#f59e0b; color:#000; transform:translateY(-10px); box-shadow:0 0 22px rgba(245,158,11,.55); }
+        .menu-item { transition: color .3s ease; }
+        .menu-item .menu-icone { transition: color .3s ease; color:#6b7280; }
+        .menu-item.ativa .menu-icone { color:#f59e0b; }
         .menu-item.ativa .menu-rotulo { color:#f59e0b; }
+        #menu-linha-path { transition: d .35s ease; }
 
         .input-custom {
             width: 100%;
@@ -282,24 +284,24 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
         <div id="faixa-conexao" class="hidden" role="status"></div>
         <main id="corpo" class="p-4 flex-1 overflow-y-auto no-scrollbar pb-24"></main>
         <nav id="menu-inferior" class="fixed left-4 right-4 mx-auto max-w-md z-[60]" style="bottom:max(16px, env(safe-area-inset-bottom))">
-            <div class="relative flex items-end justify-between rounded-[28px] bg-[#0b0b0f] border border-gray-800 px-2 pt-4 pb-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.7)]">
-                <span id="menu-curva" class="absolute -top-px left-0 w-14 h-3.5 pointer-events-none transition-all duration-300 opacity-0">
-                    <svg viewBox="0 0 56 14" class="w-full h-full" preserveAspectRatio="none"><path d="M0 0 C10 0 14 12 28 12 C42 12 46 0 56 0 Z" fill="#f59e0b"/></svg>
-                </span>
+            <div class="relative flex items-end justify-between rounded-[24px] bg-[#0b0b0f] border border-gray-800 px-2 pt-2.5 pb-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.7)]">
+                <svg id="menu-linha" class="absolute top-0 left-0 w-full h-4 pointer-events-none" preserveAspectRatio="none" aria-hidden="true">
+                    <path id="menu-linha-path" d="" fill="none" stroke="#f59e0b" stroke-width="1.2" vector-effect="non-scaling-stroke" stroke-linecap="round"/>
+                </svg>
                 <button data-act="tab" data-id="h" class="menu-item flex-1 flex flex-col items-center gap-1">
-                    <span class="menu-icone w-9 h-9 rounded-full flex items-center justify-center text-gray-400"><i data-lucide="house" class="w-4 h-4"></i></span>
-                    <span class="menu-rotulo text-[9px] font-black uppercase text-gray-500">Início</span>
+                    <span class="menu-icone flex items-center justify-center"><i data-lucide="house" class="w-4 h-4"></i></span>
+                    <span class="menu-rotulo text-[8px] font-black uppercase text-gray-500 whitespace-nowrap">Início</span>
                 </button>
                 <button data-act="tab" data-id="l" class="menu-item flex-1 flex flex-col items-center gap-1">
-                    <span class="menu-icone w-9 h-9 rounded-full flex items-center justify-center text-gray-400"><i data-lucide="store" class="w-4 h-4"></i></span>
-                    <span class="menu-rotulo text-[9px] font-black uppercase text-gray-500">Lojas</span>
+                    <span class="menu-icone flex items-center justify-center"><i data-lucide="store" class="w-4 h-4"></i></span>
+                    <span class="menu-rotulo text-[8px] font-black uppercase text-gray-500 whitespace-nowrap">Lojas</span>
                 </button>
                 <button data-act="tab" data-id="p" class="menu-item flex-1 flex flex-col items-center gap-1">
-                    <span class="menu-icone w-9 h-9 rounded-full flex items-center justify-center text-gray-400"><i data-lucide="package" class="w-4 h-4"></i></span>
-                    <span class="menu-rotulo text-[9px] font-black uppercase text-gray-500">Produtos</span>
+                    <span class="menu-icone flex items-center justify-center"><i data-lucide="package" class="w-4 h-4"></i></span>
+                    <span class="menu-rotulo text-[8px] font-black uppercase text-gray-500 whitespace-nowrap">Produtos</span>
                 </button>
                 <button data-act="tab" data-id="c" class="menu-item flex-1 flex flex-col items-center gap-1">
-                    <span class="menu-icone w-9 h-9 rounded-full flex items-center justify-center text-gray-400"><i data-lucide="settings" class="w-4 h-4"></i></span>
+                    <span class="menu-icone flex items-center justify-center"><i data-lucide="settings" class="w-4 h-4"></i></span>
                     <span class="menu-rotulo text-[8px] font-black uppercase text-gray-500 whitespace-nowrap">Configurações</span>
                 </button>
             </div>

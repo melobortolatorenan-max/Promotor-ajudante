@@ -1189,15 +1189,18 @@ document.addEventListener('error', (e) => {
             toast(status === 'aceito' ? 'Convite aceito. A agência já pode ver você.' : 'Convite recusado.');
         } catch (e) { console.error(e); toast('Não consegui responder ao convite.'); }
     }
-    // curva amarela do menu: fica embaixo do item selecionado
+    // linha fina do menu: desce sob o item selecionado
     function moverCurvaMenu() {
-        const curva = document.getElementById('menu-curva');
+        const path = document.getElementById('menu-linha-path');
+        const svg = document.getElementById('menu-linha');
         const ativo = document.querySelector('.menu-item.ativa');
         const bar = document.querySelector('#menu-inferior > div');
-        if (!curva || !ativo || !bar) return;
+        if (!path || !svg || !ativo || !bar) return;
         const r = ativo.getBoundingClientRect(), b = bar.getBoundingClientRect();
-        curva.style.left = (r.left - b.left + r.width / 2 - 28) + 'px';
-        curva.style.opacity = '1';
+        const W = b.width, x = r.left - b.left + r.width / 2;
+        const h = 14, ramp = 30;
+        path.setAttribute('d', `M0 0 H${Math.max(0, x - ramp - 14)} C${x - ramp} 0 ${x - ramp} ${h} ${x} ${h} C${x + ramp} ${h} ${x + ramp} 0 ${x + ramp + 14} 0 H${W}`);
+        svg.setAttribute('viewBox', `0 0 ${W} 16`);
     }
     window.addEventListener('resize', moverCurvaMenu);
     function fecharLegal() { const box = $('#legal'); box.classList.add('hidden'); box.classList.remove('flex'); }
