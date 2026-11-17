@@ -1198,9 +1198,9 @@ document.addEventListener('error', (e) => {
         if (!path || !svg || !ativo || !bar) return;
         const r = ativo.getBoundingClientRect(), b = bar.getBoundingClientRect();
         const W = b.width, x = r.left - b.left + r.width / 2;
-        const h = 14, ramp = 30;
+        const h = 5, ramp = 26;   // desvio raso: a linha passa acima do ícone, sem encostar nele
         path.setAttribute('d', `M0 0 H${Math.max(0, x - ramp - 14)} C${x - ramp} 0 ${x - ramp} ${h} ${x} ${h} C${x + ramp} ${h} ${x + ramp} 0 ${x + ramp + 14} 0 H${W}`);
-        svg.setAttribute('viewBox', `0 0 ${W} 16`);
+        svg.setAttribute('viewBox', `0 0 ${W} 8`);
     }
     window.addEventListener('resize', moverCurvaMenu);
     function fecharLegal() { const box = $('#legal'); box.classList.add('hidden'); box.classList.remove('flex'); }
@@ -2938,7 +2938,12 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
                 onMessage(messaging, (p) => { const n = p.notification || {}; aviso(esc(n.body || ''), { titulo: n.title || 'PROMOTOR AJUDANTE', soConfirmar: true }); });
             }
         } catch (e) { msgOk = false; console.warn(e); }
-        onAuthStateChanged(auth, (user) => user ? entrar(user) : aoSair());
+        // Ao abrir o app, nunca entra direto: se existir sessão guardada, encerra e mostra a tela de login.
+        let primeiraVez = true;
+        onAuthStateChanged(auth, (user) => {
+            if (primeiraVez) { primeiraVez = false; if (user) { signOut(auth).catch(() => {}); aoSair(); return; } }
+            user ? entrar(user) : aoSair();
+        });
     }
 
     lucide.createIcons();

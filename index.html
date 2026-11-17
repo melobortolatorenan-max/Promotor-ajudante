@@ -121,7 +121,7 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
 
     <!-- CARREGANDO / CONFIGURAÇÃO -->
     <section id="tela-carregando" class="secao ativa items-center justify-center p-6 text-center" style="background:#000000">
-        <img src="logo.png" data-fallback-logo="1" class="w-16 h-16 mb-4" style="mix-blend-mode:lighten" alt="">
+        <img src="robo.png" class="w-56 h-auto mb-4 object-contain" alt="Robô Ajudante">
         <div id="carregando-txt" class="text-[10px] font-black uppercase tracking-widest text-gray-500">Carregando...</div>
         <div class="text-[9px] text-gray-700 mt-3 font-bold">v57</div>
     </section>
@@ -214,13 +214,15 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
     <!-- LOGIN / CRIAR CONTA -->
     <section id="tela-auth" class="secao overflow-y-auto no-scrollbar">
         <div class="m-auto w-full max-w-sm p-6">
-            <div class="flex flex-col items-center gap-3 mb-8 text-center">
-                <img src="logo.png" data-fallback-logo="1" class="w-36 h-36 rounded-full p-1 bg-[#0b1020] ring-2 ring-amber-500/50 shadow-[0_0_40px_rgba(245,158,11,0.35)] object-contain" style="mix-blend-mode:lighten" alt="">
+            <div class="flex flex-col items-center gap-1 mb-6 text-center">
+                <img src="robo.png" class="w-44 h-auto object-contain" alt="Robô Ajudante">
                 <div>
                     <h1 class="text-[10px] font-bold text-gray-500 uppercase tracking-[0.3em] leading-none">Promotor</h1>
                     <span class="text-3xl font-black text-amber-500 uppercase italic leading-none">Ajudante</span>
+                    <p class="text-xs text-gray-500 mt-2">Organize seu dia de trabalho</p>
                 </div>
             </div>
+            <h2 class="text-2xl font-black text-white text-center mb-4">Bem-vindo de volta</h2>
             <button data-act="fotoPdv" class="btn-amarelo flex items-center justify-center gap-2 mb-6"><i data-lucide="camera" class="w-5 h-5"></i> Foto PDV</button>
             <h2 id="auth-titulo" class="hidden">Entrar</h2>
             <div class="space-y-4">
@@ -285,7 +287,7 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
         <main id="corpo" class="p-4 flex-1 overflow-y-auto no-scrollbar pb-24"></main>
         <nav id="menu-inferior" class="fixed left-4 right-4 mx-auto max-w-md z-[60]" style="bottom:max(16px, env(safe-area-inset-bottom))">
             <div class="relative flex items-end justify-between rounded-[24px] bg-[#0b0b0f] border border-gray-800 px-2 pt-2.5 pb-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.7)]">
-                <svg id="menu-linha" class="absolute top-0 left-0 w-full h-4 pointer-events-none" preserveAspectRatio="none" aria-hidden="true">
+                <svg id="menu-linha" class="absolute top-0 left-0 w-full h-2 pointer-events-none" preserveAspectRatio="none" aria-hidden="true">
                     <path id="menu-linha-path" d="" fill="none" stroke="#f59e0b" stroke-width="1.2" vector-effect="non-scaling-stroke" stroke-linecap="round"/>
                 </svg>
                 <button data-act="tab" data-id="h" class="menu-item flex-1 flex flex-col items-center gap-1">
