@@ -2,7 +2,7 @@
 // Estes valores NÃO são segredo: a proteção dos dados é feita pelas regras do Firestore.
 self.FIREBASE_CONFIG = {
   apiKey: "AIzaSyA2AdNO_jA2qFWau_26QTuX5zdIfZ4Xndo",
-  authDomain: "promotor-ajudante.vercel.app",
+  authDomain: "promotor-ajudante.firebaseapp.com",
   projectId: "promotor-ajudante",
   storageBucket: "promotor-ajudante.firebasestorage.app",
   messagingSenderId: "1013089986545",

@@ -29,11 +29,5 @@
         }
       ]
     }
-  ],
-  "rewrites": [
-    {
-      "source": "/__/auth/:path*",
-      "destination": "https://promotor-ajudante.firebaseapp.com/__/auth/:path*"
-    }
   ]
 }
