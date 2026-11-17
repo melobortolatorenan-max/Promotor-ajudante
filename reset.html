@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Redefinir senha</title>
+<style>
+:root{--bg:#f6f7f5;--card:#fff;--ink:#1c2321;--muted:#5d6a66;--line:#d9dfdc;--accent:#0f766e;--accent-ink:#fff;--err:#b42318}
+@media (prefers-color-scheme:dark){:root{--bg:#121816;--card:#1a2220;--ink:#e8eeec;--muted:#9aa9a4;--line:#2d3a37;--accent:#2fb5a6;--accent-ink:#06201d;--err:#ff8a7a}}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:grid;place-items:center;padding:20px;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{width:100%;max-width:400px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:28px 24px}
+h1{font-size:1.4rem;line-height:1.2;margin:0 0 8px}
+p{margin:0 0 16px;color:var(--muted)}
+label{display:block;font-weight:600;font-size:.9rem;margin:14px 0 6px}
+input[type=password],input[type=text]{width:100%;font:inherit;padding:12px;border:1px solid var(--line);border-radius:10px;background:transparent;color:var(--ink)}
+.show{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:.9rem;color:var(--muted)}
+input:focus-visible,.btn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.btn{display:block;width:100%;margin-top:20px;padding:13px;border:0;border-radius:10px;background:var(--accent);color:var(--accent-ink);font:inherit;font-weight:600;text-align:center;text-decoration:none;cursor:pointer}
+.btn:disabled{opacity:.6;cursor:wait}
+.msg{margin:14px 0 0;font-size:.9rem;color:var(--err)}
+.code{font-size:.8rem;color:var(--muted);word-break:break-all}
+.email{font-weight:600;color:var(--ink);word-break:break-all}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main>
+  <section id="loading">
+    <h1>Verificando o link…</h1>
+    <p>Aguarde um instante.</p>
+  </section>
+
+  <section id="form" hidden>
+    <h1>Criar nova senha</h1>
+    <p>Conta: <span class="email" id="email"></span></p>
+    <form id="f" novalidate>
+      <label for="p1">Nova senha</label>
+      <input id="p1" type="password" autocomplete="new-password" minlength="6" required>
+      <label for="p2">Repita a nova senha</label>
+      <input id="p2" type="password" autocomplete="new-password" minlength="6" required>
+      <label class="show"><input id="show" type="checkbox"> Mostrar senhas</label>
+      <p class="msg" id="msg" role="alert"></p>
+      <button class="btn" id="save" type="submit">Salvar nova senha</button>
+    </form>
+  </section>
+
+  <section id="done" hidden>
+    <h1>Senha alterada</h1>
+    <p>Agora você já pode entrar no app com a nova senha.</p>
+    <a class="btn" href="/">Entrar no app</a>
+  </section>
+
+  <section id="error" hidden>
+    <h1 id="err-title"></h1>
+    <p id="err-text"></p>
+    <p class="code" id="err-code"></p>
+    <a class="btn" href="/">Voltar ao app</a>
+  </section>
+</main>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, verifyPasswordResetCode, confirmPasswordReset } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+const $ = id => document.getElementById(id);
+const params = new URLSearchParams(location.search);
+const mode = params.get("mode");
+const oobCode = params.get("oobCode");
+const apiKey = params.get("apiKey");
+
+const erros = {
+  "auth/expired-action-code": ["Link expirado", "Este link vale por 1 hora. Peça uma nova redefinição no app e abra o e-mail mais recente."],
+  "auth/invalid-action-code": ["Link já usado ou substituído", "Este link já foi usado, ou existe um e-mail mais novo. Abra o e-mail mais recente ou peça uma nova redefinição no app."],
+  "auth/user-disabled": ["Conta desativada", "Esta conta está desativada. Fale com o administrador do app."],
+  "auth/user-not-found": ["Conta não encontrada", "Não existe conta para este e-mail. Confira o cadastro no app."]
+};
+
+function show(id) {
+  ["loading", "form", "done", "error"].forEach(s => { $(s).hidden = s !== id; });
+}
+
+function fail(title, text, code) {
+  $("err-title").textContent = title;
+  $("err-text").textContent = text;
+  $("err-code").textContent = code ? "Código técnico: " + code : "";
+  show("error");
+}
+
+function falhaDoFirebase(e) {
+  const [t, m] = erros[e.code] || ["Não foi possível validar o link", "Peça uma nova redefinição no app e tente de novo."];
+  fail(t, m, e.code || String(e));
+}
+
+let auth;
+
+(async () => {
+  if (mode !== "resetPassword" || !oobCode || !apiKey) {
+    fail("Link incompleto", "Abra o link direto do e-mail, sem editar o endereço. Se copiou o link, confira se ele veio inteiro.");
+    return;
+  }
+  try {
+    auth = getAuth(initializeApp({ apiKey, authDomain: "promotor-ajudante.firebaseapp.com" }));
+    $("email").textContent = await verifyPasswordResetCode(auth, oobCode);
+    show("form");
+  } catch (e) {
+    console.error(e);
+    falhaDoFirebase(e);
+  }
+})();
+
+$("show").addEventListener("change", ev => {
+  const tipo = ev.target.checked ? "text" : "password";
+  $("p1").type = tipo;
+  $("p2").type = tipo;
+});
+
+$("f").addEventListener("submit", async ev => {
+  ev.preventDefault();
+  const p1 = $("p1").value;
+  const p2 = $("p2").value;
+  const msg = $("msg");
+  msg.textContent = "";
+  if (p1.length < 6) { msg.textContent = "A senha precisa ter pelo menos 6 caracteres."; return; }
+  if (p1 !== p2) { msg.textContent = "As senhas não são iguais."; return; }
+
+  const btn = $("save");
+  btn.disabled = true;
+  btn.textContent = "Salvando…";
+  try {
+    await confirmPasswordReset(auth, oobCode, p1);
+    show("done");
+  } catch (e) {
+    console.error(e);
+    btn.disabled = false;
+    btn.textContent = "Salvar nova senha";
+    if (e.code === "auth/weak-password") msg.textContent = "Senha fraca. Use pelo menos 6 caracteres.";
+    else if (erros[e.code]) falhaDoFirebase(e);
+    else msg.textContent = "Não foi possível salvar. Tente de novo.";
+  }
+});
+</script>
+</body>
+</html>
