@@ -1189,6 +1189,17 @@ document.addEventListener('error', (e) => {
             toast(status === 'aceito' ? 'Convite aceito. A agência já pode ver você.' : 'Convite recusado.');
         } catch (e) { console.error(e); toast('Não consegui responder ao convite.'); }
     }
+    // curva amarela do menu: fica embaixo do item selecionado
+    function moverCurvaMenu() {
+        const curva = document.getElementById('menu-curva');
+        const ativo = document.querySelector('.menu-item.ativa');
+        const bar = document.querySelector('#menu-inferior > div');
+        if (!curva || !ativo || !bar) return;
+        const r = ativo.getBoundingClientRect(), b = bar.getBoundingClientRect();
+        curva.style.left = (r.left - b.left + r.width / 2 - 28) + 'px';
+        curva.style.opacity = '1';
+    }
+    window.addEventListener('resize', moverCurvaMenu);
     function fecharLegal() { const box = $('#legal'); box.classList.add('hidden'); box.classList.remove('flex'); }
 
     /* ---- cobrança: acesso anual ---- */
@@ -1356,6 +1367,7 @@ document.addEventListener('error', (e) => {
 
     function desenhar(topo) {
         document.querySelectorAll('.nav-aba, .menu-item').forEach(b => b.classList.toggle('ativa', b.dataset.id === view.tab));
+        moverCurvaMenu();
         const naConta = view.tab === 'c' || view.tab === 'r' || view.tab === 'cap';
         const bc = $('#btn-conta'); if (bc) { bc.classList.toggle('text-amber-500', naConta); bc.classList.toggle('text-gray-500', !naConta); }
         const m = $('#corpo');
