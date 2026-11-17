@@ -2938,12 +2938,7 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
                 onMessage(messaging, (p) => { const n = p.notification || {}; aviso(esc(n.body || ''), { titulo: n.title || 'PROMOTOR AJUDANTE', soConfirmar: true }); });
             }
         } catch (e) { msgOk = false; console.warn(e); }
-        // Ao abrir o app, nunca entra direto: se existir sessão guardada, encerra e mostra a tela de login.
-        let primeiraVez = true;
-        onAuthStateChanged(auth, (user) => {
-            if (primeiraVez) { primeiraVez = false; if (user) { signOut(auth).catch(() => {}); aoSair(); return; } }
-            user ? entrar(user) : aoSair();
-        });
+        onAuthStateChanged(auth, (user) => user ? entrar(user) : aoSair());
     }
 
     lucide.createIcons();
