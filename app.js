@@ -17,7 +17,7 @@ document.addEventListener('error', (e) => {
         from "https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging.js";
 
     /* ================= utilidades ================= */
-    const VERSAO_APP = 'v56';
+    const VERSAO_APP = 'v57';
     document.getElementById('versao-login').textContent = VERSAO_APP;
     const API_BASE = 'https://promotor-ajudante.vercel.app';
     const SETORES = ['Bebidas', 'Doces', 'Higiene', 'Laticínios', 'Leites', 'Limpeza', 'Massas congeladas', 'Molhos', 'Pães', 'Salgadinhos', 'Temperos'];
@@ -1355,10 +1355,9 @@ document.addEventListener('error', (e) => {
     }
 
     function desenhar(topo) {
-        document.querySelectorAll('.nav-aba').forEach(b => b.classList.toggle('ativa', b.dataset.id === view.tab));
+        document.querySelectorAll('.nav-aba, .menu-item').forEach(b => b.classList.toggle('ativa', b.dataset.id === view.tab));
         const naConta = view.tab === 'c' || view.tab === 'r' || view.tab === 'cap';
-        $('#btn-conta').classList.toggle('text-amber-500', naConta);
-        $('#btn-conta').classList.toggle('text-gray-500', !naConta);
+        const bc = $('#btn-conta'); if (bc) { bc.classList.toggle('text-amber-500', naConta); bc.classList.toggle('text-gray-500', !naConta); }
         const m = $('#corpo');
         const st = m.scrollTop;
         let html = '';

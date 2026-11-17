@@ -32,6 +32,9 @@
         }
 
         .nav-aba.ativa { background-color: #f59e0b !important; color: #000000 !important; }
+        .menu-item .menu-icone { transition: transform .35s ease, background-color .35s ease, box-shadow .35s ease; }
+        .menu-item.ativa .menu-icone { background:#f59e0b; color:#000; transform:translateY(-16px); box-shadow:0 0 22px rgba(245,158,11,.55); }
+        .menu-item.ativa .menu-rotulo { color:#f59e0b; }
 
         .input-custom {
             width: 100%;
@@ -118,7 +121,7 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
     <section id="tela-carregando" class="secao ativa items-center justify-center p-6 text-center" style="background:#000000">
         <img src="logo.png" data-fallback-logo="1" class="w-16 h-16 mb-4" style="mix-blend-mode:lighten" alt="">
         <div id="carregando-txt" class="text-[10px] font-black uppercase tracking-widest text-gray-500">Carregando...</div>
-        <div class="text-[9px] text-gray-700 mt-3 font-bold">v55</div>
+        <div class="text-[9px] text-gray-700 mt-3 font-bold">v57</div>
     </section>
 
     <!-- CÓDIGOS DE BARRAS CADASTRADOS -->
@@ -262,26 +265,42 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
     <section id="tela-app" class="secao">
         <header class="p-4 border-b border-gray-800 bg-gray-950/80 sticky top-0 z-50" style="padding-top:max(1rem, env(safe-area-inset-top))">
             <div class="flex items-center justify-between mb-4">
-                <div class="flex items-center gap-3">
+                <button data-act="tab" data-id="h" class="flex items-center gap-3 text-left" aria-label="Ir para o início">
                     <img src="logo.png" data-fallback-logo="1" class="w-10 h-10" style="mix-blend-mode:lighten" alt="">
                     <div>
                         <h1 class="text-[9px] font-bold text-gray-500 uppercase tracking-widest leading-none">Promotor</h1>
                         <span class="text-xl font-black text-amber-500 uppercase italic leading-none">Ajudante</span>
                     </div>
-                </div>
+                </button>
                 <div class="flex items-center gap-1">
                     <button data-act="buscaAbrir" class="p-2 text-gray-500" aria-label="Buscar"><i data-lucide="search" class="w-5 h-5"></i></button>
-                    <button id="btn-conta" data-act="tab" data-id="c" class="p-2 text-gray-500" aria-label="Minha conta e notificações"><i data-lucide="settings" class="w-5 h-5"></i></button>
+                    <button data-act="novoVencido" class="p-2 rounded-xl border border-red-500/50 text-red-500" aria-label="Registrar vencido"><i data-lucide="package-x" class="w-5 h-5"></i></button>
+                    <button data-act="novoProdutoTopo" class="p-2 rounded-xl border border-amber-500/50 text-amber-500" aria-label="Cadastrar produto"><i data-lucide="package-plus" class="w-5 h-5"></i></button>
                 </div>
             </div>
-            <nav class="flex gap-1 bg-gray-900 p-1 rounded-2xl border border-gray-800">
-                <button data-act="tab" data-id="h" class="nav-aba flex-1 py-2 rounded-xl text-[9px] font-black uppercase">Início</button>
-                <button data-act="tab" data-id="l" class="nav-aba flex-1 py-2 rounded-xl text-[9px] font-black uppercase">Lojas</button>
-                <button data-act="tab" data-id="p" class="nav-aba flex-1 py-2 rounded-xl text-[9px] font-black uppercase">Produtos</button>
-            </nav>
         </header>
         <div id="faixa-conexao" class="hidden" role="status"></div>
         <main id="corpo" class="p-4 flex-1 overflow-y-auto no-scrollbar pb-24"></main>
+        <nav id="menu-inferior" class="fixed left-4 right-4 mx-auto max-w-md z-[60]" style="bottom:max(16px, env(safe-area-inset-bottom))">
+            <div class="flex items-end justify-between rounded-[28px] bg-[#0b0b0f] border border-gray-800 px-2 pt-5 pb-2 shadow-[0_12px_40px_rgba(0,0,0,0.7)]">
+                <button data-act="tab" data-id="h" class="menu-item flex-1 flex flex-col items-center gap-1">
+                    <span class="menu-icone w-11 h-11 rounded-full flex items-center justify-center text-gray-400"><i data-lucide="house" class="w-5 h-5"></i></span>
+                    <span class="menu-rotulo text-[9px] font-black uppercase text-gray-500">Início</span>
+                </button>
+                <button data-act="tab" data-id="l" class="menu-item flex-1 flex flex-col items-center gap-1">
+                    <span class="menu-icone w-11 h-11 rounded-full flex items-center justify-center text-gray-400"><i data-lucide="store" class="w-5 h-5"></i></span>
+                    <span class="menu-rotulo text-[9px] font-black uppercase text-gray-500">Lojas</span>
+                </button>
+                <button data-act="tab" data-id="p" class="menu-item flex-1 flex flex-col items-center gap-1">
+                    <span class="menu-icone w-11 h-11 rounded-full flex items-center justify-center text-gray-400"><i data-lucide="package" class="w-5 h-5"></i></span>
+                    <span class="menu-rotulo text-[9px] font-black uppercase text-gray-500">Produtos</span>
+                </button>
+                <button data-act="tab" data-id="c" class="menu-item flex-1 flex flex-col items-center gap-1">
+                    <span class="menu-icone w-11 h-11 rounded-full flex items-center justify-center text-gray-400"><i data-lucide="settings" class="w-5 h-5"></i></span>
+                    <span class="menu-rotulo text-[8px] font-black uppercase text-gray-500 whitespace-nowrap">Configurações</span>
+                </button>
+            </div>
+        </nav>
     </section>
 
     <div id="print-area" aria-hidden="true"></div>
