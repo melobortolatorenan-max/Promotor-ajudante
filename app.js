@@ -329,7 +329,8 @@ document.addEventListener('error', (e) => {
     let scanDestino = null;
     let planoLoja = null;
     let ultimoRegistro = null;
-    let superiores = [];         // superiores cadastrados (recebem o relatório semanal)
+    let superiores = [];
+    let convitesRecebidos = [];   // convites de agências para este promotor         // superiores cadastrados (recebem o relatório semanal)
     let supEdit = null;          // null = lista; 'novo' ou id = formulário
     let visitas = [];            // visitas registradas (loja, data e hora)   // último cadastro de produto feito nesta sessão (para desfazer)        // loja aberta no planograma      // 'busca' quando a leitura serve para a busca        // 'imprimir' ou 'compartilhar' (vale para o próximo relatório)
     let filtroSetor = '';            // filtro de setor na lista de produtos da marca
@@ -1038,12 +1039,29 @@ document.addEventListener('error', (e) => {
         try {
             if (supEdit === 'novo') await addDoc(collection(db, 'users', uid, 'superiores'), dados);
             else await setDoc(doc(db, 'users', uid, 'superiores', supEdit), dados, { merge: true });
+            // se trocou o e-mail do superior, o vínculo antigo sai
+            const antigo = supEdit !== 'novo' ? superiores.find(x => x.id === supEdit) : null;
+            if (antigo && antigo.email && antigo.email.toLowerCase() !== dados.email.toLowerCase()) {
+                await deleteDoc(doc(db, 'vinculos', antigo.email.toLowerCase(), 'promotores', uid)).catch(() => {});
+            }
+            await sincronizarVinculo(dados.email, total === 1 ? marcasUnicas() : marcas);
             supEdit = null;
             superioresRender();
         } catch (e) { erroDb(e); }
     }
     function superiorExcluir(id) {
-        aviso('Excluir este superior? Ele deixa de receber o relatório.', { ok: () => deleteDoc(doc(db, 'users', uid, 'superiores', id)).catch(erroDb) });
+        const sup = superiores.find(x => x.id === id);
+        aviso('Excluir este superior? Ele deixa de receber o relatório.', {
+            ok: () => deleteDoc(doc(db, 'users', uid, 'superiores', id))
+                .then(() => (sup && sup.email ? deleteDoc(doc(db, 'vinculos', sup.email.toLowerCase(), 'promotores', uid)) : null))
+                .catch(erroDb),
+        });
+    }
+    // vínculo do promotor com o e-mail do superior (a agência lê por este caminho)
+    async function sincronizarVinculo(email, marcasEscolhidas) {
+        const id = String(email).trim().toLowerCase();
+        const nome = (perfilAcesso && perfilAcesso.nome) || (userInfo && userInfo.displayName) || (userInfo && userInfo.email) || 'Promotor';
+        await setDoc(doc(db, 'vinculos', id, 'promotores', uid), { nome, marcas: marcasEscolhidas, atualizadoEm: serverTimestamp() }, { merge: true });
     }
     function relatorioSalvar() {
         const dia = Number($('#rel-dia').value), hora = Number($('#rel-hora').value);
@@ -1131,6 +1149,45 @@ document.addEventListener('error', (e) => {
             console.error('escolher endereço:', e);
             aviso('Não consegui pegar esse endereço. Tente de novo.', { soConfirmar: true });
         }
+    }
+    /* ---- convites de agência ---- */
+    function convitePendente(c) {
+        if (c.status !== 'pendente') return false;
+        const exp = c.expiraEm && c.expiraEm.toDate ? c.expiraEm.toDate() : null;
+        return !exp || exp > new Date();
+    }
+    function convitesPendentes() { return convitesRecebidos.filter(convitePendente); }
+    function htmlConvites() {
+        const lista = convitesPendentes();
+        if (!lista.length) return '';
+        return `<div class="card-app p-4 mb-3">
+            <div class="text-[9px] text-gray-500 font-black uppercase mb-3">Convites de agência</div>
+            ${lista.map(c => `<div class="mb-3">
+                <div class="text-white font-bold text-sm">${esc(c.agenciaNome || 'Agência')}</div>
+                <div class="text-gray-500 text-[11px] mb-2">${esc(c.agenciaEmail || '')}</div>
+                <div class="grid grid-cols-2 gap-2">
+                    <button data-act="conviteAceitar" data-agencia="${esc(c.agenciaUid)}" class="py-2 rounded-xl bg-amber-500 text-black text-[10px] font-black uppercase">Aceitar</button>
+                    <button data-act="conviteRecusar" data-agencia="${esc(c.agenciaUid)}" class="py-2 rounded-xl border border-gray-700 text-gray-300 text-[10px] font-black uppercase">Recusar</button>
+                </div></div>`).join('')}
+        </div>`;
+    }
+    function nomeDoPromotor() {
+        return (perfilAcesso && perfilAcesso.nome) || (userInfo && userInfo.displayName) || (userInfo && userInfo.email) || 'Promotor';
+    }
+    async function conviteResponder(agenciaUid, status) {
+        const c = convitesRecebidos.find(x => x.agenciaUid === agenciaUid && convitePendente(x));
+        if (!c) return;
+        const emailProm = (userInfo.email || '').toLowerCase();
+        try {
+            if (status === 'aceito') {
+                // o promotor cria o vínculo com o e-mail da agência, e a agência passa a vê-lo
+                await setDoc(doc(db, 'vinculos', c.agenciaEmail.toLowerCase(), 'promotores', uid),
+                    { nome: nomeDoPromotor(), marcas: marcasUnicas(), atualizadoEm: serverTimestamp() }, { merge: true });
+            }
+            await updateDoc(doc(db, 'convites', emailProm, 'pedidos', agenciaUid), { status, respondidoEm: serverTimestamp() });
+            await updateDoc(doc(db, 'agencias', agenciaUid, 'convites', emailProm), { status, respondidoEm: serverTimestamp() }).catch(() => {});
+            toast(status === 'aceito' ? 'Convite aceito. A agência já pode ver você.' : 'Convite recusado.');
+        } catch (e) { console.error(e); toast('Não consegui responder ao convite.'); }
     }
     function fecharLegal() { const box = $('#legal'); box.classList.add('hidden'); box.classList.remove('flex'); }
 
@@ -1425,6 +1482,7 @@ document.addEventListener('error', (e) => {
         }).join('');
         return `
             ${htmlBannerPlano()}
+            ${convitesPendentes().length ? `<button data-act="verConvites" class="w-full mb-3 p-3 rounded-2xl border border-amber-500 text-amber-500 text-[11px] font-black uppercase">Você tem ${convitesPendentes().length} convite(s) de agência · ver</button>` : ''}
             ${htmlResumoTopo()}
             <div class="grid grid-cols-2 gap-2 mb-3">
                 <button data-act="novoVencido" class="py-3 rounded-2xl border border-red-500/50 text-red-500 text-[10px] font-black uppercase">+ Vencido</button>
@@ -1813,6 +1871,7 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
             ${htmlAcaoCard('Dados', 'Exportar planilha', 'Produtos e vencidos em CSV', 'exportarDados')}
             ${htmlAcaoCard('Lojas', 'Planograma lojas', lojas.length + ' lojas', 'planogramaAbrir')}
             ${htmlAcaoCard('Resumo', 'Resumo do dia', 'Retiradas e cadastros por dia', 'resumoAbrir')}
+            ${htmlConvites()}
             ${htmlAcaoCard('Rota', 'Rota do dia', 'Ordem das lojas de hoje, pela distância', 'abrirRota')}
             ${htmlAcaoCard('Relatório', 'Superiores e relatório semanal', superiores.length + ' superiores', 'superioresAbrir')}
             ${htmlAvaliacao()}
@@ -2178,6 +2237,9 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
         scanFechar: () => { scanDestino = null; leitorFechar(); },
         lerCodigoBusca: () => { scanDestino = 'busca'; lerCodigo(); },
         excluirConta: () => confirmarExclusao(),
+        verConvites: () => ir('c'),
+        conviteAceitar: (d) => conviteResponder(d.agencia, 'aceito'),
+        conviteRecusar: (d) => conviteResponder(d.agencia, 'recusado'),
         pdvEscolherLoja: (d) => pdvEscolherLoja(d.id),
         pdvLojaFechar: () => pdvLojaCancelar(),
         pdvTrocarLoja: () => pdvListaLojas(null),
@@ -2806,6 +2868,12 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
             visitas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
             if (view.tab === 'l' || view.tab === 'c' || view.tab === 'h') desenhar(false);
         }));
+        if (userInfo && userInfo.email) {
+            unsubs.push(onSnapshot(collection(db, 'convites', userInfo.email.toLowerCase(), 'pedidos'), (snap) => {
+                convitesRecebidos = snap.docs.map(d => ({ agenciaUid: d.id, ...d.data() }));
+                if (view.tab === 'h' || view.tab === 'c') desenhar(false);
+            }));
+        }
         unsubs.push(onSnapshot(collection(db, 'users', uid, 'superiores'), (snap) => {
             superiores = snap.docs.map(d => ({ id: d.id, ...d.data() }));
             if (!$('#superiores').classList.contains('hidden')) superioresRender();
