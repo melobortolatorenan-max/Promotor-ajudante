@@ -1260,7 +1260,7 @@ document.addEventListener('error', (e) => {
 
     /* ---- cobrança: acesso anual ---- */
     const PAGAMENTO_LINK = 'https://mpago.la/1Vi3SVH';
-    const PRECO_ANUAL = 'R$ 50,00';
+    const PRECO_ANUAL = 510;   // valor do plano anual (15% de desconto sobre 12 × R$ 50,00)
     const DATA_CORTE = new Date('2026-11-07T18:00:00-03:00');   // contas criadas ANTES desta data continuam grátis
     let contaAntiga = false, perfilAcesso = {}, appAberto = false;
     let diasAviso = [2, 3, 5];   // dias antes do vencimento em que o promotor quer ser avisado (1 a 5)
