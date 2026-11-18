@@ -1,0 +1,27 @@
+name: Iniciar teste gratis (migracao)
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'true = só simula (padrão)'
+        default: 'true'
+
+jobs:
+  migrar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Instalar dependências
+        working-directory: scripts
+        run: npm install --omit=dev --no-audit --no-fund
+      - name: Iniciar teste das contas grátis
+        working-directory: scripts
+        run: node iniciar-teste-gratis.js
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'true' }}
