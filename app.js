@@ -1583,14 +1583,14 @@ document.addEventListener('error', (e) => {
         const n = ativas.length, feitas = feitasIds.size, faltam = n - feitas;
         const total = previstas.length;
         const pos = (i) => ((i + 1) / (total + 1)) * 100;
-        // a linha cresce até a última loja feita (na ordem da rota)
-        let ultimaFeita = -1;
-        previstas.forEach((l, i) => { if (feitasIds.has(l.id)) ultimaFeita = i; });
-        const progresso = n === 0 ? 0 : feitas === n ? 100 : (ultimaFeita >= 0 ? pos(ultimaFeita) : 0);
-        const caixas = previstas.map((l, i) => {
+        // sequência fixa: primeiro as lojas que ainda vão ser visitadas, depois as lojas sem visita (vermelho)
+        const seq = [...ativas, ...previstas.filter(l => semIds.has(l.id))];
+        // quadros acendem em ordem: a 1ª visita feita acende o 1º quadro, a 2ª acende o 2º, e assim por diante
+        const progresso = n === 0 ? 0 : feitas === n ? 100 : (feitas > 0 ? pos(feitas - 1) : 0);
+        const caixas = seq.map((l, i) => {
             if (semIds.has(l.id)) return `<div class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-[3px] bg-red-600 shadow-[0_0_8px_rgba(220,38,38,0.6)]" style="left:${pos(i)}%" title="Sem visita"></div>`;
-            const feita = feitasIds.has(l.id);
-            return `<div class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-[3px] ${feita ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]' : 'bg-gray-800 border border-gray-600'}" style="left:${pos(i)}%"></div>`;
+            const acesa = i < feitas;
+            return `<div class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-[3px] ${acesa ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]' : 'bg-gray-800 border border-gray-600'}" style="left:${pos(i)}%"></div>`;
         }).join('');
         return `<div class="card-app mb-4 p-4 rounded-[22px]">
             <div class="flex items-center justify-between gap-3">
@@ -1744,7 +1744,7 @@ document.addEventListener('error', (e) => {
                 let acao = '';
                 if (i.semHoje) acao = `<span class="px-3 py-2 rounded-xl bg-red-600/20 border border-red-600 text-red-400 text-[10px] font-black uppercase">Sem visita hoje</span>`;
                 else if (i.visitouHoje) acao = `<span class="px-3 py-2 rounded-xl border border-green-500/60 text-green-400 text-[10px] font-black uppercase">✓ Visitada hoje às ${i.visitouHoje.hora}</span>`;
-                else if (i.atendeHoje) acao = `<div class="flex flex-wrap gap-2"><button data-act="visitaRegistrar" data-id="${esc(l.id)}" class="px-3 py-2 rounded-xl bg-amber-500 text-gray-950 text-[10px] font-black uppercase">Registrar visita</button><button data-act="semVisitaAbrir" data-id="${esc(l.id)}" class="px-3 py-2 rounded-xl bg-red-600 text-white text-[10px] font-black uppercase">Sem visita hoje</button></div>`;
+                else if (i.atendeHoje) acao = `<div class="flex flex-wrap gap-2"><button data-act="visitaRegistrar" data-id="${esc(l.id)}" class="px-3 py-1.5 rounded-lg border border-amber-500/70 text-amber-500 text-[10px] font-black uppercase">Registrar visita</button><button data-act="semVisitaAbrir" data-id="${esc(l.id)}" class="px-3 py-1.5 rounded-lg border border-red-600/60 text-red-400 text-[10px] font-black uppercase">Sem visita hoje</button></div>`;
                 let aviso = '';
                 if (!i.dias.length) aviso = '<div class="text-[10px] text-gray-500 mt-2">Defina os dias de visita abaixo.</div>';
                 else if (!i.atendeHoje && i.proximo) {
