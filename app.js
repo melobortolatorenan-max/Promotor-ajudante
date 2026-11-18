@@ -698,11 +698,11 @@ document.addEventListener('error', (e) => {
     }
     // Tabela de códigos cadastrados: produto, marca, imagem do código e número (ordem alfabética)
     function codigosAbrir() {
-        const b = $('#codigos'); b.classList.remove('hidden'); b.classList.add('flex');
+        const b = $('#codigos'); b.classList.remove('hidden'); b.classList.add('flex'); b.style.display = 'flex';
         $('#codigos-tab').innerHTML = htmlCodigos();
         lucide.createIcons();
     }
-    function codigosFechar() { const b = $('#codigos'); b.classList.add('hidden'); b.classList.remove('flex'); }
+    function codigosFechar() { const b = $('#codigos'); b.classList.add('hidden'); b.classList.remove('flex'); b.style.display = 'none'; }
     // Desenha o código de barras EAN-13 (ou UPC-A/EAN-8 convertidos) a partir do número, para itens sem foto
     function gerarBarrasSvg(codigo) {
         let c = String(codigo || '').replace(/\D/g, '');
