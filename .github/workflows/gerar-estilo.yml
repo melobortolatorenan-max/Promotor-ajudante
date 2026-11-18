@@ -3,7 +3,7 @@ name: Gerar estilo
 on:
   push:
     branches: [main]
-    paths: ['index.html', 'app.js', 'vigia.js', 'rota.html', 'rota.js', 'input-estilo.css', 'tailwind.config.js']
+    paths: ['index.html', 'app.js', 'vigia.js', 'rota.html', 'rota.js', 'estilo/input-estilo.css', 'estilo/tailwind.config.js']
   workflow_dispatch:
 
 permissions:
@@ -18,7 +18,7 @@ jobs:
         with:
           node-version: 20
       - name: Gerar styles.css
-        run: npx --yes tailwindcss@3.4.17 -i input-estilo.css -o styles.css --minify
+        run: npx --yes tailwindcss@3.4.17 -c estilo/tailwind.config.js -i estilo/input-estilo.css -o styles.css --minify
       - name: Salvar styles.css no repositório
         run: |
           git config user.name "github-actions"
