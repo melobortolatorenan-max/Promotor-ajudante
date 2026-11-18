@@ -10,15 +10,14 @@ try {
   firebase.messaging();   // com o app fechado, o Firebase exibe a notificação e abre o link ao tocar
 } catch (e) { /* aparelho sem suporte a notificações: o app continua funcionando normalmente */ }
 
-const CACHE = 'promotor-ajudante-v6';
+const CACHE = 'promotor-ajudante-v7';
 const ESPERA_REDE_MS = 3000;   // com sinal fraco, depois de 3 s usa a cópia guardada no aparelho
 
 // Arquivos do próprio app (sempre tenta a internet primeiro, para pegar atualizações)
-const LOCAIS = ['./', 'index.html', 'app.js', 'regras.mjs', 'vigia.js', 'firebase-config.js', 'manifest.json', 'logo.png'];
+const LOCAIS = ['./', 'index.html', 'styles.css', 'app.js', 'regras.mjs', 'vigia.js', 'firebase-config.js', 'manifest.json', 'logo.png'];
 // Bibliotecas externas com versão fixa (ficam guardadas e abrem na hora)
-const HOSTS_CDN = ['cdn.tailwindcss.com', 'unpkg.com', 'www.gstatic.com', 'fonts.googleapis.com', 'fonts.gstatic.com', 'raw.githubusercontent.com'];
+const HOSTS_CDN = ['unpkg.com', 'www.gstatic.com', 'fonts.googleapis.com', 'fonts.gstatic.com', 'raw.githubusercontent.com'];
 const CDN = [
-  'https://cdn.tailwindcss.com/3.4.17',
   'https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js',
   'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js',
   'https://www.gstatic.com/firebasejs/10.14.1/firebase-app-check.js',
