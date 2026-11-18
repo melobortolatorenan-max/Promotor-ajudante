@@ -1,17 +1,62 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
+    <title>Promotor Ajudante | Vencidos e rota para promotores em Florianópolis</title>
+    <meta name="description" content="App para promotores de vendas controlarem vencidos, visitas e a rota do dia. Feito pela Melo Staff, em Florianópolis/SC. Teste grátis de 60 dias.">
+    <link rel="canonical" href="https://promotor-ajudante.vercel.app/">
+    <meta property="og:title" content="Promotor Ajudante | Vencidos e rota para promotores em Florianópolis">
+    <meta property="og:description" content="App para promotores de vendas controlarem vencidos, visitas e a rota do dia. Feito pela Melo Staff, em Florianópolis/SC. Teste grátis de 60 dias.">
+    <meta property="og:url" content="https://promotor-ajudante.vercel.app/">
+    <meta property="og:locale" content="pt_BR">
+    <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Promotor Ajudante",
+  "applicationCategory": "BusinessApplication",
+  "operatingSystem": "Android, Web",
+  "url": "https://promotor-ajudante.vercel.app/",
+  "inLanguage": "pt-BR",
+  "description": "Controle de vencidos, visitas e rota do dia para promotores de vendas.",
+  "offers": [
+    {
+      "@type": "Offer",
+      "name": "Plano mensal",
+      "price": "50.00",
+      "priceCurrency": "BRL",
+      "url": "https://promotor-ajudante.vercel.app/"
+    },
+    {
+      "@type": "Offer",
+      "name": "Plano anual",
+      "price": "510.00",
+      "priceCurrency": "BRL",
+      "url": "https://promotor-ajudante.vercel.app/"
+    }
+  ],
+  "provider": {
+    "@type": "Organization",
+    "name": "Melo Staff",
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "Florianópolis",
+      "addressRegion": "SC",
+      "addressCountry": "BR"
+    }
+  }
+}</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <script src="vigia.js"></script>
     <meta name="theme-color" content="#000000">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="logo.png">
-    <title>Promotor Ajudante Pro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
     <link rel="stylesheet" href="styles.css">
-    <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap">
+    <script defer src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
 
         body {
             font-family: 'Inter', sans-serif;
@@ -121,7 +166,7 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
 
     <!-- CARREGANDO / CONFIGURAÇÃO -->
     <section id="tela-carregando" class="secao ativa items-center justify-center p-6 text-center" style="background:#000000">
-        <img src="robo.png" class="mb-4 object-contain" style="width:224px;max-width:70vw;height:auto" alt="Robô Ajudante">
+        <img src="robo.png" decoding="async" class="mb-4 object-contain" style="width:224px;max-width:70vw;height:auto" alt="Robô Ajudante">
         <div id="carregando-txt" class="text-[10px] font-black uppercase tracking-widest text-gray-500">Carregando...</div>
         <div class="text-[9px] text-gray-700 mt-3 font-bold">v57</div>
     </section>
@@ -215,7 +260,7 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
     <section id="tela-auth" class="secao overflow-y-auto no-scrollbar">
         <div class="m-auto w-full max-w-sm p-6">
             <div class="flex flex-col items-center gap-1 mb-6 text-center">
-                <img src="robo.png" class="object-contain" style="width:176px;max-width:60vw;height:auto" alt="Robô Ajudante">
+                <img src="robo.png" loading="lazy" decoding="async" class="object-contain" style="width:176px;max-width:60vw;height:auto" alt="Robô Ajudante">
                 <div>
                     <h1 class="text-[10px] font-bold text-gray-500 uppercase tracking-[0.3em] leading-none">Promotor</h1>
                     <span class="text-3xl font-black text-amber-500 uppercase italic leading-none">Ajudante</span>
@@ -284,8 +329,8 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
         <div id="faixa-conexao" class="hidden" role="status"></div>
         <main id="corpo" class="p-4 flex-1 overflow-y-auto no-scrollbar pb-24"></main>
         <nav id="menu-inferior" class="fixed left-4 right-4 mx-auto max-w-md z-[60]" style="bottom:max(16px, env(safe-area-inset-bottom))">
-            <div class="relative flex items-end justify-between rounded-[24px] bg-[#0b0b0f] border border-gray-800 px-2 pt-2.5 pb-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.7)]">
-                <svg id="menu-linha" class="absolute top-0 left-6 right-6 h-2 pointer-events-none" preserveAspectRatio="none" aria-hidden="true">
+            <div class="relative flex items-end justify-between rounded-[24px] bg-[#0b0b0f] border border-gray-800 px-2 pt-2.5 pb-3 shadow-[0_10px_30px_rgba(0,0,0,0.7)]">
+                <svg id="menu-linha" class="absolute bottom-0 left-6 right-6 h-2 pointer-events-none" preserveAspectRatio="none" aria-hidden="true">
                     <path id="menu-linha-path" d="" fill="none" stroke="#f59e0b" stroke-width="1.2" vector-effect="non-scaling-stroke" stroke-linecap="round"/>
                 </svg>
                 <button data-act="tab" data-id="h" class="menu-item flex-1 flex flex-col items-center gap-1">
