@@ -17,7 +17,7 @@ document.addEventListener('error', (e) => {
         from "https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging.js";
 
     /* ================= utilidades ================= */
-    const VERSAO_APP = 'v57';
+    const VERSAO_APP = 'v58';
     document.getElementById('versao-login').textContent = VERSAO_APP;
     const API_BASE = 'https://promotor-ajudante.vercel.app';
     const SETORES = ['Bebidas', 'Doces', 'Higiene', 'Laticínios', 'Leites', 'Limpeza', 'Massas congeladas', 'Molhos', 'Pães', 'Salgadinhos', 'Temperos'];
@@ -2164,13 +2164,13 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
             const btn = $('#a-btn'); btn.disabled = true;
             try {
                 if (modoCriar) {
-                    const cred = await createUserWithEmailAndPassword(auth, email, senha);
+                    const cred = await comTempo(createUserWithEmailAndPassword(auth, email, senha));
                     await updateProfile(cred.user, { displayName: nome });
                     await setDoc(doc(db, 'users', cred.user.uid), { nome, email, criadoEm: serverTimestamp(), aceitouTermosEm: serverTimestamp(), versaoTermos: VERSAO_TERMOS }, { merge: true });
                 } else {
-                    await signInWithEmailAndPassword(auth, email, senha);
+                    await comTempo(signInWithEmailAndPassword(auth, email, senha));
                 }
-            } catch (e) { erro.textContent = msgAuth(e); }
+            } catch (e) { console.warn('login:', e); erro.textContent = msgAuth(e); }
             btn.disabled = false;
         },
         authGoogle: async () => {
@@ -2184,8 +2184,12 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
         authReset: async () => {
             const email = $('#a-email').value.trim(), erro = $('#a-erro');
             if (!email) { erro.textContent = 'Digite seu e-mail acima e toque de novo.'; return; }
-            try { await sendPasswordResetEmail(auth, email); erro.className = erro.className.replace('text-red-500', 'text-amber-500'); erro.textContent = 'Enviamos um link para redefinir a senha no seu e-mail.'; }
-            catch (e) { erro.className = erro.className.replace('text-amber-500', 'text-red-500'); erro.textContent = msgAuth(e); }
+            if (resetEmCurso) return;
+            resetEmCurso = true;
+            erro.className = erro.className.replace('text-red-500', 'text-amber-500'); erro.textContent = 'Enviando…';
+            try { await comTempo(sendPasswordResetEmail(auth, email)); erro.className = erro.className.replace('text-red-500', 'text-amber-500'); erro.textContent = 'Enviamos um link para redefinir a senha no seu e-mail.'; }
+            catch (e) { console.warn('reset:', e); erro.className = erro.className.replace('text-amber-500', 'text-red-500'); erro.textContent = msgAuth(e); }
+            finally { resetEmCurso = false; }
         },
         alternarDia: (d) => {
             const n = Number(d.dia); if (!(n >= 1 && n <= 5)) return;
@@ -2401,8 +2405,13 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
         acoes[el.dataset.act](el.dataset);
     });
 
+    // Se o Firebase não responder em 20 s, o botão é liberado e aparece um aviso (antes ficava travado sem mensagem)
+    let resetEmCurso = false;
+    const comTempo = (p, ms = 20000) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej({ code: 'app/timeout' }), ms))]);
+
     function msgAuth(e) {
         const m = {
+            'app/timeout': 'O servidor não respondeu. Confira a internet e tente de novo.',
             'auth/invalid-credential': 'E-mail ou senha incorretos.',
             'auth/wrong-password': 'E-mail ou senha incorretos.',
             'auth/user-not-found': 'E-mail ou senha incorretos.',
@@ -2418,7 +2427,8 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
             'auth/operation-not-allowed': 'O login com Google ainda não foi ativado no Firebase.',
             'auth/account-exists-with-different-credential': 'Já existe uma conta com este e-mail. Entre com e-mail e senha.',
         };
-        return e.code in m ? m[e.code] : 'Não foi possível concluir. Tente novamente.';
+        const c = (e && e.code) || '';
+        return c in m ? m[c] : 'Não foi possível concluir' + (c ? ' (' + c + ')' : '') + '. Tente novamente.';
     }
 
     /* ================= calendário: até 3 datas para o relatório de vencidos ================= */
@@ -2922,6 +2932,7 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
         // App Check: envia uma prova de que a requisição vem do app (reCAPTCHA Enterprise).
         // Chave do site é pública. No console, deixar o Firestore em "Monitorar" até validar.
         try {
+            if (new URLSearchParams(location.search).has('semappcheck')) throw new Error('App Check desligado pelo teste (?semappcheck)');
             initializeAppCheck(app, { provider: new ReCaptchaEnterpriseProvider('6LcP7h8uAAAAAEiq9TNzUbJVIsWf9t4R_lIbhv2h'), isTokenAutoRefreshEnabled: true });
         } catch (e) { console.warn('App Check indisponível:', e); }
         auth = getAuth(app);
