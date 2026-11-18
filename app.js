@@ -71,7 +71,7 @@ document.addEventListener('error', (e) => {
         if (!l || !uid) return;
         if (!infoDiaLoja(l).atendeHoje) return;   // fora do dia de atendimento não conta como visita
         const hoje = isoLocal(new Date()), chave = `${lojaId}|${hoje}`;
-        if (visitasMarcadasSessao.has(chave) || visitas.some(v => v.lojaId === lojaId && v.data === hoje)) return;
+        if (visitasMarcadasSessao.has(chave) || visitas.some(v => v.lojaId === lojaId && v.data === hoje && !v.semVisita)) return;
         visitasMarcadasSessao.add(chave);
         const ag = new Date();
         addDoc(collection(db, 'users', uid, 'visitas'), { lojaId, lojaNome: l.nome, data: hoje, hora: `${String(ag.getHours()).padStart(2, '0')}:${String(ag.getMinutes()).padStart(2, '0')}`, criadoEm: serverTimestamp() })
@@ -574,6 +574,74 @@ document.addEventListener('error', (e) => {
             + '</div>';
     }
     function abrirImpressaoVenc(titulo, html) { return abrirImpressao(titulo, html + htmlResumoVencidos(ultimaListaVenc)); }
+    // ---- bloco de notas: fica salvo neste aparelho por 12 horas ----
+    const NOTAS_MS = 12 * 60 * 60 * 1000;
+    const chaveNotas = () => 'notas_' + (uid || 'local');
+    function notasLer() {
+        try {
+            const r = JSON.parse(localStorage.getItem(chaveNotas()) || 'null');
+            if (!r || Date.now() - r.salvoEm > NOTAS_MS) { localStorage.removeItem(chaveNotas()); return ''; }
+            return r.texto || '';
+        } catch (e) { return ''; }
+    }
+    function notasAbrir() {
+        notasFechar();
+        const ov = document.createElement('div');
+        ov.id = 'notas-ov';
+        ov.className = 'fixed inset-0 z-[95] bg-black overflow-y-auto p-4';
+        ov.innerHTML = `<div class="w-full max-w-md mx-auto pb-10">
+            <h1 class="font-black italic uppercase text-amber-500 text-2xl leading-tight mb-2">Anote suas idéias</h1>
+            <p class="text-[12px] text-gray-300 mb-4">As informações ficam salvas por <b class="text-red-500">12 horas</b>.</p>
+            <textarea id="notas-txt" class="w-full min-h-[55vh] rounded-2xl bg-[#111827] border border-gray-800 text-white p-4 text-[14px] outline-none"></textarea>
+            <button data-act="notasSalvar" class="btn-amarelo mt-4">SALVAR</button>
+            <p class="text-[12px] text-gray-300 mt-4 text-center">As informações ficam salvas por <b class="text-red-500">12 horas</b>.</p>
+            <button data-act="notasFechar" class="w-full py-3 mt-2 text-[10px] font-black uppercase text-gray-500">Voltar</button>
+        </div>`;
+        document.body.appendChild(ov);
+        document.getElementById('notas-txt').value = notasLer();
+    }
+    function notasFechar() { const ov = document.getElementById('notas-ov'); if (ov) ov.remove(); }
+    function notasSalvar() {
+        const t = document.getElementById('notas-txt');
+        localStorage.setItem(chaveNotas(), JSON.stringify({ texto: t.value, salvoEm: Date.now() }));
+        toast('Anotação salva. Fica guardada por 12 horas.');
+    }
+    // ---- sem visita hoje: motivo obrigatório ----
+    function semVisitaAbrir(lojaId) {
+        const l = lojas.find(x => x.id === lojaId); if (!l) return;
+        const ov = document.createElement('div');
+        ov.id = 'sv-ov';
+        ov.dataset.id = lojaId;
+        ov.className = 'fixed inset-0 z-[95] bg-black/90 flex items-center justify-center p-4';
+        ov.innerHTML = `<div class="w-full max-w-sm card-app p-5">
+            <div class="text-[9px] text-gray-500 font-black uppercase mb-1">Sem visita hoje</div>
+            <div class="text-white font-black italic uppercase text-lg mb-3">${esc(l.nome)}</div>
+            <label class="text-[11px] text-gray-300 font-bold">Motivo (obrigatório)</label>
+            <textarea id="sv-motivo" class="w-full min-h-[120px] mt-2 rounded-xl bg-[#111827] border border-gray-800 text-white p-3 text-[13px] outline-none" placeholder="Ex.: loja fechada, reposição não feita"></textarea>
+            <button data-act="semVisitaSalvar" class="btn-amarelo mt-4">SALVAR</button>
+            <button data-act="svFechar" class="w-full py-3 mt-2 text-[10px] font-black uppercase text-gray-500">Cancelar</button>
+        </div>`;
+        document.body.appendChild(ov);
+        setTimeout(() => document.getElementById('sv-motivo').focus(), 50);
+    }
+    function svFechar() { const ov = document.getElementById('sv-ov'); if (ov) ov.remove(); }
+    async function semVisitaSalvar() {
+        const ov = document.getElementById('sv-ov'); if (!ov) return;
+        const motivo = document.getElementById('sv-motivo').value.trim();
+        if (!motivo) { aviso('Informe o motivo para continuar.', { soConfirmar: true }); return; }
+        const l = lojas.find(x => x.id === ov.dataset.id);
+        if (!l || !uid) return;
+        const ag = new Date();
+        try {
+            await addDoc(collection(db, 'users', uid, 'visitas'), {
+                lojaId: l.id, lojaNome: l.nome, data: isoLocal(ag),
+                hora: `${String(ag.getHours()).padStart(2, '0')}:${String(ag.getMinutes()).padStart(2, '0')}`,
+                semVisita: true, motivo, criadoEm: serverTimestamp(),
+            });
+            svFechar();
+            toast('Sem visita registrada: ' + esc(l.nome));
+        } catch (e) { erroDb(e); }
+    }
     // ---- planos ----
     const PRECO_MENSAL = 50;
     const fimTesteISO = () => { if (!criadaEm) return null; const d = new Date(criadaEm); d.setDate(d.getDate() + 60); return isoLocal(d); };
@@ -787,7 +855,7 @@ document.addEventListener('error', (e) => {
             const atual = porCodigo.get(p.codigo);
             if (!atual || (p.fotoCodigo && !atual.fotoCodigo)) porCodigo.set(p.codigo, p);
         });
-        const marcaDe = (p) => { const l = lojas.find(x => x.id === p.lojaId); const m = l && (l.marcas || []).find(x => x.id === p.marcaId); return m ? String(m.nome).trim() : '—'; };
+        const marcaDe = (p) => { const l = lojas.find(x => x.id === p.lojaId); const m = l && (l.marcas || []).find(x => x.id === p.marcaId); return m ? String(m.nome).trim() : '-'; };
         // ordem: marca (alfabética) e, dentro da marca, nome (alfabética)
         const lista = [...porCodigo.values()].sort((a, b) => marcaDe(a).localeCompare(marcaDe(b), 'pt-BR') || a.nome.localeCompare(b.nome, 'pt-BR'));
         if (!lista.length) return '<p class="text-gray-500 text-[11px]">Nenhum código cadastrado ainda.</p>';
@@ -1131,7 +1199,7 @@ document.addEventListener('error', (e) => {
         const gravar = () => addDoc(collection(db, 'users', uid, 'visitas'), { lojaId, lojaNome: l.nome, data, hora, criadoEm: serverTimestamp() })
             .then(() => aviso(`Visita registrada em <b>${esc(l.nome)}</b> às ${hora}.`, { soConfirmar: true }))
             .catch(erroDb);
-        if (visitas.some(v => v.lojaId === lojaId && v.data === data)) {
+        if (visitas.some(v => v.lojaId === lojaId && v.data === data && !v.semVisita)) {
             return aviso(`Você já registrou visita nesta loja hoje. Registrar outra?`, { titulo: 'VISITA', okTexto: 'Registrar', ok: gravar });
         }
         gravar();
@@ -1141,10 +1209,11 @@ document.addEventListener('error', (e) => {
         const hoje = isoLocal(new Date()), dias = diasDaLoja(l), diaSemana = new Date().getDay();
         const nomes = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
         const atendeHoje = dias.includes(diaSemana);
-        const visitouHoje = atendeHoje ? visitas.filter(v => v.lojaId === l.id && v.data === hoje).sort((x, y) => x.hora.localeCompare(y.hora))[0] : undefined;
+        const visitouHoje = atendeHoje ? visitas.filter(v => v.lojaId === l.id && v.data === hoje && !v.semVisita).sort((x, y) => x.hora.localeCompare(y.hora))[0] : undefined;
+        const semHoje = visitas.some(v => v.lojaId === l.id && v.data === hoje && v.semVisita);
         let proximo = null;
         if (dias.length) for (let k = 1; k <= 7; k++) { const d = (diaSemana + k) % 7; if (dias.includes(d)) { proximo = { k, d }; break; } }
-        return { visitouHoje, atendeHoje, dias, proximo, nomes };
+        return { visitouHoje, semHoje, atendeHoje, dias, proximo, nomes };
     }
     /* ---- endereço da loja: sugestões do Google Maps enquanto digita ---- */
     const MAPS_KEY = 'COLE_A_CHAVE_DO_GOOGLE_MAPS_AQUI';
@@ -1279,7 +1348,7 @@ document.addEventListener('error', (e) => {
     const refProd  = (id) => doc(db, 'users', uid, 'produtos', id);
     const colVenc  = () => collection(db, 'users', uid, 'vencidos');
     const refVenc  = (id) => doc(db, 'users', uid, 'vencidos', id);
-    const nomeLoja = (id) => (lojas.find(l => l.id === id) || {}).nome || '—';
+    const nomeLoja = (id) => (lojas.find(l => l.id === id) || {}).nome || '-';
     // As marcas ficam dentro do documento da loja: loja.marcas = [{ id, nome }]
     const marcasDe = (lojaId) => ((lojas.find(l => l.id === lojaId) || {}).marcas) || [];
     const nomeMarca = (lojaId, marcaId) => (marcasDe(lojaId).find(m => m.id === marcaId) || {}).nome || '';
@@ -1482,15 +1551,23 @@ document.addEventListener('error', (e) => {
         const prox = futuros[0];
         const dias = prox ? Math.round((Date.parse(prox.data + 'T00:00:00Z') - Date.parse(hoje + 'T00:00:00Z')) / 86400000) : null;
         const qtdProx = prox ? futuros.filter(p => p.data === prox.data).length : 0;
-        const rotulo = dias === null ? '—' : dias === 0 ? 'HOJE' : dias === 1 ? 'AMANHÃ' : `${dias} DIAS`;
+        const rotulo = dias === null ? '-' : dias === 0 ? 'HOJE' : dias === 1 ? 'AMANHÃ' : `${dias} DIAS`;
         const previstas = lojas.filter(l => diasDaLoja(l).includes(dia)).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
-        const feitasIds = new Set(previstas.filter(l => visitas.some(v => v.lojaId === l.id && v.data === hoje)).map(l => l.id));
-        const n = previstas.length, feitas = feitasIds.size, faltam = n - feitas;
-        // posição de cada caixa na linha; a casa fica no fim (100%)
-        const pos = (i) => ((i + 1) / (n + 1)) * 100;
-        // a linha cresce em sequência: após k check-ins, fica amarela até a k-ésima posição (sem buracos)
-        const progresso = n === 0 ? 0 : feitas === n ? 100 : (feitas > 0 ? pos(feitas - 1) : 0);
-        const caixas = previstas.map((l, i) => `<div class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-[3px] ${i < feitas ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]' : 'bg-gray-800 border border-gray-600'}" style="left:${pos(i)}%"></div>`).join('');
+        const semIds = new Set(previstas.filter(l => visitas.some(v => v.lojaId === l.id && v.data === hoje && v.semVisita)).map(l => l.id));
+        const ativas = previstas.filter(l => !semIds.has(l.id));
+        const feitasIds = new Set(ativas.filter(l => visitas.some(v => v.lojaId === l.id && v.data === hoje && !v.semVisita)).map(l => l.id));
+        const n = ativas.length, feitas = feitasIds.size, faltam = n - feitas;
+        const total = previstas.length;
+        const pos = (i) => ((i + 1) / (total + 1)) * 100;
+        // a linha cresce até a última loja feita (na ordem da rota)
+        let ultimaFeita = -1;
+        previstas.forEach((l, i) => { if (feitasIds.has(l.id)) ultimaFeita = i; });
+        const progresso = n === 0 ? 0 : feitas === n ? 100 : (ultimaFeita >= 0 ? pos(ultimaFeita) : 0);
+        const caixas = previstas.map((l, i) => {
+            if (semIds.has(l.id)) return `<div class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-[3px] bg-red-600 shadow-[0_0_8px_rgba(220,38,38,0.6)]" style="left:${pos(i)}%" title="Sem visita"></div>`;
+            const feita = feitasIds.has(l.id);
+            return `<div class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-[3px] ${feita ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]' : 'bg-gray-800 border border-gray-600'}" style="left:${pos(i)}%"></div>`;
+        }).join('');
         return `<div class="card-app mb-4 p-4 rounded-[22px]">
             <div class="flex items-center justify-between gap-3">
                 <div class="flex items-center gap-3">
@@ -1636,13 +1713,14 @@ document.addEventListener('error', (e) => {
                 const i = infoDiaLoja(l);
                 const dd = diasDaLoja(l);
                 // só conta visita feita em dia de atendimento da loja
-                const validas = visitas.filter(v => v.lojaId === l.id && dd.includes(new Date(v.data + 'T12:00:00').getDay()))
+                const validas = visitas.filter(v => v.lojaId === l.id && !v.semVisita && dd.includes(new Date(v.data + 'T12:00:00').getDay()))
                     .sort((x, y) => (y.data + y.hora).localeCompare(x.data + x.hora));
                 const ult = validas[0];
                 const ultTxt = ult ? `Última visita: <b class="text-gray-200">${dataBR(ult.data)} às ${ult.hora}</b>` : 'Nenhuma visita registrada';
                 let acao = '';
-                if (i.visitouHoje) acao = `<span class="px-3 py-2 rounded-xl border border-green-500/60 text-green-400 text-[10px] font-black uppercase">✓ Visitada hoje às ${i.visitouHoje.hora}</span>`;
-                else if (i.atendeHoje) acao = `<button data-act="visitaRegistrar" data-id="${esc(l.id)}" class="px-3 py-2 rounded-xl bg-amber-500 text-gray-950 text-[10px] font-black uppercase">Registrar visita</button>`;
+                if (i.semHoje) acao = `<span class="px-3 py-2 rounded-xl bg-red-600/20 border border-red-600 text-red-400 text-[10px] font-black uppercase">Sem visita hoje</span>`;
+                else if (i.visitouHoje) acao = `<span class="px-3 py-2 rounded-xl border border-green-500/60 text-green-400 text-[10px] font-black uppercase">✓ Visitada hoje às ${i.visitouHoje.hora}</span>`;
+                else if (i.atendeHoje) acao = `<div class="flex flex-wrap gap-2"><button data-act="visitaRegistrar" data-id="${esc(l.id)}" class="px-3 py-2 rounded-xl bg-amber-500 text-gray-950 text-[10px] font-black uppercase">Registrar visita</button><button data-act="semVisitaAbrir" data-id="${esc(l.id)}" class="px-3 py-2 rounded-xl bg-red-600 text-white text-[10px] font-black uppercase">Sem visita hoje</button></div>`;
                 let aviso = '';
                 if (!i.dias.length) aviso = '<div class="text-[10px] text-gray-500 mt-2">Defina os dias de visita abaixo.</div>';
                 else if (!i.atendeHoje && i.proximo) {
@@ -1874,7 +1952,7 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
                         <div class="flex justify-between items-start gap-2">
                             <div class="flex-1 min-w-0">
                                 <div class="text-white font-black italic uppercase text-xs leading-tight">${esc(v.nome)}</div>
-                                <div class="text-[9px] text-gray-500 font-bold uppercase mt-1 truncate">Loja: ${esc(v.lojaNome || '—')}</div>
+                                <div class="text-[9px] text-gray-500 font-bold uppercase mt-1 truncate">Loja: ${esc(v.lojaNome || '-')}</div>
                             </div>
                             <div class="text-right shrink-0">
                                 <div class="text-[8px] text-gray-500 font-bold uppercase leading-none">Qtd retirada</div>
@@ -1915,8 +1993,9 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
         const n = notifEstado();
         return `
             <h2 class="text-amber-500 font-black italic uppercase text-lg mb-2">Minha Conta</h2>
-            <p class="text-[11px] font-bold text-white mb-4">Visitas hoje: ${(() => { const hoje = isoLocal(new Date()), dia = new Date().getDay(); const previstas = lojas.filter(l => diasDaLoja(l).includes(dia)); return new Set(visitas.filter(v => v.data === hoje && previstas.some(l => l.id === v.lojaId)).map(v => v.lojaId)).size; })()} de ${lojas.filter(l => diasDaLoja(l).includes(new Date().getDay())).length} previstas</p>
+            <p class="text-[11px] font-bold text-white mb-4">Visitas hoje: ${(() => { const hoje = isoLocal(new Date()), dia = new Date().getDay(); const previstas = lojas.filter(l => diasDaLoja(l).includes(dia) && !visitas.some(v => v.lojaId === l.id && v.data === hoje && v.semVisita)); return new Set(visitas.filter(v => v.data === hoje && previstas.some(l => l.id === v.lojaId)).map(v => v.lojaId)).size; })()} de ${lojas.filter(l => diasDaLoja(l).includes(new Date().getDay())).length} previstas</p>
             ${htmlPlano()}
+            <button data-act="notasAbrir" class="card-app p-4 mb-4 w-full text-left block"><div class="text-[9px] text-gray-500 font-black uppercase mb-1">Bloco de notas</div><p class="text-[12px] text-gray-300">Anote suas ideias. Ficam salvas por <b class="text-red-500">12 horas</b>.</p></button>
             <div class="card-app p-4 mb-3">
                 <div class="text-[9px] text-gray-500 font-black uppercase mb-1">Promotor</div>
                 <div class="text-white font-black italic uppercase text-sm truncate">${esc((userInfo && userInfo.displayName) || 'Sem nome')}</div>
@@ -2306,6 +2385,8 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
         pdvLojaFechar: () => pdvLojaCancelar(),
         pdvTrocarLoja: () => pdvListaLojas(null),
         visitaRegistrar: (d) => visitaRegistrar(d.id),
+        notasAbrir: () => notasAbrir(), notasFechar: () => notasFechar(), notasSalvar: () => notasSalvar(),
+        semVisitaAbrir: (d) => semVisitaAbrir(d.id), semVisitaSalvar: () => semVisitaSalvar(), svFechar: () => svFechar(),
         superioresAbrir: () => superioresAbrir(),
         superioresFechar: () => superioresFechar(),
         superiorNovo: () => { supEdit = 'novo'; superioresRender(); },
@@ -2723,7 +2804,7 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
         const lojasMap = new Map();
         lista.forEach(v => {
             const kl = norm(v.lojaNome) || '_';
-            if (!lojasMap.has(kl)) lojasMap.set(kl, { nome: (v.lojaNome || '—').trim(), prods: new Map() });
+            if (!lojasMap.has(kl)) lojasMap.set(kl, { nome: (v.lojaNome || '-').trim(), prods: new Map() });
             const L = lojasMap.get(kl);
             const kp = norm(v.nome);
             if (!L.prods.has(kp)) L.prods.set(kp, { grafias: new Map(), itens: [] });
