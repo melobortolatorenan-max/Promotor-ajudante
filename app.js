@@ -1498,11 +1498,6 @@ document.addEventListener('error', (e) => {
             ${htmlBannerPlano()}
             ${convitesPendentes().length ? `<button data-act="verConvites" class="w-full mb-3 p-3 rounded-2xl border border-amber-500 text-amber-500 text-[11px] font-black uppercase">Você tem ${convitesPendentes().length} convite(s) de agência · ver</button>` : ''}
             ${htmlResumoTopo()}
-            <div class="grid grid-cols-2 gap-2 mb-3">
-                <button data-act="novoVencido" class="py-3 rounded-2xl border border-red-500/50 text-red-500 text-[10px] font-black uppercase">+ Vencido</button>
-                <button data-act="novoProdutoTopo" class="py-3 rounded-2xl border border-amber-500/50 text-amber-500 text-[10px] font-black uppercase">+ Produto</button>
-            </div>
-            <button data-act="fotoPdv" class="w-full mb-4 flex items-center justify-center gap-2 py-3 rounded-2xl border border-amber-500 text-amber-500 text-[11px] font-black uppercase"><i data-lucide="camera" class="w-4 h-4"></i> Foto PDV</button>
             <div class="grid grid-cols-2 gap-3 mb-6">
                 <div class="bg-gray-900/50 p-3 rounded-2xl border border-gray-800 text-center">
                     <div class="text-xl font-black text-amber-500">${lojas.length}</div>

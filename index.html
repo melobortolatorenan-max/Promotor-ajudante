@@ -278,8 +278,6 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
                 </button>
                 <div class="flex items-center gap-1">
                     <button data-act="buscaAbrir" class="p-2 text-gray-500" aria-label="Buscar"><i data-lucide="search" class="w-5 h-5"></i></button>
-                    <button data-act="novoVencido" class="p-2 rounded-xl border border-red-500/50 text-red-500" aria-label="Registrar vencido"><i data-lucide="package-x" class="w-5 h-5"></i></button>
-                    <button data-act="novoProdutoTopo" class="p-2 rounded-xl border border-amber-500/50 text-amber-500" aria-label="Cadastrar produto"><i data-lucide="package-plus" class="w-5 h-5"></i></button>
                 </div>
             </div>
         </header>
@@ -298,13 +296,17 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
                     <span class="menu-icone flex items-center justify-center"><i data-lucide="store" class="w-4 h-4"></i></span>
                     <span class="menu-rotulo text-[8px] font-black uppercase text-gray-500 whitespace-nowrap">Lojas</span>
                 </button>
-                <button data-act="tab" data-id="p" class="menu-item flex-1 flex flex-col items-center gap-1">
-                    <span class="menu-icone flex items-center justify-center"><i data-lucide="package" class="w-4 h-4"></i></span>
-                    <span class="menu-rotulo text-[8px] font-black uppercase text-gray-500 whitespace-nowrap">Produtos</span>
+                <button data-act="lerCodigo" class="menu-acao flex-1 flex flex-col items-center gap-1" aria-label="Ler código de barras">
+                    <span class="w-12 h-12 -mt-6 rounded-full bg-amber-500 text-black flex items-center justify-center shadow-[0_0_22px_rgba(245,158,11,0.55)]"><i data-lucide="scan-barcode" class="w-5 h-5"></i></span>
+                    <span class="text-[8px] font-black uppercase text-amber-500 whitespace-nowrap">Código</span>
+                </button>
+                <button data-act="fotoPdv" class="menu-acao flex-1 flex flex-col items-center gap-1" aria-label="Foto PDV">
+                    <span class="menu-icone flex items-center justify-center"><i data-lucide="library" class="w-4 h-4"></i></span>
+                    <span class="menu-rotulo text-[8px] font-black uppercase text-gray-500 whitespace-nowrap">Foto PDV</span>
                 </button>
                 <button data-act="tab" data-id="c" class="menu-item flex-1 flex flex-col items-center gap-1">
                     <span class="menu-icone flex items-center justify-center"><i data-lucide="settings" class="w-4 h-4"></i></span>
-                    <span class="menu-rotulo text-[8px] font-black uppercase text-gray-500 whitespace-nowrap">Configurações</span>
+                    <span class="menu-rotulo text-[8px] font-black uppercase text-gray-500 whitespace-nowrap">Config.</span>
                 </button>
             </div>
         </nav>
