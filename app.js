@@ -700,7 +700,7 @@ document.addEventListener('error', (e) => {
     function codigosAbrir() {
         const b = $('#codigos'); b.classList.remove('hidden'); b.classList.add('flex'); b.style.display = 'flex';
         $('#codigos-tab').innerHTML = htmlCodigos();
-        lucide.createIcons();
+        (window.lucide && lucide.createIcons());
     }
     function codigosFechar() { const b = $('#codigos'); b.classList.add('hidden'); b.classList.remove('flex'); b.style.display = 'none'; }
     // Desenha o código de barras EAN-13 (ou UPC-A/EAN-8 convertidos) a partir do número, para itens sem foto
@@ -842,7 +842,7 @@ document.addEventListener('error', (e) => {
                 <button data-act="planogramaCamera" class="flex items-center gap-2 px-3 py-2 rounded-xl border border-amber-500 text-amber-500 text-[10px] font-black uppercase"><i data-lucide="camera" class="w-4 h-4"></i> Foto</button></div>
             <div class="text-white font-black italic uppercase text-sm mb-3">${esc(l ? l.nome : '')}</div>
             <div id="planograma-fotos" class="grid grid-cols-2 gap-3 text-[11px] text-gray-500">Carregando...</div>`;
-        lucide.createIcons();
+        (window.lucide && lucide.createIcons());
         planogramaCarregarFotos();
     }
     async function planogramaCarregarFotos() {
@@ -1351,7 +1351,7 @@ document.addEventListener('error', (e) => {
     function mostrar(nome) {
         if (nome !== 'carregando') window.__appOk = true;
         ['carregando', 'auth', 'pagamento', 'app'].forEach(n => $('#tela-' + n).classList.toggle('ativa', n === nome));
-        if (nome === 'app' || nome === 'pagamento') lucide.createIcons();
+        if (nome === 'app' || nome === 'pagamento') (window.lucide && lucide.createIcons());
     }
 
     function ir(tab, extra = {}) {
@@ -1385,7 +1385,7 @@ document.addEventListener('error', (e) => {
         else html = htmlConta();
         m.innerHTML = html;
         m.scrollTop = topo ? 0 : st;
-        lucide.createIcons();
+        (window.lucide && lucide.createIcons());
         if (view.busca) atualizarBusca();
     }
 
@@ -2213,7 +2213,7 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
             $('#modal-subtext').innerHTML = htmlCalendario();
         },
         abrirCap: () => ir('cap'),
-        capTipo: (d) => { cap.tipo = d.t; $('#cap-tipos').innerHTML = htmlCapTipos(); lucide.createIcons(); },
+        capTipo: (d) => { cap.tipo = d.t; $('#cap-tipos').innerHTML = htmlCapTipos(); (window.lucide && lucide.createIcons()); },
         capEnviar: async () => {
             if (cap.enviando) return;
             const nome = $('#cap-nome').value.trim(), tel = $('#cap-tel').value.trim(), msg = $('#cap-msg').value.trim();
@@ -2232,7 +2232,7 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
                     body: JSON.stringify({ access_key: chave, subject: m.assunto, from_name: 'Promotor Ajudante - ' + m.nome, name: m.nome, email: (userInfo && userInfo.email) || undefined, phone: m.tel, message: m.corpo }) });
                 const j = await r.json().catch(() => ({}));
                 if (!r.ok || !j.success) throw new Error(j.message || 'falha');
-                $('#cap-msg').value = ''; cap.tipo = ''; $('#cap-tipos').innerHTML = htmlCapTipos(); lucide.createIcons();
+                $('#cap-msg').value = ''; cap.tipo = ''; $('#cap-tipos').innerHTML = htmlCapTipos(); (window.lucide && lucide.createIcons());
                 capStatus('');
                 aviso('Sua mensagem foi enviada com sucesso! Obrigado, responderemos assim que possível.', { titulo: 'MENSAGEM ENVIADA', soConfirmar: true });
             } catch (e) {
@@ -2843,7 +2843,7 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
             <button data-act="legal" data-aba="termos" class="w-full py-3 text-[10px] font-black text-gray-500 uppercase">TERMOS DE USO E PRIVACIDADE</button>
             <button data-act="sair" class="w-full py-4 rounded-xl border border-red-900/50 text-[10px] font-black uppercase text-red-500 mt-2">SAIR DA CONTA</button>
             <p class="text-center text-[9px] text-gray-700 mt-6 uppercase font-bold">Promotor Ajudante · ${VERSAO_APP}</p>`;
-        lucide.createIcons();
+        (window.lucide && lucide.createIcons());
     }
 
     function entrar(user) {
@@ -2941,6 +2941,6 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
         onAuthStateChanged(auth, (user) => user ? entrar(user) : aoSair());
     }
 
-    lucide.createIcons();
+    (window.lucide && lucide.createIcons());
     iniciar();
     
