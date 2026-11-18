@@ -314,6 +314,7 @@ document.addEventListener('error', (e) => {
     aplicarContraste();
     let criadaEm = null;
     let marcaPendente = null;
+    let scanPendente = null;   // dados reconhecidos pela leitura, até o usuário sair do cadastro
     let avalPendente = null;   // nota de 1 a 4 aguardando a resposta escrita   // marca lida no código, aplicada quando a loja for escolhida
     // motivo obrigatório: só quando o vencimento for mais de 2 dias depois da retirada
     const qtdInformada = (p) => p.semQtd === false || (p.semQtd === undefined && p.qtd != null && p.qtd !== '');
@@ -383,30 +384,30 @@ document.addEventListener('error', (e) => {
     // Ao identificar o código: registra o código no sistema (se ainda não existir) e preenche o que já for conhecido
     async function codigoLido(cod) {
         if (scanDestino === 'busca') { scanDestino = null; const bq = $('#busca-q'); if (bq) { bq.value = cod; buscaResultados(); } return; }
-        const campo = $('#pcod'); if (campo) campo.value = cod;
         const ref = doc(db, 'codigos', cod);
+        let base = null;
         try {
             const snap = await getDoc(ref);
             if (!snap.exists()) {
                 await setDoc(ref, { codigo: cod, nome: null, setor: null, marcaNome: null, criadoPor: uid, criadoEm: serverTimestamp() });
             }
-            const base = snap.exists() ? snap.data() : null;
-            if (base && base.nome) {
-                preencherPorCodigo(base);
-            } else {
-                // base sem nome: usa um produto já cadastrado por você com esse código (em qualquer loja)
-                const pr = produtos.find(p => p.codigo === cod && p.nome);
-                if (pr) {
-                    const l = lojas.find(x => x.id === pr.lojaId);
-                    const m = l && (l.marcas || []).find(x => x.id === pr.marcaId);
-                    preencherPorCodigo({ nome: pr.nome, setor: pr.setor || null, marcaNome: m ? m.nome : null });
-                }
-            }
+            base = snap.exists() ? snap.data() : null;
         } catch (e) {
             console.error('codigo lido:', e);
-            const campo2 = $('#pcod'); if (campo2) campo2.value = cod;
-            aviso(`Código ${esc(cod)} lido, mas não consegui consultar a base agora (${e && e.code === 'permission-denied' ? 'regras do Firestore não liberadas para códigos' : 'verifique a conexão'}). Preencha os dados à mão.`, { soConfirmar: true });
+            aviso(`Código ${esc(cod)} lido, mas não consegui consultar a base agora. Preencha os dados à mão.`, { soConfirmar: true });
         }
+        let info = null;
+        if (base && base.nome) info = base;
+        else {
+            // base sem nome: usa um produto já cadastrado por você com esse código (em qualquer loja)
+            const pr = produtos.find(p => p.codigo === cod && p.nome);
+            if (pr) {
+                const l = lojas.find(x => x.id === pr.lojaId);
+                const m = l && (l.marcas || []).find(x => x.id === pr.marcaId);
+                info = { nome: pr.nome, setor: pr.setor || null, marcaNome: m ? m.nome : null };
+            }
+        }
+        preencherPorCodigo(info || {}, cod);
     }
     // Motivo obrigatório quando a validade é posterior à data da retirada (produto retirado antes de vencer)
     function atualizarMotivoObrigatorio() {
@@ -422,18 +423,40 @@ document.addEventListener('error', (e) => {
         const op = [...pm.options].find(o => o.textContent.trim().toLowerCase() === marcaPendente.toLowerCase());
         if (op) pm.value = op.value;
     }
-    function preencherPorCodigo(d) {
-        const pn = $('#pn'); if (pn && !pn.value.trim()) pn.value = d.nome;
-        const ps = $('#psetor'); if (ps && !ps.value && d.setor) ps.value = d.setor;
-        marcaPendente = d.marcaNome ? String(d.marcaNome) : null;
-        // se a loja ainda não foi escolhida e só uma loja tem essa marca, escolhe a loja automaticamente
-        const pl = $('#pl');
-        if (pl && !pl.value && marcaPendente) {
+    function preencherPorCodigo(d, cod) {
+        scanPendente = { nome: d.nome || '', setor: d.setor || '', marcaNome: d.marcaNome ? String(d.marcaNome) : '', codigo: cod || '', lojaId: '' };
+        marcaPendente = scanPendente.marcaNome || null;
+        // se só uma loja tem essa marca, a loja já vem escolhida
+        if (marcaPendente) {
             const candidatas = lojas.filter(l => (l.marcas || []).some(m => String(m.nome || '').trim().toLowerCase() === marcaPendente.toLowerCase()));
-            if (candidatas.length === 1) { pl.value = candidatas[0].id; refreshCampoMarca(candidatas[0].id, ''); }
+            if (candidatas.length === 1) scanPendente.lojaId = candidatas[0].id;
         }
+        if (view.tab === 'p' || view.tab === 'v') desenhar();
+        else ir('p', { preLoja: scanPendente.lojaId || '' });
+        setTimeout(aplicarScanPendente, 0);
+        if (d.nome) aviso(`Produto reconhecido: <b>${esc(d.nome)}</b>. Escolha entrada ou vencido e informe a validade.`, { soConfirmar: true });
+        else aviso(`Código ${esc(cod)} ainda não tem nome. Preencha o produto e salve.`, { soConfirmar: true });
+    }
+    // Preenche o formulário que acabou de aparecer com o que a leitura reconheceu
+    function aplicarScanPendente() {
+        const s = scanPendente; if (!s) return;
+        const pn = $('#pn'); if (pn && !pn.value.trim()) pn.value = s.nome;
+        const ps = $('#psetor'); if (ps && s.setor) ps.value = s.setor;
+        const pc = $('#pcod'); if (pc && s.codigo) pc.value = s.codigo;
+        const pl = $('#pl');
+        if (pl && s.lojaId && !pl.value) { pl.value = s.lojaId; if (typeof refreshCampoMarca === 'function') refreshCampoMarca(s.lojaId, ''); }
         aplicarMarcaPendente();
-        aviso(`Produto reconhecido: <b>${esc(d.nome)}</b>. Confira e informe a validade.`, { soConfirmar: true });
+    }
+    // Lê o que está digitado no formulário atual (para trocar entre entrada e vencido sem perder nada)
+    function capturarFormCadastro() {
+        const pn = $('#pn'), ps = $('#psetor'), pc = $('#pcod'), pl = $('#pl'), pm = $('#pm');
+        const marcaTxt = pm && pm.selectedIndex > 0 ? pm.options[pm.selectedIndex].textContent.trim() : (marcaPendente || '');
+        return { nome: pn ? pn.value.trim() : (scanPendente ? scanPendente.nome : ''), setor: ps ? ps.value : (scanPendente ? scanPendente.setor : ''), codigo: pc ? pc.value.trim() : (scanPendente ? scanPendente.codigo : ''), marcaNome: marcaTxt, lojaId: pl ? pl.value : '' };
+    }
+    // Ícones no topo: cadastrar entrada e cadastrar vencido
+    function barraCadastro(tab) {
+        const btn = (t, icone, rotulo, on, off) => `<button type="button" data-act="cadTipo" data-tipo="${t}" class="flex-1 py-3 rounded-2xl border ${tab === t ? on : off} flex flex-col items-center gap-1 text-[10px] font-black uppercase"><i data-lucide="${icone}" class="w-5 h-5"></i>${rotulo}</button>`;
+        return `<div class="flex gap-2 mb-5">${btn('p', 'package-plus', 'Cadastrar entrada', 'bg-amber-500 border-amber-500 text-gray-950', 'border-gray-700 text-gray-400')}${btn('v', 'package-x', 'Cadastrar vencido', 'bg-red-600 border-red-600 text-white', 'border-gray-700 text-gray-400')}</div>`;
     }
     // Quem chega primeiro define o nome do código (setor e marca vêm junto)
     async function registrarNomeCodigo(cod, dados) {
@@ -1477,6 +1500,7 @@ document.addEventListener('error', (e) => {
     }
 
     function ir(tab, extra = {}) {
+        if (!['p', 'v'].includes(tab)) scanPendente = null;
         view = { tab, lojaId: null, marcaId: null, prod: null, preLoja: null, preMarca: '', origem: null, origemMarca: null, busca: '', ...extra };
         desenhar(true);
         if (tab !== 'p' && tab !== 'c' && tab !== 'v' && tab !== 'cap') setTimeout(verificarVencidos, 300);
@@ -1500,8 +1524,8 @@ document.addEventListener('error', (e) => {
         let html = '';
         if (view.tab === 'h') html = htmlHome();
         else if (view.tab === 'l') html = view.lojaId ? (view.marcaId ? htmlMarca(view.lojaId, view.marcaId) : htmlLoja(view.lojaId)) : htmlLojas();
-        else if (view.tab === 'p') html = htmlForm();
-        else if (view.tab === 'v') html = htmlVencForm();
+        else if (view.tab === 'p') html = barraCadastro('p') + htmlForm();
+        else if (view.tab === 'v') html = barraCadastro('v') + htmlVencForm();
         else if (view.tab === 'r') html = htmlRelVenc();
         else if (view.tab === 'cap') html = htmlCap();
         else html = htmlConta();
@@ -2107,6 +2131,7 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
         relatorioMarca: (d) => imprimirRelatorio(d.id, d.marca),
         novoVencido: () => ir('v', { de: view.tab === 'r' ? 'r' : 'h' }),
         novoProdutoTopo: () => ir('p', { preLoja: '', preMarca: '', origem: null, origemMarca: null }),
+        cadTipo: (d) => { const s = capturarFormCadastro(); scanPendente = s; marcaPendente = s.marcaNome || null; ir(d.tipo, { preLoja: s.lojaId || '' }); setTimeout(aplicarScanPendente, 0); },
         abrirRelVenc: () => ir('r'),
         voltarVenc: () => (view.venc || view.de === 'r') ? ir('r') : ir('h'),
         editVenc: (d) => ir('v', { venc: d.id, de: 'r' }),
