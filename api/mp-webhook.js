@@ -96,11 +96,17 @@ async function tratarAssinatura(db, id, res) {
 // Cobrança mensal aprovada: estende o acesso em 30 dias
 async function tratarCobrancaMensal(db, id, res) {
   const ap = await mpGet('/authorized_payments/' + encodeURIComponent(id));
-  if (ap.status !== 'processed') return res.status(200).send('nao-aprovado');
   const pre = await mpGet('/preapproval/' + encodeURIComponent(ap.preapproval_id));
   const uid = pre.external_reference;
   if (!uid) return res.status(200).send('sem-usuario');
   const ref = db.collection('users').doc(String(uid));
+  // cobrança recusada: bloqueia o acesso na hora, até o pagamento ser regularizado
+  if (['rejected', 'cancelled', 'failed'].includes(ap.status)) {
+    const ontem = somaDias(hojeSP(), -1);
+    await ref.set({ acessoAte: ontem, assinatura: { status: 'falhou', falhaEm: admin.firestore.FieldValue.serverTimestamp() } }, { merge: true });
+    return res.status(200).send('bloqueado-por-falha');
+  }
+  if (ap.status !== 'processed') return res.status(200).send('nao-aprovado');
   const pagRef = db.collection('pagamentos').doc('mp-' + String(id));
   await db.runTransaction(async (t) => {
     const [pg, u] = await Promise.all([t.get(pagRef), t.get(ref)]);
@@ -111,6 +117,7 @@ async function tratarCobrancaMensal(db, id, res) {
     t.set(ref, {
       acessoAte: somaDias(base, DIAS_MENSAL), plano: 'mensal', liberadoEm: admin.firestore.FieldValue.serverTimestamp(),
       'assinatura.ultimaCobrancaEm': admin.firestore.FieldValue.serverTimestamp(),
+      'assinatura.status': 'ativa',
     }, { merge: true });
     t.set(pagRef, { uid: ref.id, valor: PRECO_MENSAL, dias: DIAS_MENSAL, em: admin.firestore.FieldValue.serverTimestamp() });
   });
