@@ -1,0 +1,27 @@
+name: Trocar senha
+
+on:
+  workflow_dispatch:
+    inputs:
+      email:
+        description: 'E-mail da conta do promotor'
+        required: true
+
+jobs:
+  trocar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Instalar dependências
+        working-directory: scripts
+        run: npm install --omit=dev --no-audit --no-fund
+      - name: Trocar senha
+        working-directory: scripts
+        run: node trocar-senha.js
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          NOVA_SENHA: ${{ secrets.NOVA_SENHA_PROMOTOR }}
+          EMAIL: ${{ github.event.inputs.email }}
