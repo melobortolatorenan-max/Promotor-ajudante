@@ -1197,7 +1197,7 @@ document.addEventListener('error', (e) => {
         const bar = document.querySelector('#menu-inferior > div');
         if (!path || !svg || !ativo || !bar) return;
         const r = ativo.getBoundingClientRect(), b = bar.getBoundingClientRect();
-        const W = b.width, x = r.left - b.left + r.width / 2;
+        const W = b.width - 48, x = r.left - b.left - 24 + r.width / 2;   // a linha fica dentro dos cantos arredondados
         const h = 5, ramp = 26;   // desvio raso: a linha passa acima do ícone, sem encostar nele
         path.setAttribute('d', `M0 0 H${Math.max(0, x - ramp - 14)} C${x - ramp} 0 ${x - ramp} ${h} ${x} ${h} C${x + ramp} ${h} ${x + ramp} 0 ${x + ramp + 14} 0 H${W}`);
         svg.setAttribute('viewBox', `0 0 ${W} 8`);
