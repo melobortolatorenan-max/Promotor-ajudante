@@ -2881,12 +2881,13 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
         const ate = perfilAcesso.acessoAte;
         const hoje = isoLocal(new Date());
         const acabou = (typeof ate === 'string' && ate < hoje) || (!planoPago() && fimTesteISO() && fimTesteISO() < hoje);
+        const falha = !!(perfilAcesso.assinatura && perfilAcesso.assinatura.status === 'falhou');
         box.innerHTML = `
             <div class="flex items-center gap-3 mb-6">
                 <img src="logo.png" onerror="this.src='https://raw.githubusercontent.com/melobortolatorenan-max/Promotor-ajudante/main/logo.png'" class="w-12 h-12" style="mix-blend-mode:lighten" alt="">
                 <h1 class="font-black uppercase text-amber-500 italic text-xl leading-none">Escolha seu plano</h1>
             </div>
-            <p class="text-gray-400 text-[12px] leading-snug mb-5">${acabou
+            <p class="text-gray-400 text-[12px] leading-snug mb-5">${falha ? 'Não conseguimos cobrar o cartão da assinatura mensal, por isso o acesso está bloqueado. Regularize o pagamento para continuar.' : acabou
                 ? `Seu acesso terminou${typeof ate === 'string' ? ' em <b class="text-white">' + dataBR(ate) + '</b>' : ''}. Escolha um plano para continuar usando o <b class="text-white">Promotor Ajudante</b>.`
                 : 'Para continuar usando o <b class="text-white">Promotor Ajudante</b>, escolha um plano.'}</p>
             ${htmlOpcoesPlano()}
@@ -2901,7 +2902,7 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
         uid = user.uid; userInfo = { displayName: user.displayName, email: user.email };
         const criada = user.metadata && user.metadata.creationTime ? new Date(user.metadata.creationTime) : null;
         criadaEm = criada;
-        contaAntiga = !!criada && criada < DATA_CORTE;
+        contaAntiga = false;   // todos seguem a regra de teste de 60 dias (contas antigas entram pela migração)
         perfilAcesso = {}; appAberto = false;
         setDoc(doc(db, 'users', uid), { nome: user.displayName || '', email: user.email || '' }, { merge: true }).catch(() => {});
         prontoProd = false;
