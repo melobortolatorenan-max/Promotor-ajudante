@@ -10,7 +10,7 @@ try {
   firebase.messaging();   // com o app fechado, o Firebase exibe a notificação e abre o link ao tocar
 } catch (e) { /* aparelho sem suporte a notificações: o app continua funcionando normalmente */ }
 
-const CACHE = 'promotor-ajudante-v5';
+const CACHE = 'promotor-ajudante-v6';
 const ESPERA_REDE_MS = 3000;   // com sinal fraco, depois de 3 s usa a cópia guardada no aparelho
 
 // Arquivos do próprio app (sempre tenta a internet primeiro, para pegar atualizações)
