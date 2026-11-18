@@ -574,21 +574,74 @@ document.addEventListener('error', (e) => {
             + '</div>';
     }
     function abrirImpressaoVenc(titulo, html) { return abrirImpressao(titulo, html + htmlResumoVencidos(ultimaListaVenc)); }
-    // Meu plano: mostra até quando vai o acesso e quantos dias faltam
+    // ---- planos ----
+    const PRECO_MENSAL = 50;
+    const fimTesteISO = () => { if (!criadaEm) return null; const d = new Date(criadaEm); d.setDate(d.getDate() + 60); return isoLocal(d); };
+    const dataDeTs = (ts) => (ts && typeof ts.toDate === 'function') ? ts.toDate() : (ts ? new Date(ts) : null);
+    const planoPago = () => (perfilAcesso.plano === 'mensal' || perfilAcesso.plano === 'anual') && typeof perfilAcesso.acessoAte === 'string';
+    function mesesDesde(d) {
+        if (!d) return 1;
+        const h = new Date();
+        return Math.max(1, (h.getFullYear() - d.getFullYear()) * 12 + (h.getMonth() - d.getMonth()) + 1);
+    }
     function htmlPlano() {
         if (contaAntiga || perfilAcesso.gratis === true) {
-            return `<div class="card-app p-4 mb-4"><div class="text-[9px] text-gray-500 font-black uppercase mb-1">Meu plano</div><p class="text-[12px] text-gray-300">Acesso livre.</p></div>`;
+            return `<div class="card-app p-4 mb-4"><div class="text-[9px] text-gray-500 font-black uppercase mb-1">Planos</div><p class="text-[12px] text-gray-300">Acesso livre.</p></div>`;
         }
-        const ate = perfilAcesso.acessoAte;
-        if (typeof ate !== 'string') return '';
-        const dias = diasAte(ate);
-        const cor = dias <= 7 ? 'text-amber-500' : 'text-gray-300';
+        if (planoPago()) {
+            const mensal = perfilAcesso.plano === 'mensal';
+            const inicio = dataDeTs(perfilAcesso.assinaturaInicioEm || perfilAcesso.liberadoEm);
+            const meses = mesesDesde(inicio);
+            const cancelada = mensal && perfilAcesso.assinatura && perfilAcesso.assinatura.status === 'cancelada';
+            return `<div class="card-app p-4 mb-4">
+                <div class="text-[9px] text-gray-500 font-black uppercase mb-2">Assinatura</div>
+                <p class="text-[12px] text-gray-300 leading-relaxed">Plano <b class="text-white">${mensal ? 'mensal' : 'anual'}</b><br>Valor: <b class="text-white">${mensal ? 'R$ ' + PRECO_MENSAL + ',00 por mês' : 'R$ ' + PRECO_ANUAL + ',00 pago de uma vez'}</b><br>Assinado em: <b class="text-white">${inicio ? inicio.toLocaleDateString('pt-BR') : '-'}</b><br>Tempo de uso: <b class="text-white">${meses} ${meses === 1 ? 'mês' : 'meses'}</b><br>Acesso até: <b class="text-white">${dataBR(perfilAcesso.acessoAte)}</b></p>
+                ${mensal && !cancelada ? `<button data-act="cancelarAssinatura" class="mt-3 w-full py-3 rounded-xl border border-red-900/50 text-[10px] font-black uppercase text-red-500">Cancelar assinatura</button>` : ''}
+                ${cancelada ? `<p class="mt-3 text-[11px] text-gray-500">Assinatura cancelada. O acesso segue até a data acima.</p>` : ''}
+            </div>`;
+        }
+        const fim = fimTesteISO();
+        const dias = fim ? diasAte(fim) : -1;
+        const texto = dias >= 0
+            ? `Teste grátis até <b class="text-white">${dataBR(fim)}</b> · <span class="text-amber-500 font-black">${dias} ${dias === 1 ? 'dia restante' : 'dias restantes'}</span>`
+            : 'Seu teste grátis terminou. Escolha um plano para continuar.';
         return `<div class="card-app p-4 mb-4">
-            <div class="text-[9px] text-gray-500 font-black uppercase mb-1">Meu plano</div>
-            <p class="text-[12px] text-gray-300">Acesso até <b class="text-white">${dataBR(ate)}</b> · <span class="${cor} font-black">${dias > 0 ? dias + ' dias restantes' : 'vence hoje'}</span></p>
-            <button data-act="pagar" class="mt-3 w-full py-3 rounded-xl border border-amber-500 text-[10px] font-black uppercase text-amber-500">Renovar acesso (R$ 50,00)</button>
+            <div class="text-[9px] text-gray-500 font-black uppercase mb-2">Planos</div>
+            <p class="text-[12px] text-gray-300 mb-3">${texto}</p>
+            <button data-act="verPlanos" class="w-full py-3 rounded-xl border border-amber-500 text-[10px] font-black uppercase text-amber-500">Ver planos</button>
         </div>`;
     }
+    // Opções de plano (usadas no pop-up e na tela de bloqueio)
+    function htmlOpcoesPlano() {
+        return `
+            <div class="card-app p-4 mb-3">
+                <div class="text-[9px] text-gray-500 font-black uppercase mb-1">Plano mensal</div>
+                <div class="text-3xl font-black text-white">R$ ${PRECO_MENSAL},00<span class="text-xs text-gray-500"> /mês</span></div>
+                <p class="text-[11px] text-gray-400 mt-1">Cartão de crédito. A cobrança é automática todo mês.</p>
+                <button data-act="pagarPlano" data-plano="mensal" class="btn-amarelo mt-3">ASSINAR MENSAL</button>
+            </div>
+            <div class="card-app p-4 mb-3">
+                <div class="text-[9px] text-gray-500 font-black uppercase mb-1">Plano anual · 15% de desconto</div>
+                <div class="text-3xl font-black text-white">R$ ${PRECO_ANUAL},00<span class="text-xs text-gray-500"> /ano</span></div>
+                <p class="text-[11px] text-gray-400 mt-1">Pix ou débito. Pagamento único, com 365 dias de acesso.</p>
+                <button data-act="pagarPlano" data-plano="anual" class="btn-amarelo mt-3">PAGAR ANUAL</button>
+            </div>`;
+    }
+    function abrirPlanos() {
+        fecharPlanos();
+        const ov = document.createElement('div');
+        ov.id = 'planos-ov';
+        ov.className = 'fixed inset-0 z-[95] bg-black/90 flex items-center justify-center p-4 overflow-y-auto';
+        ov.innerHTML = `<div class="w-full max-w-sm">
+            <div class="text-[9px] text-gray-500 font-black uppercase mb-3 text-center">Escolha seu plano</div>
+            ${htmlOpcoesPlano()}
+            <button data-act="fecharPlanos" class="w-full py-3 text-[10px] font-black uppercase text-gray-500">Fechar</button>
+        </div>`;
+        document.body.appendChild(ov);
+        (window.lucide && lucide.createIcons());
+    }
+    function fecharPlanos() { const ov = document.getElementById('planos-ov'); if (ov) ov.remove(); }
+
     // Aviso na tela inicial quando faltam 7 dias ou menos
     function htmlBannerPlano() {
         if (contaAntiga || perfilAcesso.gratis === true) return '';
@@ -1189,7 +1242,7 @@ document.addEventListener('error', (e) => {
             toast(status === 'aceito' ? 'Convite aceito. A agência já pode ver você.' : 'Convite recusado.');
         } catch (e) { console.error(e); toast('Não consegui responder ao convite.'); }
     }
-    // linha fina do menu: desce sob o item selecionado
+    // linha por baixo do menu: percorre a borda inferior e sobe um pouco sob o item selecionado
     function moverCurvaMenu() {
         const path = document.getElementById('menu-linha-path');
         const svg = document.getElementById('menu-linha');
@@ -1197,9 +1250,9 @@ document.addEventListener('error', (e) => {
         const bar = document.querySelector('#menu-inferior > div');
         if (!path || !svg || !ativo || !bar) return;
         const r = ativo.getBoundingClientRect(), b = bar.getBoundingClientRect();
-        const W = b.width - 48, x = r.left - b.left - 24 + r.width / 2;   // a linha fica dentro dos cantos arredondados
-        const h = 5, ramp = 26;   // desvio raso: a linha passa acima do ícone, sem encostar nele
-        path.setAttribute('d', `M0 0 H${Math.max(0, x - ramp - 14)} C${x - ramp} 0 ${x - ramp} ${h} ${x} ${h} C${x + ramp} ${h} ${x + ramp} 0 ${x + ramp + 14} 0 H${W}`);
+        const W = b.width - 48, x = r.left - b.left - 24 + r.width / 2;
+        const base = 7, topo = 1, ramp = 26;   // altura do SVG = 8 px
+        path.setAttribute('d', `M0 ${base} H${Math.max(0, x - ramp - 14)} C${x - ramp} ${base} ${x - ramp} ${topo} ${x} ${topo} C${x + ramp} ${topo} ${x + ramp} ${base} ${x + ramp + 14} ${base} H${W}`);
         svg.setAttribute('viewBox', `0 0 ${W} 8`);
     }
     window.addEventListener('resize', moverCurvaMenu);
@@ -1863,6 +1916,7 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
         return `
             <h2 class="text-amber-500 font-black italic uppercase text-lg mb-2">Minha Conta</h2>
             <p class="text-[11px] font-bold text-white mb-4">Visitas hoje: ${(() => { const hoje = isoLocal(new Date()), dia = new Date().getDay(); const previstas = lojas.filter(l => diasDaLoja(l).includes(dia)); return new Set(visitas.filter(v => v.data === hoje && previstas.some(l => l.id === v.lojaId)).map(v => v.lojaId)).size; })()} de ${lojas.filter(l => diasDaLoja(l).includes(new Date().getDay())).length} previstas</p>
+            ${htmlPlano()}
             <div class="card-app p-4 mb-3">
                 <div class="text-[9px] text-gray-500 font-black uppercase mb-1">Promotor</div>
                 <div class="text-white font-black italic uppercase text-sm truncate">${esc((userInfo && userInfo.displayName) || 'Sem nome')}</div>
@@ -1917,7 +1971,6 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
                 </div>
                 <i data-lucide="chevron-right" class="w-5 h-5 text-amber-500"></i>
             </button>
-            ${htmlPlano()}
             <button data-act="toggleContraste" class="w-full py-3 text-[10px] font-black text-gray-400 uppercase">Alto contraste: ${localStorage.getItem('altoContraste') === '1' ? 'ligado' : 'desligado'}</button>
             
             <button data-act="desfazerUltimo" class="w-full py-3 text-[10px] font-black text-gray-400 uppercase">Desfazer último cadastro</button>
@@ -2310,21 +2363,38 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
         exportarDados: () => exportarCsv(),
         legal: (d) => abrirLegal(d.aba),
         legalFechar: () => fecharLegal(),
-        pagar: async () => {
-            const btn = $('#pag-pagar'); if (btn) btn.disabled = true;
-            const reabrir = () => { if (btn) btn.disabled = false; };
+        pagarPlano: async (d) => {
+            const plano = d.plano === 'anual' ? 'anual' : 'mensal';
             try {
                 if (!navigator.onLine) throw new Error('offline');
                 const token = await auth.currentUser.getIdToken();
-                const r = await fetch(API_BASE + '/api/criar-pagamento', { method: 'POST', headers: { Authorization: 'Bearer ' + token } });
+                const r = await fetch(API_BASE + '/api/criar-pagamento', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+                    body: JSON.stringify({ plano }),
+                });
                 const j = await r.json().catch(() => ({}));
                 if (!r.ok || !j.url) throw new Error('api');
-                window.location.href = j.url;      // link do Mercado Pago ligado a esta conta (liberação automática)
+                window.location.href = j.url;
             } catch (e) {
-                console.warn('pagar:', e);
-                reabrir();
-                if (!navigator.onLine) { const st = $('#pag-status'); if (st) { st.className = 'text-[11px] font-bold mt-3 text-red-500'; st.textContent = 'Sem internet. Conecte-se e tente novamente.'; } return; }
-                window.open(PAGAMENTO_LINK, '_blank', 'noopener');   // plano B: link fixo (liberação após conferência)
+                console.warn('pagarPlano:', e);
+                aviso(navigator.onLine ? 'Não consegui abrir o pagamento agora. Tente de novo.' : 'Sem internet. Conecte-se e tente de novo.', { soConfirmar: true });
+            }
+        },
+        verPlanos: () => abrirPlanos(),
+        fecharPlanos: () => fecharPlanos(),
+        cancelarAssinatura: async () => {
+            if (!confirm('Cancelar a assinatura mensal? O acesso continua até a data indicada.')) return;
+            try {
+                const token = await auth.currentUser.getIdToken();
+                const r = await fetch(API_BASE + '/api/cancelar-assinatura', { method: 'POST', headers: { Authorization: 'Bearer ' + token } });
+                if (!r.ok) throw new Error('api');
+                perfilAcesso = { ...perfilAcesso, assinatura: { ...(perfilAcesso.assinatura || {}), status: 'cancelada' } };
+                aviso('Assinatura cancelada. Seu acesso segue até a data indicada.', { soConfirmar: true });
+                ir('c');
+            } catch (e) {
+                console.warn('cancelar:', e);
+                aviso('Não consegui cancelar agora. Tente de novo.', { soConfirmar: true });
             }
         },
         pagJa: async () => {
@@ -2786,7 +2856,9 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
     /* ================= sessão ================= */
     function acessoLiberado() {
         const ate = perfilAcesso.acessoAte;
-        return contaAntiga || perfilAcesso.gratis === true || (typeof ate === 'string' && ate >= isoLocal(new Date()));
+        const hoje = isoLocal(new Date());
+        const noTeste = !planoPago() && !!criadaEm && hoje <= (fimTesteISO() || '');
+        return contaAntiga || perfilAcesso.gratis === true || (typeof ate === 'string' && ate >= hoje) || noTeste;
     }
     function aplicarAcesso() {
         if (!uid) return;
@@ -2807,35 +2879,19 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
     function desenharPagamento() {
         const box = $('#pag-conteudo'); if (!box) return;
         const ate = perfilAcesso.acessoAte;
-        const venceu = typeof ate === 'string' && ate < isoLocal(new Date());
-        const informado = !!perfilAcesso.pagamentoInformadoEm;
-        const emailPag = perfilAcesso.emailPagamento || (userInfo && userInfo.email) || '';
+        const hoje = isoLocal(new Date());
+        const acabou = (typeof ate === 'string' && ate < hoje) || (!planoPago() && fimTesteISO() && fimTesteISO() < hoje);
         box.innerHTML = `
             <div class="flex items-center gap-3 mb-6">
                 <img src="logo.png" onerror="this.src='https://raw.githubusercontent.com/melobortolatorenan-max/Promotor-ajudante/main/logo.png'" class="w-12 h-12" style="mix-blend-mode:lighten" alt="">
-                <h1 class="font-black uppercase text-amber-500 italic text-xl leading-none">ACESSO ANUAL</h1>
+                <h1 class="font-black uppercase text-amber-500 italic text-xl leading-none">Escolha seu plano</h1>
             </div>
-            <p class="text-gray-400 text-[12px] leading-snug mb-4">${venceu
-                ? `Seu acesso venceu em <b class="text-white">${dataBR(ate)}</b>. Renove para continuar usando o Promotor Ajudante.`
-                : 'Para usar o <b class="text-white">Promotor Ajudante</b>, ative o acesso anual.'}</p>
-            <div class="card-app p-5 mb-4 text-center">
-                <div class="text-5xl font-black text-white leading-none">${PRECO_ANUAL}</div>
-                <div class="text-[10px] text-gray-500 font-black uppercase mt-2">por ano · todas as funções</div>
-            </div>
-            <button id="pag-pagar" data-act="pagar" class="btn-amarelo flex items-center justify-center gap-2 text-center mb-2"><i data-lucide="credit-card" class="w-4 h-4"></i> PAGAR ${PRECO_ANUAL}</button>
-            <p class="text-[10px] text-gray-500 font-bold text-center mb-2">Depois de pagar, volte ao app: o acesso é liberado automaticamente.</p>
-            <p class="text-[10px] text-gray-600 text-center mb-5 leading-snug">Pagamento único por 365 dias, sem renovação automática. Você tem 7 dias para desistir com reembolso. <button data-act="legal" data-aba="reembolso" class="underline">Ver regras</button></p>
-            <div class="card-app p-4 mb-3">
-                <div class="text-[9px] text-gray-500 font-black uppercase mb-2">Já pagou?</div>
-                <label class="text-[9px] font-black text-gray-500 uppercase ml-2" for="pag-email">E-mail usado no pagamento</label>
-                <input id="pag-email" type="email" class="input-custom mb-3" maxlength="120" autocomplete="email" value="${esc(emailPag)}">
-                <button id="pag-ja" data-act="pagJa" class="w-full py-3 rounded-xl border border-amber-500 text-[10px] font-black uppercase text-amber-500">JÁ PAGUEI</button>
-                <p id="pag-status" class="text-[11px] font-bold mt-3 ${informado ? 'text-green-500' : 'text-gray-500'}" role="status">${informado
-                    ? 'Pagamento informado. Assim que for confirmado, o app libera sozinho (normalmente em até 1 dia útil).'
-                    : 'Depois de pagar, toque em "Já paguei" para avisarmos.'}</p>
-            </div>
-            ${htmlVoucher()}
-            <button data-act="legal" data-aba="termos" class="w-full py-3 text-[10px] font-black text-gray-500 uppercase">TERMOS DE USO E PRIVACIDADE</button>
+            <p class="text-gray-400 text-[12px] leading-snug mb-5">${acabou
+                ? `Seu acesso terminou${typeof ate === 'string' ? ' em <b class="text-white">' + dataBR(ate) + '</b>' : ''}. Escolha um plano para continuar usando o <b class="text-white">Promotor Ajudante</b>.`
+                : 'Para continuar usando o <b class="text-white">Promotor Ajudante</b>, escolha um plano.'}</p>
+            ${htmlOpcoesPlano()}
+            <p class="text-[10px] text-gray-500 font-bold text-center mb-2">Depois do pagamento, o app libera o acesso sozinho e volta ao ponto onde você parou.</p>
+            <p class="text-[10px] text-gray-600 text-center mb-5 leading-snug">Ao continuar, você concorda com os <button data-act="legal" data-aba="termos" class="underline text-gray-400">Termos de uso</button> e a <button data-act="legal" data-aba="privacidade" class="underline text-gray-400">Política de privacidade</button>.</p>
             <button data-act="sair" class="w-full py-4 rounded-xl border border-red-900/50 text-[10px] font-black uppercase text-red-500 mt-2">SAIR DA CONTA</button>
             <p class="text-center text-[9px] text-gray-700 mt-6 uppercase font-bold">Promotor Ajudante · ${VERSAO_APP}</p>`;
         (window.lucide && lucide.createIcons());
