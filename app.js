@@ -1621,6 +1621,16 @@ document.addEventListener('error', (e) => {
             </div>
         </div>`;
     }
+    // Um card por produto; dentro, as lojas que têm esse vencimento
+    function agruparPorNome(lista) {
+        const mapa = new Map();
+        lista.forEach(a => {
+            const k = String(a.nome || '').trim().toLowerCase();
+            if (!mapa.has(k)) mapa.set(k, { nome: a.nome, itens: [] });
+            mapa.get(k).itens.push(a);
+        });
+        return [...mapa.values()];
+    }
     function htmlHome() {
         const alertas = produtos.filter(p => diasAte(p.data) <= 5)
             .sort((a, b) => a.data.localeCompare(b.data) || a.nome.localeCompare(b.nome));
@@ -1636,14 +1646,19 @@ document.addEventListener('error', (e) => {
                     <i data-lucide="calendar" class="w-3 h-3"></i> ${rot}: ${fmt(data)}
                 </h3>
                 <div class="space-y-2">
-                    ${[...grupos[data]].sort(cmpAlerta).map(a => `
-                    <div class="card-app p-3 border-l-4 ${crit ? 'border-l-red-600' : 'border-l-amber-500'} flex justify-between items-center cursor-pointer" data-act="verLoja" data-id="${esc(a.lojaId)}">
-                        <div class="flex-1 truncate mr-2">
-                            <span class="text-[8px] text-gray-500 font-bold uppercase block leading-none mb-1">${rotuloLoja(a)}</span>
-                            <div class="text-white font-black italic uppercase text-xs truncate leading-tight">${esc(a.nome)}</div>
-                            <span class="${crit ? 'text-red-500' : 'text-amber-500'} font-bold text-[9px] uppercase">${a.semQtd ? 'SEM QTD' : esc(a.qtd) + ' UN'}</span>
+                    ${agruparPorNome([...grupos[data]].sort(cmpAlerta)).map(g => `
+                    <div class="card-app p-3 border-l-4 ${crit ? 'border-l-red-600' : 'border-l-amber-500'}">
+                        <div class="text-white font-black italic uppercase text-xs truncate leading-tight mb-2">${esc(g.nome)}</div>
+                        <div class="space-y-1">
+                        ${g.itens.map(a => `
+                            <div class="flex justify-between items-center gap-2 cursor-pointer" data-act="verLoja" data-id="${esc(a.lojaId)}">
+                                <div class="flex-1 truncate">
+                                    <span class="text-[8px] text-gray-500 font-bold uppercase">${rotuloLoja(a)}</span>
+                                    <span class="${crit ? 'text-red-500' : 'text-amber-500'} font-bold text-[9px] uppercase ml-1">· ${a.semQtd ? 'SEM QTD' : esc(a.qtd) + ' UN'}</span>
+                                </div>
+                                <button data-act="resolver" data-id="${esc(a.id)}" class="p-1.5 bg-red-500/10 rounded-lg" aria-label="Remover (resolvido)"><i data-lucide="trash-2" class="w-3.5 h-3.5 text-red-500"></i></button>
+                            </div>`).join('')}
                         </div>
-                        <button data-act="resolver" data-id="${esc(a.id)}" class="p-2 bg-red-500/10 rounded-lg" aria-label="Remover (resolvido)"><i data-lucide="trash-2" class="w-3.5 h-3.5 text-red-500"></i></button>
                     </div>`).join('')}
                 </div>
             </div>`;
