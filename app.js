@@ -665,6 +665,55 @@ document.addEventListener('error', (e) => {
             toast('Sem visita registrada: ' + esc(l.nome));
         } catch (e) { erroDb(e); }
     }
+    // ---- redefinir senha: e-mail, código, nova senha ----
+    let rsEtapa = 1, rsEmail = '';
+    function redefinirAbrir() { rsEtapa = 1; rsEmail = ''; rsDesenhar(); }
+    function rsFechar() { const ov = document.getElementById('rs-ov'); if (ov) ov.remove(); }
+    function rsDesenhar(msg) {
+        let ov = document.getElementById('rs-ov');
+        if (!ov) { ov = document.createElement('div'); ov.id = 'rs-ov'; ov.className = 'fixed inset-0 z-[96] bg-black/90 flex items-center justify-center p-4'; document.body.appendChild(ov); }
+        const erro = msg ? `<p class="text-red-400 text-[11px] font-bold mt-3">${esc(msg)}</p>` : '';
+        const campo = (id, rotulo, tipo = 'text', extra = '') => `<label class="block text-[10px] text-gray-400 font-bold uppercase mt-3">${rotulo}</label><input id="${id}" type="${tipo}" ${extra} class="w-full mt-1 rounded-xl bg-[#111827] border border-gray-800 text-white p-3 text-[14px] outline-none">`;
+        let corpo = '';
+        if (rsEtapa === 1) corpo = `<h2 class="text-white font-black italic uppercase text-lg">Redefinir senha</h2><p class="text-[12px] text-gray-400 mt-2">Digite o e-mail da sua conta. Vamos enviar um código.</p>${campo('rs-email', 'E-mail cadastrado', 'email', 'autocomplete="email"')}${erro}<button data-act="rsEnviar" class="btn-amarelo mt-4">ENVIAR CÓDIGO</button>`;
+        else if (rsEtapa === 2) corpo = `<h2 class="text-white font-black italic uppercase text-lg">Digite o código</h2><p class="text-[12px] text-gray-400 mt-2">Enviamos um código de 6 letras e números para <b class="text-white">${esc(rsEmail)}</b>. Ele vale por 15 minutos.</p>${campo('rs-codigo', 'Código', 'text', 'maxlength="6" autocapitalize="characters" style="text-transform:uppercase"')}${erro}<button data-act="rsConfirmar" class="btn-amarelo mt-4">CONFIRMAR CÓDIGO</button><button data-act="rsEnviar" class="w-full py-2 mt-2 text-[10px] font-bold uppercase text-gray-500">Reenviar código</button>`;
+        else corpo = `<h2 class="text-white font-black italic uppercase text-lg">Nova senha</h2>${campo('rs-senha', 'Nova senha (mínimo 6)', 'password')}${campo('rs-senha2', 'Confirmar nova senha', 'password')}${erro}<button data-act="rsSalvar" class="btn-amarelo mt-4">SALVAR NOVA SENHA</button>`;
+        ov.innerHTML = `<div class="w-full max-w-sm card-app p-5">${corpo}<button data-act="rsFechar" class="w-full py-3 mt-2 text-[10px] font-black uppercase text-gray-500">Cancelar</button></div>`;
+        setTimeout(() => { const f = ov.querySelector('input'); if (f) f.focus(); }, 50);
+    }
+    async function rsChamar(corpo) {
+        const r = await fetch(API_BASE + '/api/redefinir-senha', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) });
+        const j = await r.json().catch(() => ({}));
+        return { ok: r.ok, erro: j.erro || '' };
+    }
+    const RS_MSG = { codigo: 'Código incorreto. Confira e tente de novo.', expirado: 'Este código expirou. Peça um novo.', tentativas: 'Muitas tentativas. Peça um novo código.', espere: 'Aguarde 1 minuto para pedir outro código.', 'senha-curta': 'A nova senha precisa ter pelo menos 6 caracteres.', falha: 'Não consegui agora. Verifique a internet e tente de novo.', email: 'Digite um e-mail válido.' };
+    async function rsEnviar() {
+        const el = document.getElementById('rs-email');
+        const e = (el ? el.value : rsEmail).trim().toLowerCase();
+        if (!e.includes('@')) { rsDesenhar(RS_MSG.email); return; }
+        rsEmail = e;
+        const r = await rsChamar({ acao: 'enviar', email: e });
+        if (!r.ok) { rsDesenhar(RS_MSG[r.erro] || RS_MSG.falha); return; }
+        rsEtapa = 2; rsDesenhar('Código enviado. Confira sua caixa de entrada e o spam.');
+    }
+    async function rsConfirmar() {
+        const cod = document.getElementById('rs-codigo').value.trim().toUpperCase();
+        if (cod.length !== 6) { rsDesenhar('Digite os 6 caracteres do código.'); return; }
+        rsCodigo = cod;
+        const r = await rsChamar({ acao: 'confirmar', email: rsEmail, codigo: cod });
+        if (!r.ok) { rsDesenhar(RS_MSG[r.erro] || RS_MSG.falha); return; }
+        rsEtapa = 3; rsDesenhar();
+    }
+    let rsCodigo = '';
+    async function rsSalvar() {
+        const s1 = document.getElementById('rs-senha').value, s2 = document.getElementById('rs-senha2').value;
+        if (s1.length < 6) { rsDesenhar(RS_MSG['senha-curta']); return; }
+        if (s1 !== s2) { rsDesenhar('As senhas não são iguais.'); return; }
+        const r = await rsChamar({ acao: 'salvar', email: rsEmail, codigo: rsCodigo, novaSenha: s1 });
+        if (!r.ok) { rsEtapa = r.erro === 'codigo' || r.erro === 'expirado' ? 1 : rsEtapa; rsDesenhar(RS_MSG[r.erro] || RS_MSG.falha); return; }
+        rsFechar();
+        aviso('Senha redefinida. Use a nova senha na próxima vez que entrar.', { soConfirmar: true });
+    }
     // ---- planos ----
     const PRECO_MENSAL = 50;
     const fimTesteISO = () => { if (!criadaEm) return null; const d = new Date(criadaEm); d.setDate(d.getDate() + 60); return isoLocal(d); };
@@ -1631,23 +1680,6 @@ document.addEventListener('error', (e) => {
         });
         return [...mapa.values()];
     }
-    // Cabeçalho: some ao descer a página e volta ao subir
-    function configurarCabecalhoRolagem() {
-        const cab = document.querySelector('header');
-        const corpo = document.getElementById('corpo');
-        if (!cab || !corpo) return;
-        cab.style.transition = 'margin-bottom .3s ease, opacity .3s ease';
-        let ultimo = 0;
-        const mostrar = () => { cab.style.marginBottom = '0px'; cab.style.opacity = '1'; cab.style.pointerEvents = ''; };
-        const esconder = () => { cab.style.marginBottom = -cab.offsetHeight + 'px'; cab.style.opacity = '0'; cab.style.pointerEvents = 'none'; };
-        corpo.addEventListener('scroll', () => {
-            const y = corpo.scrollTop;
-            if (y < 16) mostrar();
-            else if (y > ultimo + 6) esconder();
-            else if (y < ultimo - 6) mostrar();
-            ultimo = y;
-        }, { passive: true });
-    }
     function htmlHome() {
         const alertas = produtos.filter(p => diasAte(p.data) <= 5)
             .sort((a, b) => a.data.localeCompare(b.data) || a.nome.localeCompare(b.nome));
@@ -2110,6 +2142,7 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
             
             <button data-act="desfazerUltimo" class="w-full py-3 text-[10px] font-black text-gray-400 uppercase">Desfazer último cadastro</button>
             <button data-act="excluirConta" class="w-full py-3 text-[10px] font-black text-red-500 uppercase">EXCLUIR MINHA CONTA</button>
+            <button data-act="redefinirAbrir" class="w-full py-2 text-[10px] font-bold text-gray-600 uppercase">Redefinir senha</button>
             <button data-act="legal" data-aba="termos" class="w-full py-3 text-[10px] font-black text-gray-500 uppercase">TERMOS, PRIVACIDADE E REEMBOLSO</button>
             <button data-act="sair" class="w-full py-4 rounded-xl border border-red-900/50 text-[10px] font-black uppercase text-red-500 mt-2">SAIR DA CONTA</button>
             <p class="text-center text-[9px] text-gray-700 mt-6 uppercase font-bold">Promotor Ajudante · ${VERSAO_APP}</p>
@@ -2520,6 +2553,7 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
             }
         },
         verPlanos: () => abrirPlanos(),
+        redefinirAbrir: () => redefinirAbrir(), rsFechar: () => rsFechar(), rsEnviar: () => rsEnviar(), rsConfirmar: () => rsConfirmar(), rsSalvar: () => rsSalvar(),
         fecharPlanos: () => fecharPlanos(),
         cancelarAssinatura: async () => {
             if (!confirm('Cancelar a assinatura mensal? O acesso continua até a data indicada.')) return;
@@ -3132,6 +3166,5 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
     }
 
     (window.lucide && lucide.createIcons());
-    configurarCabecalhoRolagem();
     iniciar();
     
