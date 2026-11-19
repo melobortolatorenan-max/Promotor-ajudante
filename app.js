@@ -1386,7 +1386,7 @@ document.addEventListener('error', (e) => {
         const lista = [...marcasDe(lojaId)];
         extras.forEach(x => { if (!lista.some(m => m.id === x.id)) lista.push(x); });
         if (!lista.length) {
-            return `<button type="button" data-act="novaMarcaForm" class="input-custom text-left text-amber-500 font-black uppercase text-xs">+ Cadastrar marca</button>`;
+            return `<button type="button" data-act="novaMarcaForm" class="input-custom text-left text-amber-500 font-bold uppercase text-[10px]">+ Cadastrar marca</button>`;
         }
         return `<select id="pm" class="input-custom"><option value="">Selecione a marca...</option>` +
             lista.map(m => `<option value="${esc(m.id)}" ${m.id === sel ? 'selected' : ''}>${esc(m.nome)}</option>`).join('') +
@@ -1757,9 +1757,9 @@ document.addEventListener('error', (e) => {
                 const ult = validas[0];
                 const ultTxt = ult ? `Última visita: <b class="text-gray-200">${dataBR(ult.data)} às ${ult.hora}</b>` : 'Nenhuma visita registrada';
                 let acao = '';
-                if (i.semHoje) acao = `<span class="px-3 py-2 rounded-xl bg-red-600/20 border border-red-600 text-red-400 text-[10px] font-black uppercase">Sem visita hoje</span>`;
+                if (i.semHoje) acao = `<span class="px-2 py-1 rounded-md border border-red-600/50 text-red-400 text-[9px] font-bold uppercase whitespace-nowrap">Sem visita hoje</span>`;
                 else if (i.visitouHoje) acao = `<span class="px-3 py-2 rounded-xl border border-green-500/60 text-green-400 text-[10px] font-black uppercase">✓ Visitada hoje às ${i.visitouHoje.hora}</span>`;
-                else if (i.atendeHoje) acao = `<div class="flex flex-wrap gap-2"><button data-act="visitaRegistrar" data-id="${esc(l.id)}" class="px-3 py-1.5 rounded-lg border border-amber-500/70 text-amber-500 text-[10px] font-black uppercase">Registrar visita</button><button data-act="semVisitaAbrir" data-id="${esc(l.id)}" class="px-3 py-1.5 rounded-lg border border-red-600/60 text-red-400 text-[10px] font-black uppercase">Sem visita hoje</button></div>`;
+                else if (i.atendeHoje) acao = `<div class="flex flex-row gap-1.5 flex-nowrap"><button data-act="visitaRegistrar" data-id="${esc(l.id)}" class="px-2 py-1 rounded-md border border-amber-500/60 text-amber-500 text-[9px] font-bold uppercase whitespace-nowrap">Registrar visita</button><button data-act="semVisitaAbrir" data-id="${esc(l.id)}" class="px-2 py-1 rounded-md border border-red-600/50 text-red-400 text-[9px] font-bold uppercase whitespace-nowrap">Sem visita hoje</button></div>`;
                 let aviso = '';
                 if (!i.dias.length) aviso = '<div class="text-[10px] text-gray-500 mt-2">Defina os dias de visita abaixo.</div>';
                 else if (!i.atendeHoje && i.proximo) {
