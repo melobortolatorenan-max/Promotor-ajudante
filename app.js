@@ -1680,6 +1680,23 @@ document.addEventListener('error', (e) => {
         });
         return [...mapa.values()];
     }
+    // Cabeçalho: some ao descer a página e volta ao subir
+    function configurarCabecalhoRolagem() {
+        const cab = document.querySelector('header');
+        const corpo = document.getElementById('corpo');
+        if (!cab || !corpo) return;
+        cab.style.transition = 'margin-bottom .3s ease, opacity .3s ease';
+        let ultimo = 0;
+        const mostrar = () => { cab.style.marginBottom = '0px'; cab.style.opacity = '1'; cab.style.pointerEvents = ''; };
+        const esconder = () => { cab.style.marginBottom = -cab.offsetHeight + 'px'; cab.style.opacity = '0'; cab.style.pointerEvents = 'none'; };
+        corpo.addEventListener('scroll', () => {
+            const y = corpo.scrollTop;
+            if (y < 16) mostrar();
+            else if (y > ultimo + 6) esconder();
+            else if (y < ultimo - 6) mostrar();
+            ultimo = y;
+        }, { passive: true });
+    }
     function htmlHome() {
         const alertas = produtos.filter(p => diasAte(p.data) <= 5)
             .sort((a, b) => a.data.localeCompare(b.data) || a.nome.localeCompare(b.nome));
@@ -1697,12 +1714,12 @@ document.addEventListener('error', (e) => {
                 <div class="space-y-2">
                     ${agruparPorNome([...grupos[data]].sort(cmpAlerta)).map(g => `
                     <div class="card-app p-3 border-l-4 ${crit ? 'border-l-red-600' : 'border-l-amber-500'}">
-                        <div class="text-white font-black italic uppercase text-xs truncate leading-tight mb-2">${esc(g.nome)}</div>
+                        <div class="text-white font-black uppercase text-xs truncate leading-tight mb-2">${esc(g.nome)}</div>
                         <div class="space-y-1">
                         ${g.itens.map(a => `
                             <div class="flex justify-between items-center gap-2 cursor-pointer" data-act="verLoja" data-id="${esc(a.lojaId)}">
                                 <div class="flex-1 truncate">
-                                    <span class="text-[8px] text-gray-500 font-bold uppercase">${rotuloLoja(a)}</span>
+                                    <span class="text-[9px] text-white font-black uppercase">${rotuloLoja(a)}</span>
                                     <span class="${crit ? 'text-red-500' : 'text-amber-500'} font-bold text-[9px] uppercase ml-1">· ${a.semQtd ? 'SEM QTD' : esc(a.qtd) + ' UN'}</span>
                                 </div>
                                 <button data-act="resolver" data-id="${esc(a.id)}" class="p-1.5 bg-red-500/10 rounded-lg" aria-label="Remover (resolvido)"><i data-lucide="trash-2" class="w-3.5 h-3.5 text-red-500"></i></button>
@@ -3166,5 +3183,6 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
     }
 
     (window.lucide && lucide.createIcons());
+    configurarCabecalhoRolagem();
     iniciar();
     
