@@ -1631,6 +1631,23 @@ document.addEventListener('error', (e) => {
         });
         return [...mapa.values()];
     }
+    // Cabeçalho: some ao descer a página e volta ao subir
+    function configurarCabecalhoRolagem() {
+        const cab = document.querySelector('header');
+        const corpo = document.getElementById('corpo');
+        if (!cab || !corpo) return;
+        cab.style.transition = 'margin-bottom .3s ease, opacity .3s ease';
+        let ultimo = 0;
+        const mostrar = () => { cab.style.marginBottom = '0px'; cab.style.opacity = '1'; cab.style.pointerEvents = ''; };
+        const esconder = () => { cab.style.marginBottom = -cab.offsetHeight + 'px'; cab.style.opacity = '0'; cab.style.pointerEvents = 'none'; };
+        corpo.addEventListener('scroll', () => {
+            const y = corpo.scrollTop;
+            if (y < 16) mostrar();
+            else if (y > ultimo + 6) esconder();
+            else if (y < ultimo - 6) mostrar();
+            ultimo = y;
+        }, { passive: true });
+    }
     function htmlHome() {
         const alertas = produtos.filter(p => diasAte(p.data) <= 5)
             .sort((a, b) => a.data.localeCompare(b.data) || a.nome.localeCompare(b.nome));
@@ -3115,5 +3132,6 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
     }
 
     (window.lucide && lucide.createIcons());
+    configurarCabecalhoRolagem();
     iniciar();
     
