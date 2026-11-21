@@ -322,7 +322,11 @@ document.addEventListener('error', (e) => {
         ctx.restore();
         const lojaDaFoto = pdvLoja ? lojas.find(x => x.id === pdvLoja.lojaId) : null;
         desenharMarca(ctx, W0, H0, nome, local, pdvLoja ? pdvLoja.nome : '', lojaDaFoto && lojaDaFoto.endereco ? lojaDaFoto.endereco : '');
-        pdv.blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.95));
+        // foto reduzida para 1600 px no lado maior: envia mais rápido e ocupa menos espaço
+        const s = Math.min(1, 1600 / Math.max(c.width, c.height));
+        const c2 = document.createElement('canvas'); c2.width = Math.round(c.width * s); c2.height = Math.round(c.height * s);
+        c2.getContext('2d').drawImage(c, 0, 0, c2.width, c2.height);
+        pdv.blob = await new Promise(r => c2.toBlob(r, 'image/jpeg', 0.85));
         const ag = new Date();
         const stamp = isoLocal(ag) + ' ' + String(ag.getHours()).padStart(2, '0') + '-' + String(ag.getMinutes()).padStart(2, '0') + '-' + String(ag.getSeconds()).padStart(2, '0');
         pdv.nomeArq = `Promotor Ajudante - foto pdv - ${stamp}.jpg`;
@@ -963,13 +967,15 @@ document.addEventListener('error', (e) => {
             if (!atual || (p.fotoCodigo && !atual.fotoCodigo)) porCodigo.set(p.codigo, p);
         });
         const marcaDe = (p) => { const l = lojas.find(x => x.id === p.lojaId); const m = l && (l.marcas || []).find(x => x.id === p.marcaId); return m ? String(m.nome).trim() : '-'; };
+        // 'PAO NINO', 'Pão Nino' e 'pao nino' são a mesma marca (sem acento e sem diferença de maiúscula)
+        const norm = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
         // ordem: marca (alfabética) e, dentro da marca, nome (alfabética)
-        const lista = [...porCodigo.values()].sort((a, b) => marcaDe(a).localeCompare(marcaDe(b), 'pt-BR') || a.nome.localeCompare(b.nome, 'pt-BR'));
+        const lista = [...porCodigo.values()].sort((a, b) => norm(marcaDe(a)).localeCompare(norm(marcaDe(b)), 'pt-BR') || norm(a.nome).localeCompare(norm(b.nome), 'pt-BR'));
         if (!lista.length) return '<p class="text-gray-500 text-[11px]">Nenhum código cadastrado ainda.</p>';
         let html = '<table class="w-full text-[11px]"><thead><tr class="text-left text-gray-500 uppercase text-[9px]"><th class="py-2 pr-2">Produto</th><th class="pr-2">Marca</th><th class="text-center pr-2">Imagem</th><th>Código</th></tr></thead><tbody>';
         let marcaAtual = null;
         for (const p of lista) {
-            const m = marcaDe(p), chave = m.toLowerCase();
+            const m = marcaDe(p), chave = norm(m);
             if (chave !== marcaAtual) {
                 marcaAtual = chave;
                 html += `<tr><td colspan="4" class="pt-5 pb-2 text-amber-500 font-black uppercase tracking-wider text-[11px] border-b border-amber-500/40">${esc(m)}</td></tr>`;
@@ -1715,6 +1721,9 @@ document.addEventListener('error', (e) => {
         });
         return [...mapa.values()];
     }
+    // ---- tamanho do texto (normal ou grande), escolhido nas Configurações ----
+    function aplicarTamanhoTexto() { document.documentElement.style.fontSize = localStorage.getItem('texto_grande') === '1' ? '16px' : '14px'; }
+    function textoAlternar() { localStorage.setItem('texto_grande', localStorage.getItem('texto_grande') === '1' ? '0' : '1'); aplicarTamanhoTexto(); desenhar(); }
     // ---- instalar como app (Android): banner na parte de baixo, com botão Instalar e X ----
     let eventoInstalar = null;
     const INSTALAR_DIAS = 7;
@@ -2176,6 +2185,7 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
             <p class="text-[11px] font-bold text-white mb-4">Visitas hoje: ${(() => { const hoje = isoLocal(new Date()), dia = new Date().getDay(); const previstas = lojas.filter(l => diasDaLoja(l).includes(dia) && !visitas.some(v => v.lojaId === l.id && v.data === hoje && v.semVisita)); return new Set(visitas.filter(v => v.data === hoje && previstas.some(l => l.id === v.lojaId)).map(v => v.lojaId)).size; })()} de ${lojas.filter(l => diasDaLoja(l).includes(new Date().getDay())).length} previstas</p>
             ${htmlPlano()}
             ${jaInstalado() ? '' : `<button data-act="instalarApp" class="card-app p-4 mb-4 w-full text-left block"><div class="text-[9px] text-gray-500 font-black uppercase mb-1">Aplicativo</div><p class="text-[12px] text-gray-300">Instale o Promotor Ajudante na tela inicial do celular.</p></button>`}
+            <button data-act="textoAlternar" class="card-app p-4 mb-4 w-full text-left block"><div class="text-[9px] text-gray-500 font-black uppercase mb-1">Tamanho do texto</div><p class="text-[12px] text-gray-300">${localStorage.getItem('texto_grande') === '1' ? 'Grande (toque para normal)' : 'Normal (toque para grande)'}</p></button>
             <button data-act="notasAbrir" class="card-app p-4 mb-4 w-full text-left block"><div class="text-[9px] text-gray-500 font-black uppercase mb-1">Bloco de notas</div><p class="text-[12px] text-gray-300">Anote suas ideias. Ficam salvas por <b class="text-red-500">12 horas</b>.</p></button>
             <div class="card-app p-4 mb-3">
                 <div class="text-[9px] text-gray-500 font-black uppercase mb-1">Promotor</div>
@@ -2647,7 +2657,7 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
             }
         },
         verPlanos: () => abrirPlanos(),
-        instalarApp: () => instalarApp(), instalarFechar: () => instalarFechar(),
+        instalarApp: () => instalarApp(), instalarFechar: () => instalarFechar(), textoAlternar: () => textoAlternar(),
         redefinirAbrir: () => redefinirAbrir(), rsFechar: () => rsFechar(), rsEnviar: () => rsEnviar(), rsConfirmar: () => rsConfirmar(), rsSalvar: () => rsSalvar(),
         fecharPlanos: () => fecharPlanos(),
         cancelarAssinatura: async () => {
@@ -3262,6 +3272,7 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
     }
 
     (window.lucide && lucide.createIcons());
+    aplicarTamanhoTexto();
     configurarCabecalhoRolagem();
     // no Android, mostra o banner de instalação mesmo sem o aviso automático do Chrome
     if (/Android/i.test(navigator.userAgent)) setTimeout(mostrarBannerInstalar, 3000);
