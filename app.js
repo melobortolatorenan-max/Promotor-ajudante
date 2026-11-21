@@ -1680,6 +1680,43 @@ document.addEventListener('error', (e) => {
         });
         return [...mapa.values()];
     }
+    // ---- instalar como app (Android): banner na parte de baixo, com botão Instalar e X ----
+    let eventoInstalar = null;
+    const INSTALAR_DIAS = 7;
+    function jaInstalado() { return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true; }
+    function instalarDispensado() { const t = Number(localStorage.getItem('instalar_fechado') || 0); return !!t && Date.now() - t < INSTALAR_DIAS * 86400000; }
+    function mostrarBannerInstalar() {
+        if (document.getElementById('instalar-ban') || jaInstalado() || instalarDispensado()) return;
+        const b = document.createElement('div');
+        b.id = 'instalar-ban';
+        b.className = 'fixed left-4 right-4 z-[90] card-app p-3 flex items-center gap-3 shadow-[0_12px_40px_rgba(0,0,0,0.7)]';
+        b.style.bottom = 'calc(96px + env(safe-area-inset-bottom))';
+        b.innerHTML = `<img src="robo.png" class="w-10 h-10 object-contain" alt="">
+            <div class="flex-1 min-w-0">
+                <div class="text-white font-black uppercase text-[11px] leading-tight">Instale o Promotor Ajudante</div>
+                <div class="text-gray-400 text-[10px] leading-tight">Fica na tela inicial, como um app.</div>
+            </div>
+            <button data-act="instalarApp" class="btn-amarelo px-3 py-2 text-[10px] whitespace-nowrap">Instalar app</button>
+            <button data-act="instalarFechar" aria-label="Fechar" class="p-1 text-gray-500"><i data-lucide="x" class="w-4 h-4"></i></button>`;
+        document.body.appendChild(b);
+        (window.lucide && lucide.createIcons());
+    }
+    function instalarFechar() {
+        localStorage.setItem('instalar_fechado', String(Date.now()));
+        const b = document.getElementById('instalar-ban'); if (b) b.remove();
+    }
+    async function instalarApp() {
+        if (eventoInstalar) {
+            eventoInstalar.prompt();
+            const r = await eventoInstalar.userChoice;
+            eventoInstalar = null;
+            if (r && r.outcome === 'accepted') { const b = document.getElementById('instalar-ban'); if (b) b.remove(); }
+            return;
+        }
+        aviso('Para instalar: toque nos três pontinhos do Chrome e escolha "Instalar app" ou "Adicionar à tela inicial".', { soConfirmar: true });
+    }
+    window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); eventoInstalar = e; mostrarBannerInstalar(); });
+    window.addEventListener('appinstalled', () => { const b = document.getElementById('instalar-ban'); if (b) b.remove(); });
     // Cabeçalho: some ao descer a página e volta ao subir
     function configurarCabecalhoRolagem() {
         const cab = document.querySelector('header');
@@ -2570,6 +2607,7 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
             }
         },
         verPlanos: () => abrirPlanos(),
+        instalarApp: () => instalarApp(), instalarFechar: () => instalarFechar(),
         redefinirAbrir: () => redefinirAbrir(), rsFechar: () => rsFechar(), rsEnviar: () => rsEnviar(), rsConfirmar: () => rsConfirmar(), rsSalvar: () => rsSalvar(),
         fecharPlanos: () => fecharPlanos(),
         cancelarAssinatura: async () => {
@@ -3184,5 +3222,7 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
 
     (window.lucide && lucide.createIcons());
     configurarCabecalhoRolagem();
+    // no Android, mostra o banner de instalação mesmo sem o aviso automático do Chrome
+    if (/Android/i.test(navigator.userAgent)) setTimeout(mostrarBannerInstalar, 3000);
     iniciar();
     
