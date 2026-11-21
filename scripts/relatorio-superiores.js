@@ -28,7 +28,7 @@ function corpoHtml(promotor, porLoja, visitasPorLoja) {
   let h = `<p>Relatório semanal de <b>${esc(promotor)}</b>, de ${fmtBR(inicio)} a ${fmtBR(hoje)}.</p>`;
   for (const loja of lojas) {
     const itens = porLoja[loja] || [];
-    const visitas = (visitasPorLoja[loja] || []).map(v => `${fmtBR(v.data)} às ${esc(v.hora)}`).join(', ');
+    const visitas = (visitasPorLoja[loja] || []).map(v => v.semVisita ? `${fmtBR(v.data)}: <b style="color:#b91c1c">sem visita</b>, motivo: ${esc(v.motivo || '-')}` : `${fmtBR(v.data)} às ${esc(v.hora)}`).join('; ');
     h += `<h3 style="margin:16px 0 4px">${esc(loja)}</h3>
       <p style="margin:0 0 6px;font-size:13px;color:#444">Visitas: ${visitas || 'nenhuma registrada'}</p>`;
     if (!itens.length) { h += `<p style="font-size:13px;color:#666">Sem retiradas no período.</p>`; continue; }
