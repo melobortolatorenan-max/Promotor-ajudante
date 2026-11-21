@@ -1686,18 +1686,21 @@ document.addEventListener('error', (e) => {
     function jaInstalado() { return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true; }
     function instalarDispensado() { const t = Number(localStorage.getItem('instalar_fechado') || 0); return !!t && Date.now() - t < INSTALAR_DIAS * 86400000; }
     function mostrarBannerInstalar() {
-        if (document.getElementById('instalar-ban') || jaInstalado() || instalarDispensado()) return;
+        if (uid || document.getElementById('instalar-ban') || jaInstalado() || instalarDispensado()) return;
         const b = document.createElement('div');
         b.id = 'instalar-ban';
-        b.className = 'fixed left-4 right-4 z-[90] card-app p-3 flex items-center gap-3 shadow-[0_12px_40px_rgba(0,0,0,0.7)]';
-        b.style.bottom = 'calc(96px + env(safe-area-inset-bottom))';
-        b.innerHTML = `<img src="robo.png" class="w-10 h-10 object-contain" alt="">
-            <div class="flex-1 min-w-0">
-                <div class="text-white font-black uppercase text-[11px] leading-tight">Instale o Promotor Ajudante</div>
-                <div class="text-gray-400 text-[10px] leading-tight">Fica na tela inicial, como um app.</div>
+        b.className = 'fixed left-4 right-4 mx-auto max-w-md z-[90] card-app p-4 shadow-[0_12px_40px_rgba(0,0,0,0.7)]';
+        b.style.bottom = 'calc(16px + env(safe-area-inset-bottom))';
+        b.innerHTML = `
+            <div class="flex items-start gap-3">
+                <img src="robo.png" class="w-12 h-12 object-contain shrink-0" alt="">
+                <div class="flex-1 min-w-0">
+                    <div class="text-white font-black text-[12px] leading-tight">Instale o app</div>
+                    <div class="text-gray-400 text-[10px] leading-snug mt-0.5">Acesse o Promotor Ajudante direto pela tela inicial do celular.</div>
+                </div>
+                <button data-act="instalarFechar" aria-label="Fechar" class="p-1 text-gray-500 shrink-0"><i data-lucide="x" class="w-4 h-4"></i></button>
             </div>
-            <button data-act="instalarApp" class="btn-amarelo px-3 py-2 text-[10px] whitespace-nowrap">Instalar app</button>
-            <button data-act="instalarFechar" aria-label="Fechar" class="p-1 text-gray-500"><i data-lucide="x" class="w-4 h-4"></i></button>`;
+            <button data-act="instalarApp" class="mt-3 w-full py-2.5 rounded-xl bg-amber-500 text-gray-950 text-[11px] font-black uppercase">Instalar app</button>`;
         document.body.appendChild(b);
         (window.lucide && lucide.createIcons());
     }
@@ -2137,6 +2140,7 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
             <h2 class="text-amber-500 font-black italic uppercase text-lg mb-2">Minha Conta</h2>
             <p class="text-[11px] font-bold text-white mb-4">Visitas hoje: ${(() => { const hoje = isoLocal(new Date()), dia = new Date().getDay(); const previstas = lojas.filter(l => diasDaLoja(l).includes(dia) && !visitas.some(v => v.lojaId === l.id && v.data === hoje && v.semVisita)); return new Set(visitas.filter(v => v.data === hoje && previstas.some(l => l.id === v.lojaId)).map(v => v.lojaId)).size; })()} de ${lojas.filter(l => diasDaLoja(l).includes(new Date().getDay())).length} previstas</p>
             ${htmlPlano()}
+            ${jaInstalado() ? '' : `<button data-act="instalarApp" class="card-app p-4 mb-4 w-full text-left block"><div class="text-[9px] text-gray-500 font-black uppercase mb-1">Aplicativo</div><p class="text-[12px] text-gray-300">Instale o Promotor Ajudante na tela inicial do celular.</p></button>`}
             <button data-act="notasAbrir" class="card-app p-4 mb-4 w-full text-left block"><div class="text-[9px] text-gray-500 font-black uppercase mb-1">Bloco de notas</div><p class="text-[12px] text-gray-300">Anote suas ideias. Ficam salvas por <b class="text-red-500">12 horas</b>.</p></button>
             <div class="card-app p-4 mb-3">
                 <div class="text-[9px] text-gray-500 font-black uppercase mb-1">Promotor</div>
@@ -3126,6 +3130,7 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
     }
 
     function entrar(user) {
+        const bi = document.getElementById('instalar-ban'); if (bi) bi.remove();
         uid = user.uid; userInfo = { displayName: user.displayName, email: user.email };
         const criada = user.metadata && user.metadata.creationTime ? new Date(user.metadata.creationTime) : null;
         criadaEm = criada;
