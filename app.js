@@ -1721,6 +1721,26 @@ document.addEventListener('error', (e) => {
         });
         return [...mapa.values()];
     }
+    // ---- remoção com Desfazer: remove na hora e deixa um aviso por alguns segundos para voltar atrás ----
+    let remocaoDesfazer = null, remocaoTimer = null;
+    function avisoRemocao(texto, desfazer) {
+        clearTimeout(remocaoTimer);
+        const antigo = document.getElementById('remocao-ban'); if (antigo) antigo.remove();
+        remocaoDesfazer = desfazer;
+        const b = document.createElement('div');
+        b.id = 'remocao-ban';
+        b.className = 'fixed left-4 right-4 mx-auto max-w-md z-[92] card-app p-3 flex items-center justify-between gap-3 shadow-[0_12px_40px_rgba(0,0,0,0.7)]';
+        b.style.bottom = 'calc(96px + env(safe-area-inset-bottom))';
+        b.innerHTML = `<span class="text-white text-[12px] font-bold">${esc(texto)}</span><button data-act="remocaoDesfazer" class="text-amber-500 font-black uppercase text-[11px] px-2 py-1">Desfazer</button>`;
+        document.body.appendChild(b);
+        remocaoTimer = setTimeout(() => { remocaoDesfazer = null; b.remove(); }, 6000);
+    }
+    async function remocaoDesfazerAgora() {
+        const f = remocaoDesfazer; remocaoDesfazer = null;
+        clearTimeout(remocaoTimer);
+        const b = document.getElementById('remocao-ban'); if (b) b.remove();
+        if (f) { try { await f(); } catch (e) { erroDb(e); } }
+    }
     // ---- tamanho do texto (normal ou grande), escolhido nas Configurações ----
     function aplicarTamanhoTexto() { document.documentElement.style.fontSize = localStorage.getItem('texto_grande') === '1' ? '16px' : '14px'; }
     function textoAlternar() { localStorage.setItem('texto_grande', localStorage.getItem('texto_grande') === '1' ? '0' : '1'); aplicarTamanhoTexto(); desenhar(); }
@@ -2437,7 +2457,12 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
         } }),
         desfazer: () => desfazerAgora(),
         fecharDesfazer: () => fecharDesfazer(),
-        resolver: (d) => aviso('RESOLVIDO?', { ok: () => deleteDoc(refProd(d.id)).catch(erroDb) }),
+        resolver: (d) => {
+            const p = produtos.find(x => x.id === d.id); if (!p) return;
+            const dados = { ...p }; delete dados.id;
+            deleteDoc(refProd(d.id)).then(() => avisoRemocao('Item removido.', () => setDoc(refProd(d.id), dados))).catch(erroDb);
+        },
+        remocaoDesfazer: () => remocaoDesfazerAgora(),
         salvarProd: () => {
             const nome = $('#pn').value.trim(), data = $('#pd').value, lojaId = $('#pl').value, marcaId = $('#pm') ? $('#pm').value : '';
             const semQtd = !($('#pq-informar') && $('#pq-informar').checked);
