@@ -183,7 +183,8 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
             <input id="pdv-nome" class="input-custom" maxlength="40" autocomplete="name">
         </div>
         <div class="w-full max-w-sm flex justify-end"><button id="pdv-trocar" data-act="pdvTrocarLoja" class="hidden w-9 h-9 rounded-full border border-amber-500 text-amber-500 flex items-center justify-center" aria-label="Trocar loja"><i data-lucide="store" class="w-4 h-4"></i></button></div>
-        <video id="pdv-video" playsinline muted autoplay class="w-full max-w-sm rounded-2xl bg-black" style="aspect-ratio:3/4;object-fit:cover"></video>
+        <div id="pdv-cam" class="hidden justify-center gap-2 mb-3"><button data-act="camZoom" data-box="pdv" data-z="1" class="px-3 py-1 rounded-lg border border-gray-600 text-white text-[11px] font-black">1x</button><button data-act="camZoom" data-box="pdv" data-z="2" class="px-3 py-1 rounded-lg border border-gray-600 text-white text-[11px] font-black">2x</button><button data-act="camFlash" data-box="pdv" data-flash="1" class="px-3 py-1 rounded-lg border border-gray-600 text-white flex items-center"><i data-lucide="zap" class="w-4 h-4"></i></button></div>
+<video id="pdv-video" playsinline muted autoplay class="w-full max-w-sm rounded-2xl bg-black" style="aspect-ratio:3/4;object-fit:cover"></video>
         <canvas id="pdv-canvas" class="hidden"></canvas>
         <div class="w-full max-w-sm flex items-center justify-between px-4">
             <button data-act="pdvFechar" class="w-12 h-12 rounded-full border border-gray-600 text-gray-300 flex items-center justify-center" aria-label="Fechar"><i data-lucide="x" class="w-5 h-5"></i></button>
@@ -195,7 +196,8 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
     <!-- LEITOR DE CÓDIGO DE BARRAS -->
     <div id="scan" class="hidden fixed inset-0 flex-col items-center justify-center p-5 gap-4" style="z-index:95;background:rgba(3,7,18,.97)" role="dialog" aria-modal="true">
         <p id="scan-msg" class="text-amber-500 font-black uppercase text-sm text-center"></p>
-        <video id="scan-video" playsinline muted class="w-full max-w-sm rounded-2xl border border-gray-700 bg-black" style="aspect-ratio:3/4;object-fit:cover"></video>
+        <div id="scan-cam" class="hidden justify-center gap-2 mb-3"><button data-act="camZoom" data-box="scan" data-z="1" class="px-3 py-1 rounded-lg border border-gray-600 text-white text-[11px] font-black">1x</button><button data-act="camZoom" data-box="scan" data-z="2" class="px-3 py-1 rounded-lg border border-gray-600 text-white text-[11px] font-black">2x</button><button data-act="camFlash" data-box="scan" data-flash="1" class="px-3 py-1 rounded-lg border border-gray-600 text-white flex items-center"><i data-lucide="zap" class="w-4 h-4"></i></button></div>
+<video id="scan-video" playsinline muted class="w-full max-w-sm rounded-2xl border border-gray-700 bg-black" style="aspect-ratio:3/4;object-fit:cover"></video>
         <button data-act="scanFechar" class="w-full max-w-sm py-4 rounded-xl border border-gray-700 text-[10px] font-black uppercase text-gray-300">CANCELAR</button>
     </div>
 

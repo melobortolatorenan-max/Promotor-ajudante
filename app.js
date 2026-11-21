@@ -217,11 +217,45 @@ document.addEventListener('error', (e) => {
             }, () => resolve(null), { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
         });
     }
+    // ---- zoom 1x/2x e lanterna nas câmeras (leitura de código e foto do PDV) ----
+    const camEstado = { scan: { zoom: 1, flash: false }, pdv: { zoom: 1, flash: false } };
+    function camTrack(box) { const s = box === 'scan' ? leitor.stream : pdv.stream; return s ? s.getVideoTracks()[0] : null; }
+    function camDestacar(box) {
+        const barra = document.getElementById(box + '-cam'); if (!barra) return;
+        barra.querySelectorAll('[data-z]').forEach(b => { const on = Number(b.dataset.z) === camEstado[box].zoom; b.classList.toggle('bg-amber-500', on); b.classList.toggle('border-amber-500', on); b.classList.toggle('text-gray-950', on); b.classList.toggle('text-white', !on); });
+        const f = barra.querySelector('[data-flash]');
+        if (f) { const on = camEstado[box].flash; f.classList.toggle('bg-amber-500', on); f.classList.toggle('border-amber-500', on); f.classList.toggle('text-gray-950', on); f.classList.toggle('text-white', !on); }
+    }
+    function camPrepararBotoes(box) {
+        camEstado[box] = { zoom: 1, flash: false };
+        const t = camTrack(box), caps = t && t.getCapabilities ? t.getCapabilities() : {};
+        const barra = document.getElementById(box + '-cam'); if (!barra) return;
+        const mostra = !!(caps.zoom || caps.torch);
+        barra.classList.toggle('hidden', !mostra); barra.classList.toggle('flex', mostra);
+        barra.querySelectorAll('[data-z]').forEach(b => b.classList.toggle('hidden', !caps.zoom));
+        barra.querySelectorAll('[data-flash]').forEach(b => b.classList.toggle('hidden', !caps.torch));
+        camDestacar(box);
+    }
+    async function camZoom(box, z) {
+        const t = camTrack(box); if (!t || !t.getCapabilities) return;
+        const caps = t.getCapabilities(); if (!caps.zoom) return;
+        const alvo = Math.min(caps.zoom.max, Math.max(caps.zoom.min, z));
+        await t.applyConstraints({ advanced: [{ zoom: alvo }] }).catch(() => {});
+        camEstado[box].zoom = z; camDestacar(box);
+    }
+    async function camFlash(box) {
+        const t = camTrack(box); if (!t || !t.getCapabilities) return;
+        if (!t.getCapabilities().torch) return;
+        camEstado[box].flash = !camEstado[box].flash;
+        await t.applyConstraints({ advanced: [{ torch: camEstado[box].flash }] }).catch(() => {});
+        camDestacar(box);
+    }
     async function pdvIniciarCamera() {
         if (pdv.stream) return;
         try {
             pdv.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false });
             const v = $('#pdv-video'); v.srcObject = pdv.stream; await v.play();
+            camPrepararBotoes('pdv');
             // sobe para a resolução máxima que este aparelho oferece
             const track = pdv.stream.getVideoTracks()[0];
             const caps = track && track.getCapabilities ? track.getCapabilities() : {};
@@ -354,6 +388,7 @@ document.addEventListener('error', (e) => {
         try {
             leitor.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
             const v = $('#scan-video'); v.srcObject = leitor.stream; await v.play();
+            camPrepararBotoes('scan');
             try { leitor.detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'itf'] }); }
             catch (e) { leitor.detector = new BarcodeDetector(); }
             leitor.timer = setInterval(async () => {
@@ -2518,6 +2553,7 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
             }
         },
         fotoPdv: () => pdvAbrir(),
+        camZoom: (d) => camZoom(d.box, Number(d.z)), camFlash: (d) => camFlash(d.box),
         pdvCapturar: () => pdvCapturar(),
         pdvCompartilhar: () => pdvCompartilhar(),
         pdvSalvar: () => pdvSalvar(),
