@@ -11,7 +11,7 @@ document.addEventListener('error', (e) => {
     import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app-check.js";
     import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendPasswordResetEmail, updateProfile, GoogleAuthProvider, signInWithPopup, deleteUser }
         from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-    import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, where, writeBatch, serverTimestamp, getDoc, getDocs, runTransaction }
+    import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, where, writeBatch, serverTimestamp, getDoc, getDocs, runTransaction, waitForPendingWrites }
         from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
     import { getMessaging, getToken, deleteToken, onMessage, isSupported }
         from "https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging.js";
@@ -1741,6 +1741,28 @@ document.addEventListener('error', (e) => {
         const b = document.getElementById('remocao-ban'); if (b) b.remove();
         if (f) { try { await f(); } catch (e) { erroDb(e); } }
     }
+    // ---- indicador de sincronização no topo ----
+    function sincronizacaoAtualizar(estado) {
+        const el = document.getElementById('sync-ind'); if (!el) return;
+        const cores = { ok: 'bg-emerald-500', fila: 'bg-amber-500', sem: 'bg-red-500' };
+        const textos = { ok: 'Tudo salvo', fila: 'Enviando cadastros...', sem: 'Sem internet: os cadastros ficam no celular' };
+        el.querySelector('i').className = 'inline-block w-2 h-2 rounded-full ' + cores[estado];
+        el.querySelector('span').textContent = textos[estado];
+        el.classList.toggle('hidden', estado === 'ok');
+    }
+    async function sincronizacaoVerificar() {
+        if (!navigator.onLine) { sincronizacaoAtualizar('sem'); return; }
+        if (!uid) { sincronizacaoAtualizar('ok'); return; }
+        // se a espera pelos envios não termina logo, ainda há cadastros aguardando o servidor
+        const pendente = await Promise.race([
+            waitForPendingWrites(db).then(() => false),
+            new Promise(r => setTimeout(() => r(true), 400)),
+        ]);
+        sincronizacaoAtualizar(pendente ? 'fila' : 'ok');
+    }
+    setInterval(sincronizacaoVerificar, 4000);
+    window.addEventListener('online', sincronizacaoVerificar);
+    window.addEventListener('offline', () => sincronizacaoAtualizar('sem'));
     // ---- tamanho do texto (normal ou grande), escolhido nas Configurações ----
     function aplicarTamanhoTexto() { document.documentElement.style.fontSize = localStorage.getItem('texto_grande') === '1' ? '16px' : '14px'; }
     function textoAlternar() { localStorage.setItem('texto_grande', localStorage.getItem('texto_grande') === '1' ? '0' : '1'); aplicarTamanhoTexto(); desenhar(); }
