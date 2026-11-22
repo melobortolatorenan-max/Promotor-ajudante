@@ -1763,6 +1763,66 @@ document.addEventListener('error', (e) => {
     setInterval(sincronizacaoVerificar, 4000);
     window.addEventListener('online', sincronizacaoVerificar);
     window.addEventListener('offline', () => sincronizacaoAtualizar('sem'));
+    // ---- tutorial de primeiro acesso: 3 telas, uma vez por conta ----
+    const TUTORIAL_PASSOS = [
+        ['Visitas e rota', 'Na tela inicial você vê as lojas do dia. Cada quadrado é uma visita: ele acende quando a visita é feita, e fica vermelho se a loja não tiver visita hoje.'],
+        ['Cadastro rápido', 'Toque no botão de código no meio do menu para ler o código de barras. O produto já vem preenchido. Você só informa a validade e, se quiser, a quantidade.'],
+        ['Vencidos e relatório', 'Os vencimentos aparecem agrupados por produto, com as lojas de cada um. Em Configurações você encontra o relatório, o bloco de notas e os planos.'],
+    ];
+    let tutorialPasso = 0;
+    function tutorialAbrir() {
+        tutorialPasso = 0;
+        tutorialDesenhar();
+    }
+    function tutorialDesenhar() {
+        let ov = document.getElementById('tutorial-ov');
+        if (!ov) { ov = document.createElement('div'); ov.id = 'tutorial-ov'; ov.className = 'fixed inset-0 z-[97] bg-black/90 flex items-center justify-center p-4'; document.body.appendChild(ov); }
+        const [titulo, texto] = TUTORIAL_PASSOS[tutorialPasso];
+        const ultimo = tutorialPasso === TUTORIAL_PASSOS.length - 1;
+        const pontos = TUTORIAL_PASSOS.map((_, i) => `<span class="inline-block w-2 h-2 rounded-full ${i === tutorialPasso ? 'bg-amber-500' : 'bg-gray-700'}"></span>`).join(' ');
+        ov.innerHTML = `<div class="w-full max-w-sm card-app p-5">
+            <div class="text-[9px] text-gray-500 font-black uppercase mb-1">${tutorialPasso + 1} de ${TUTORIAL_PASSOS.length}</div>
+            <h2 class="text-white font-black italic uppercase text-lg mb-2">${esc(titulo)}</h2>
+            <p class="text-[13px] text-gray-300 leading-relaxed">${esc(texto)}</p>
+            <div class="flex justify-center gap-2 my-4">${pontos}</div>
+            <button data-act="tutorialProximo" class="btn-amarelo">${ultimo ? 'COMEÇAR' : 'PRÓXIMO'}</button>
+            <button data-act="tutorialFechar" class="w-full py-3 mt-2 text-[10px] font-black uppercase text-gray-500">Pular</button>
+        </div>`;
+    }
+    function tutorialProximo() {
+        if (tutorialPasso < TUTORIAL_PASSOS.length - 1) { tutorialPasso++; tutorialDesenhar(); }
+        else tutorialFechar();
+    }
+    function tutorialFechar() {
+        if (uid) localStorage.setItem('tutorial_visto_' + uid, '1');
+        const ov = document.getElementById('tutorial-ov'); if (ov) ov.remove();
+    }
+    // ---- resumo do dia para compartilhar ----
+    function textoResumoDoDia() {
+        const hoje = isoLocal(new Date()), dia = new Date().getDay();
+        const previstas = lojas.filter(l => diasDaLoja(l).includes(dia));
+        const semHoje = new Set(visitas.filter(v => v.data === hoje && v.semVisita).map(v => v.lojaId));
+        const feitas = new Set(visitas.filter(v => v.data === hoje && !v.semVisita).map(v => v.lojaId));
+        const ativas = previstas.filter(l => !semHoje.has(l.id));
+        const feitasNaRota = ativas.filter(l => feitas.has(l.id)).length;
+        const vencem = produtos.filter(p => p.data === hoje);
+        const linhas = [
+            `Resumo do dia ${fmtBR(hoje)} · ${userInfo && userInfo.displayName ? userInfo.displayName : 'Promotor'}`,
+            `Visitas: ${feitasNaRota} de ${ativas.length} previstas` + (semHoje.size ? ` (${semHoje.size} sem visita)` : ''),
+            `Vencimentos de hoje: ${vencem.length} produto(s)`,
+        ];
+        vencem.slice(0, 15).forEach(p => {
+            const l = lojas.find(x => x.id === p.lojaId);
+            linhas.push(`- ${p.nome} (${l ? l.nome : '-'}) ${p.qtd ? p.qtd + ' UN' : 'sem qtd'}`);
+        });
+        return linhas.join('\n');
+    }
+    async function compartilharResumo() {
+        const texto = textoResumoDoDia();
+        if (navigator.share) { try { await navigator.share({ title: 'Resumo do dia', text: texto }); return; } catch (e) { if (e && e.name === 'AbortError') return; } }
+        try { await navigator.clipboard.writeText(texto); aviso('Resumo copiado. Cole no WhatsApp ou no e-mail.', { soConfirmar: true }); }
+        catch (e) { aviso('Não consegui copiar o resumo. Tente de novo.', { soConfirmar: true }); }
+    }
     // ---- tamanho do texto (normal ou grande), escolhido nas Configurações ----
     function aplicarTamanhoTexto() { document.documentElement.style.fontSize = localStorage.getItem('texto_grande') === '1' ? '16px' : '14px'; }
     function textoAlternar() { localStorage.setItem('texto_grande', localStorage.getItem('texto_grande') === '1' ? '0' : '1'); aplicarTamanhoTexto(); desenhar(); }
@@ -1823,8 +1883,18 @@ document.addEventListener('error', (e) => {
             ultimo = y;
         }, { passive: true });
     }
-    function htmlHome() {
-        const alertas = produtos.filter(p => diasAte(p.data) <= 5)
+    // ---- filtro por marca na tela inicial ----
+    let filtroMarcaHome = '';
+    const marcaDoProduto = (p) => { const l = lojas.find(x => x.id === p.lojaId); const m = l && (l.marcas || []).find(x => x.id === p.marcaId); return m ? String(m.nome).trim() : ''; };
+    function htmlChipsMarca() {
+        const marcas = [...new Set(produtos.filter(p => diasAte(p.data) <= 5).map(marcaDoProduto).filter(Boolean))].sort((x, y) => x.localeCompare(y, 'pt-BR'));
+        if (marcas.length < 2) return '';
+        const chip = (nome, valor) => `<button data-act="filtroMarca" data-marca="${esc(valor)}" class="shrink-0 px-3 py-1.5 rounded-full border text-[10px] font-black uppercase ${filtroMarcaHome === valor ? 'bg-amber-500 border-amber-500 text-gray-950' : 'border-gray-700 text-gray-400'}">${esc(nome)}</button>`;
+        return `<div class="flex gap-2 overflow-x-auto no-scrollbar pb-3 mb-2">${chip('Todas', '')}${marcas.map(m => chip(m, m)).join('')}</div>`;
+    }
+    function htmlHome() { return htmlChipsMarca() + htmlHomeBase(); }
+    function htmlHomeBase() {
+        const alertas = produtos.filter(p => diasAte(p.data) <= 5 && (!filtroMarcaHome || marcaDoProduto(p) === filtroMarcaHome))
             .sort((a, b) => a.data.localeCompare(b.data) || a.nome.localeCompare(b.nome));
         const grupos = {};
         alertas.forEach(p => (grupos[p.data] = grupos[p.data] || []).push(p));
@@ -2228,6 +2298,7 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
             ${htmlPlano()}
             ${jaInstalado() ? '' : `<button data-act="instalarApp" class="card-app p-4 mb-4 w-full text-left block"><div class="text-[9px] text-gray-500 font-black uppercase mb-1">Aplicativo</div><p class="text-[12px] text-gray-300">Instale o Promotor Ajudante na tela inicial do celular.</p></button>`}
             <button data-act="textoAlternar" class="card-app p-4 mb-4 w-full text-left block"><div class="text-[9px] text-gray-500 font-black uppercase mb-1">Tamanho do texto</div><p class="text-[12px] text-gray-300">${localStorage.getItem('texto_grande') === '1' ? 'Grande (toque para normal)' : 'Normal (toque para grande)'}</p></button>
+            <button data-act="compartilharResumo" class="card-app p-4 mb-4 w-full text-left block"><div class="text-[9px] text-gray-500 font-black uppercase mb-1">Resumo do dia</div><p class="text-[12px] text-gray-300">Enviar visitas e vencimentos de hoje pelo WhatsApp ou e-mail.</p></button>
             <button data-act="notasAbrir" class="card-app p-4 mb-4 w-full text-left block"><div class="text-[9px] text-gray-500 font-black uppercase mb-1">Bloco de notas</div><p class="text-[12px] text-gray-300">Anote suas ideias. Ficam salvas por <b class="text-red-500">12 horas</b>.</p></button>
             <div class="card-app p-4 mb-3">
                 <div class="text-[9px] text-gray-500 font-black uppercase mb-1">Promotor</div>
@@ -2341,6 +2412,7 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
         relatorioMarca: (d) => imprimirRelatorio(d.id, d.marca),
         novoVencido: () => ir('v', { de: view.tab === 'r' ? 'r' : 'h' }),
         novoProdutoTopo: () => ir('p', { preLoja: '', preMarca: '', origem: null, origemMarca: null }),
+        filtroMarca: (d) => { filtroMarcaHome = d.marca || ''; desenhar(); },
         cadTipo: (d) => { const s = capturarFormCadastro(); scanPendente = s; marcaPendente = s.marcaNome || null; ir(d.tipo, { preLoja: s.lojaId || '' }); setTimeout(aplicarScanPendente, 0); },
         abrirRelVenc: () => ir('r'),
         voltarVenc: () => (view.venc || view.de === 'r') ? ir('r') : ir('h'),
@@ -2705,6 +2777,7 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
         },
         verPlanos: () => abrirPlanos(),
         instalarApp: () => instalarApp(), instalarFechar: () => instalarFechar(), textoAlternar: () => textoAlternar(),
+        tutorialProximo: () => tutorialProximo(), tutorialFechar: () => tutorialFechar(), compartilharResumo: () => compartilharResumo(),
         redefinirAbrir: () => redefinirAbrir(), rsFechar: () => rsFechar(), rsEnviar: () => rsEnviar(), rsConfirmar: () => rsConfirmar(), rsSalvar: () => rsSalvar(),
         fecharPlanos: () => fecharPlanos(),
         cancelarAssinatura: async () => {
@@ -3224,7 +3297,8 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
 
     function entrar(user) {
         const bi = document.getElementById('instalar-ban'); if (bi) bi.remove();
-        uid = user.uid; userInfo = { displayName: user.displayName, email: user.email };
+        uid = user.uid;
+        if (!localStorage.getItem('tutorial_visto_' + uid)) setTimeout(tutorialAbrir, 1200); userInfo = { displayName: user.displayName, email: user.email };
         const criada = user.metadata && user.metadata.creationTime ? new Date(user.metadata.creationTime) : null;
         criadaEm = criada;
         contaAntiga = false;   // todos seguem a regra de teste de 60 dias (contas antigas entram pela migração)
