@@ -74,6 +74,7 @@ async function tratarPagamento(db, id, res) {
       liberadoEm: admin.firestore.FieldValue.serverTimestamp(), pagamentoInformadoEm: admin.firestore.FieldValue.delete(),
     }, { merge: true });
     t.set(pagRef, { uid: ref.id, valor: p.transaction_amount, dias: DIAS_ANUAL, em: admin.firestore.FieldValue.serverTimestamp() });
+    t.set(ref.collection('recibos').doc(String(id)), { tipo: 'anual', valor: p.transaction_amount, dias: DIAS_ANUAL, criadoEm: admin.firestore.FieldValue.serverTimestamp() });
   });
   return res.status(200).send('ok');
 }
@@ -120,6 +121,7 @@ async function tratarCobrancaMensal(db, id, res) {
       'assinatura.status': 'ativa',
     }, { merge: true });
     t.set(pagRef, { uid: ref.id, valor: PRECO_MENSAL, dias: DIAS_MENSAL, em: admin.firestore.FieldValue.serverTimestamp() });
+    t.set(ref.collection('recibos').doc('mp-' + String(id)), { tipo: 'mensal', valor: PRECO_MENSAL, dias: DIAS_MENSAL, criadoEm: admin.firestore.FieldValue.serverTimestamp() });
   });
   return res.status(200).send('ok');
 }
