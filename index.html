@@ -103,6 +103,27 @@ html.alto-contraste .border-gray-800, html.alto-contraste .border-gray-700 { bor
 html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size: 11px !important; }
 </style>
 <style>.bg-gray-950,.bg-gray-950\/80,.bg-gray-950\/30,.bg-gray-950\/50{background-color:#000000 !important}</style>
+    <style>
+        /* modo claro: segue a configuração do celular. No modo escuro nada muda. */
+        @media (prefers-color-scheme: light) {
+            html, body, #corpo, section.secao, header, #tela-auth, #tela-carregando { background: #ffffff !important; color: #111827 !important; }
+            .bg-black, .bg-gray-950, .bg-gray-900, .bg-\[\#0b0b0f\], .bg-\[\#050a14\] { background-color: #ffffff !important; }
+            .bg-black\/90, .bg-black\/80, .bg-black\/60, .bg-gray-950\/80 { background-color: rgba(255,255,255,.94) !important; }
+            .bg-\[\#111827\], .bg-\[\#0f172a\] { background-color: #f3f4f6 !important; }
+            .card-app { background: #ffffff !important; border-color: #e5e7eb !important; box-shadow: 0 1px 3px rgba(0,0,0,.06) !important; }
+            .text-white { color: #111827 !important; }
+            .text-gray-300, .text-gray-400 { color: #4b5563 !important; }
+            .text-gray-500 { color: #6b7280 !important; }
+            .text-gray-600, .text-gray-700 { color: #9ca3af !important; }
+            .border-gray-800 { border-color: #e5e7eb !important; }
+            .border-gray-700, .border-gray-600 { border-color: #d1d5db !important; }
+            input, textarea, select { background-color: #f3f4f6 !important; color: #111827 !important; border-color: #d1d5db !important; }
+            #menu-inferior > div { background-color: #ffffff !important; border-color: #e5e7eb !important; box-shadow: 0 10px 30px rgba(0,0,0,.12) !important; }
+            .menu-item .menu-icone { color: #9ca3af !important; }
+            .menu-item.ativa .menu-icone, .menu-item.ativa .menu-rotulo { color: #d97706 !important; }
+            .menu-item .menu-rotulo { color: #6b7280 !important; }
+        }
+    </style>
 </head>
 <body>
 
