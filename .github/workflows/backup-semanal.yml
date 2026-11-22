@@ -1,0 +1,29 @@
+name: Backup semanal
+
+on:
+  schedule:
+    - cron: '0 12 * * 0'        # domingo, 9h em Brasília
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'true = só simula (padrão)'
+        default: 'true'
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Instalar dependências
+        working-directory: scripts
+        run: npm install --omit=dev --no-audit --no-fund
+      - name: Enviar backups
+        working-directory: scripts
+        run: node backup-semanal.js
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'true' }}
