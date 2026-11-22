@@ -1883,6 +1883,32 @@ document.addEventListener('error', (e) => {
             ultimo = y;
         }, { passive: true });
     }
+    // ---- atalho de voz para a rota: "próxima loja" abre o endereço no Maps (ou no Waze) ----
+    function proximaLojaDeHoje() {
+        const hoje = isoLocal(new Date()), dia = new Date().getDay();
+        const previstas = lojas.filter(l => diasDaLoja(l).includes(dia)).sort((x, y) => x.nome.localeCompare(y.nome, 'pt-BR'));
+        const semHoje = new Set(visitas.filter(v => v.data === hoje && v.semVisita).map(v => v.lojaId));
+        const feitas = new Set(visitas.filter(v => v.data === hoje && !v.semVisita).map(v => v.lojaId));
+        return previstas.find(l => !semHoje.has(l.id) && !feitas.has(l.id)) || null;
+    }
+    function vozRota() {
+        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SR) { aviso('Este navegador não aceita comando de voz. Use o Chrome do Android.', { soConfirmar: true }); return; }
+        const r = new SR(); r.lang = 'pt-BR'; r.interimResults = false; r.maxAlternatives = 1;
+        r.onresult = (e) => {
+            const fala = String(e.results[0][0].transcript || '').toLowerCase();
+            if (!/pr[oó]xima/.test(fala) || !/loja/.test(fala)) { aviso('Não entendi. Diga "próxima loja".', { soConfirmar: true }); return; }
+            const l = proximaLojaDeHoje();
+            if (!l) { aviso('Não há próxima loja na rota de hoje.', { soConfirmar: true }); return; }
+            const end = l.endereco || l.nome;
+            const url = /waze/.test(fala)
+                ? `https://waze.com/ul?q=${encodeURIComponent(end)}&navigate=yes`
+                : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(end)}`;
+            window.open(url, '_blank');
+        };
+        r.onerror = () => aviso('Não consegui ouvir. Tente de novo.', { soConfirmar: true });
+        r.start();
+    }
     // ---- filtro por marca na tela inicial ----
     let filtroMarcaHome = '';
     const marcaDoProduto = (p) => { const l = lojas.find(x => x.id === p.lojaId); const m = l && (l.marcas || []).find(x => x.id === p.marcaId); return m ? String(m.nome).trim() : ''; };
@@ -1892,7 +1918,7 @@ document.addEventListener('error', (e) => {
         const chip = (nome, valor) => `<button data-act="filtroMarca" data-marca="${esc(valor)}" class="shrink-0 px-3 py-1.5 rounded-full border text-[10px] font-black uppercase ${filtroMarcaHome === valor ? 'bg-amber-500 border-amber-500 text-gray-950' : 'border-gray-700 text-gray-400'}">${esc(nome)}</button>`;
         return `<div class="flex gap-2 overflow-x-auto no-scrollbar pb-3 mb-2">${chip('Todas', '')}${marcas.map(m => chip(m, m)).join('')}</div>`;
     }
-    function htmlHome() { return htmlChipsMarca() + htmlHomeBase(); }
+    function htmlHome() { return `<div class="flex justify-end mb-2"><button data-act="vozRota" class="px-3 py-1.5 rounded-lg border border-amber-500/60 text-amber-500 text-[10px] font-black uppercase">Falar: próxima loja</button></div>` + htmlChipsMarca() + htmlHomeBase(); }
     function htmlHomeBase() {
         const alertas = produtos.filter(p => diasAte(p.data) <= 5 && (!filtroMarcaHome || marcaDoProduto(p) === filtroMarcaHome))
             .sort((a, b) => a.data.localeCompare(b.data) || a.nome.localeCompare(b.nome));
@@ -2413,6 +2439,7 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
         novoVencido: () => ir('v', { de: view.tab === 'r' ? 'r' : 'h' }),
         novoProdutoTopo: () => ir('p', { preLoja: '', preMarca: '', origem: null, origemMarca: null }),
         filtroMarca: (d) => { filtroMarcaHome = d.marca || ''; desenhar(); },
+        vozRota: () => vozRota(),
         cadTipo: (d) => { const s = capturarFormCadastro(); scanPendente = s; marcaPendente = s.marcaNome || null; ir(d.tipo, { preLoja: s.lojaId || '' }); setTimeout(aplicarScanPendente, 0); },
         abrirRelVenc: () => ir('r'),
         voltarVenc: () => (view.venc || view.de === 'r') ? ir('r') : ir('h'),
