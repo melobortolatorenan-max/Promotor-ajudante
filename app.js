@@ -777,6 +777,7 @@ document.addEventListener('error', (e) => {
                 <p class="text-[12px] text-gray-300 leading-relaxed">Plano <b class="text-white">${mensal ? 'mensal' : 'anual'}</b><br>Valor: <b class="text-white">${mensal ? 'R$ ' + PRECO_MENSAL + ',00 por mês' : 'R$ ' + PRECO_ANUAL + ',00 pago de uma vez'}</b><br>Assinado em: <b class="text-white">${inicio ? inicio.toLocaleDateString('pt-BR') : '-'}</b><br>Tempo de uso: <b class="text-white">${meses} ${meses === 1 ? 'mês' : 'meses'}</b><br>Acesso até: <b class="text-white">${dataBR(perfilAcesso.acessoAte)}</b></p>
                 ${mensal && !cancelada ? `<button data-act="cancelarAssinatura" class="mt-3 w-full py-3 rounded-xl border border-red-900/50 text-[10px] font-black uppercase text-red-500">Cancelar assinatura</button>` : ''}
                 ${cancelada ? `<p class="mt-3 text-[11px] text-gray-500">Assinatura cancelada. O acesso segue até a data acima.</p>` : ''}
+                <div class="mt-4 border-t border-gray-800 pt-3"><div class="text-[9px] text-gray-500 font-black uppercase mb-2">Recibos</div><div id="recibos-lista" class="text-[12px] text-gray-400">Carregando...</div></div>
             </div>`;
         }
         const fim = fimTesteISO();
@@ -1591,6 +1592,7 @@ document.addEventListener('error', (e) => {
 
     function ir(tab, extra = {}) {
         if (!['p', 'v'].includes(tab)) scanPendente = null;
+        if (tab === 'c') setTimeout(carregarRecibos, 80);
         view = { tab, lojaId: null, marcaId: null, prod: null, preLoja: null, preMarca: '', origem: null, origemMarca: null, busca: '', ...extra };
         desenhar(true);
         if (tab !== 'p' && tab !== 'c' && tab !== 'v' && tab !== 'cap') setTimeout(verificarVencidos, 300);
@@ -1822,6 +1824,18 @@ document.addEventListener('error', (e) => {
         if (navigator.share) { try { await navigator.share({ title: 'Resumo do dia', text: texto }); return; } catch (e) { if (e && e.name === 'AbortError') return; } }
         try { await navigator.clipboard.writeText(texto); aviso('Resumo copiado. Cole no WhatsApp ou no e-mail.', { soConfirmar: true }); }
         catch (e) { aviso('Não consegui copiar o resumo. Tente de novo.', { soConfirmar: true }); }
+    }
+    // ---- recibos da assinatura: lidos uma vez e exibidos na tela de Configurações ----
+    async function carregarRecibos() {
+        const el = document.getElementById('recibos-lista'); if (!el || !uid) return;
+        try {
+            const snap = await getDocs(query(collection(db, 'users', uid, 'recibos'), orderBy('criadoEm', 'desc')));
+            if (snap.empty) { el.textContent = 'Nenhum recibo ainda.'; return; }
+            el.innerHTML = snap.docs.map(d => {
+                const r = d.data(), dt = dataDeTs(r.criadoEm);
+                return `<div class="flex justify-between py-1.5 border-b border-gray-800 last:border-0"><span>${dt ? dt.toLocaleDateString('pt-BR') : '-'} · ${r.tipo === 'mensal' ? 'Mensal' : 'Anual'}</span><b class="text-white">R$ ${Number(r.valor).toFixed(2).replace('.', ',')}</b></div>`;
+            }).join('');
+        } catch (e) { el.textContent = 'Não consegui carregar os recibos agora.'; console.warn('recibos:', e); }
     }
     // ---- tamanho do texto (normal ou grande), escolhido nas Configurações ----
     function aplicarTamanhoTexto() { document.documentElement.style.fontSize = localStorage.getItem('texto_grande') === '1' ? '16px' : '14px'; }
