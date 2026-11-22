@@ -1251,6 +1251,7 @@ document.addEventListener('error', (e) => {
                     <select id="rel-hora" class="input-custom w-24">${Array.from({ length: 24 }, (_, h) => `<option value="${h}" ${rel.hora === h ? 'selected' : ''}>${String(h).padStart(2, '0')}:00</option>`).join('')}</select>
                 </div>
                 <button data-act="relatorioSalvar" class="btn-amarelo mt-2">Salvar horário</button>
+                <button data-act="relatorioEnviarAgora" class="w-full py-3 mt-2 rounded-xl border border-amber-500 text-[10px] font-black uppercase text-amber-500">Enviar relatório agora</button>
                 <p class="text-[10px] text-gray-500 mt-2">O relatório dos últimos 7 dias vai por e-mail para cada superior cadastrado.</p>
             </div>
             <button data-act="superiorNovo" class="btn-amarelo mb-3">+ Novo superior</button>
@@ -1836,6 +1837,19 @@ document.addEventListener('error', (e) => {
                 return `<div class="flex justify-between py-1.5 border-b border-gray-800 last:border-0"><span>${dt ? dt.toLocaleDateString('pt-BR') : '-'} · ${r.tipo === 'mensal' ? 'Mensal' : 'Anual'}</span><b class="text-white">R$ ${Number(r.valor).toFixed(2).replace('.', ',')}</b></div>`;
             }).join('');
         } catch (e) { el.textContent = 'Não consegui carregar os recibos agora.'; console.warn('recibos:', e); }
+    }
+    // ---- envio manual do relatório aos superiores ----
+    async function relatorioEnviarAgora() {
+        if (!confirm('Enviar o relatório dos últimos 7 dias agora para todos os superiores com e-mail?')) return;
+        try {
+            const token = await auth.currentUser.getIdToken();
+            const r = await fetch(API_BASE + '/api/enviar-relatorio', { method: 'POST', headers: { Authorization: 'Bearer ' + token } });
+            const j = await r.json().catch(() => ({}));
+            if (r.status === 429) { aviso('Você já enviou há pouco. Aguarde 10 minutos para enviar de novo.', { soConfirmar: true }); return; }
+            if (r.status === 400) { aviso('Cadastre um superior com e-mail antes de enviar.', { soConfirmar: true }); return; }
+            if (!r.ok) throw new Error('api');
+            aviso(`Relatório enviado para ${j.enviados} superior(es).`, { soConfirmar: true });
+        } catch (e) { console.warn('relatorio manual:', e); aviso('Não consegui enviar agora. Verifique a internet e tente de novo.', { soConfirmar: true }); }
     }
     // ---- tamanho do texto (normal ou grande), escolhido nas Configurações ----
     function aplicarTamanhoTexto() { document.documentElement.style.fontSize = localStorage.getItem('texto_grande') === '1' ? '16px' : '14px'; }
@@ -2453,7 +2467,7 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
         novoVencido: () => ir('v', { de: view.tab === 'r' ? 'r' : 'h' }),
         novoProdutoTopo: () => ir('p', { preLoja: '', preMarca: '', origem: null, origemMarca: null }),
         filtroMarca: (d) => { filtroMarcaHome = d.marca || ''; desenhar(); },
-        vozRota: () => vozRota(),
+        vozRota: () => vozRota(), relatorioEnviarAgora: () => relatorioEnviarAgora(),
         cadTipo: (d) => { const s = capturarFormCadastro(); scanPendente = s; marcaPendente = s.marcaNome || null; ir(d.tipo, { preLoja: s.lojaId || '' }); setTimeout(aplicarScanPendente, 0); },
         abrirRelVenc: () => ir('r'),
         voltarVenc: () => (view.venc || view.de === 'r') ? ir('r') : ir('h'),
@@ -3370,7 +3384,7 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
             aplicarAcesso();
         }, (e) => { console.warn('perfil:', e); aplicarAcesso(); }));
         vencErro = '';
-        unsubs.push(onSnapshot(collection(db, 'users', uid, 'visitas'), (snap) => {
+        unsubs.push(onSnapshot(query(collection(db, 'users', uid, 'visitas'), where('data', '>=', isoLocal(new Date(Date.now() - 90 * 86400000)))), (snap) => {
             visitas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
             if (view.tab === 'l' || view.tab === 'c' || view.tab === 'h') desenhar(false);
         }));
