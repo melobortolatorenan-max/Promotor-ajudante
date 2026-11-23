@@ -71,7 +71,7 @@ document.addEventListener('error', (e) => {
         if (!l || !uid) return;
         if (!infoDiaLoja(l).atendeHoje) return;   // fora do dia de atendimento não conta como visita
         const hoje = isoLocal(new Date()), chave = `${lojaId}|${hoje}`;
-        if (visitasMarcadasSessao.has(chave) || visitas.some(v => v.lojaId === lojaId && v.data === hoje && !v.semVisita)) return;
+        if (visitasMarcadasSessao.has(chave) || visitas.some(v => v.lojaId === lojaId && v.data === hoje && !v.semVisita && !v.extra)) return;
         visitasMarcadasSessao.add(chave);
         const ag = new Date();
         addDoc(collection(db, 'users', uid, 'visitas'), { lojaId, lojaNome: l.nome, data: hoje, hora: `${String(ag.getHours()).padStart(2, '0')}:${String(ag.getMinutes()).padStart(2, '0')}`, criadoEm: serverTimestamp() })
@@ -203,6 +203,7 @@ document.addEventListener('error', (e) => {
         return new Promise(resolve => {
             navigator.geolocation.getCurrentPosition(async (pos) => {
                 const lat = pos.coords.latitude, lon = pos.coords.longitude;
+                if (!navigator.onLine) return resolve(null);
                 const coords = lat.toFixed(5) + ', ' + lon.toFixed(5);
                 let endereco = null;
                 try {
@@ -1325,7 +1326,7 @@ document.addEventListener('error', (e) => {
         const gravar = () => addDoc(collection(db, 'users', uid, 'visitas'), { lojaId, lojaNome: l.nome, data, hora, criadoEm: serverTimestamp() })
             .then(() => aviso(`Visita registrada em <b>${esc(l.nome)}</b> às ${hora}.`, { soConfirmar: true }))
             .catch(erroDb);
-        if (visitas.some(v => v.lojaId === lojaId && v.data === data && !v.semVisita)) {
+        if (visitas.some(v => v.lojaId === lojaId && v.data === data && !v.semVisita && !v.extra)) {
             return aviso(`Você já registrou visita nesta loja hoje. Registrar outra?`, { titulo: 'VISITA', okTexto: 'Registrar', ok: gravar });
         }
         gravar();
@@ -1334,8 +1335,8 @@ document.addEventListener('error', (e) => {
     function infoDiaLoja(l) {
         const hoje = isoLocal(new Date()), dias = diasDaLoja(l), diaSemana = new Date().getDay();
         const nomes = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
-        const atendeHoje = dias.includes(diaSemana);
-        const visitouHoje = atendeHoje ? visitas.filter(v => v.lojaId === l.id && v.data === hoje && !v.semVisita).sort((x, y) => x.hora.localeCompare(y.hora))[0] : undefined;
+        const atendeHoje = dias.includes(diaSemana) || visitas.some(v => v.extra && v.lojaId === l.id && v.data === hoje);
+        const visitouHoje = atendeHoje ? visitas.filter(v => v.lojaId === l.id && v.data === hoje && !v.semVisita && !v.extra).sort((x, y) => x.hora.localeCompare(y.hora))[0] : undefined;
         const semHoje = visitas.some(v => v.lojaId === l.id && v.data === hoje && v.semVisita);
         let proximo = null;
         if (dias.length) for (let k = 1; k <= 7; k++) { const d = (diaSemana + k) % 7; if (dias.includes(d)) { proximo = { k, d }; break; } }
@@ -1680,10 +1681,10 @@ document.addEventListener('error', (e) => {
         const dias = prox ? Math.round((Date.parse(prox.data + 'T00:00:00Z') - Date.parse(hoje + 'T00:00:00Z')) / 86400000) : null;
         const qtdProx = prox ? futuros.filter(p => p.data === prox.data).length : 0;
         const rotulo = dias === null ? '-' : dias === 0 ? 'HOJE' : dias === 1 ? 'AMANHÃ' : `${dias} DIAS`;
-        const previstas = lojas.filter(l => diasDaLoja(l).includes(dia)).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+        const previstas = previstasDoDia(hoje).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
         const semIds = new Set(previstas.filter(l => visitas.some(v => v.lojaId === l.id && v.data === hoje && v.semVisita)).map(l => l.id));
         const ativas = previstas.filter(l => !semIds.has(l.id));
-        const feitasIds = new Set(ativas.filter(l => visitas.some(v => v.lojaId === l.id && v.data === hoje && !v.semVisita)).map(l => l.id));
+        const feitasIds = new Set(ativas.filter(l => visitas.some(v => v.lojaId === l.id && v.data === hoje && !v.semVisita && !v.extra)).map(l => l.id));
         const n = ativas.length, feitas = feitasIds.size, faltam = n - feitas;
         const total = previstas.length;
         const pos = (i) => ((i + 1) / (total + 1)) * 100;
@@ -1814,9 +1815,9 @@ document.addEventListener('error', (e) => {
     // ---- resumo do dia para compartilhar ----
     function textoResumoDoDia() {
         const hoje = isoLocal(new Date()), dia = new Date().getDay();
-        const previstas = lojas.filter(l => diasDaLoja(l).includes(dia));
+        const previstas = previstasDoDia(hoje);
         const semHoje = new Set(visitas.filter(v => v.data === hoje && v.semVisita).map(v => v.lojaId));
-        const feitas = new Set(visitas.filter(v => v.data === hoje && !v.semVisita).map(v => v.lojaId));
+        const feitas = new Set(visitas.filter(v => v.data === hoje && !v.semVisita && !v.extra).map(v => v.lojaId));
         const ativas = previstas.filter(l => !semHoje.has(l.id));
         const feitasNaRota = ativas.filter(l => feitas.has(l.id)).length;
         const vencem = produtos.filter(p => p.data === hoje);
@@ -1861,6 +1862,46 @@ document.addEventListener('error', (e) => {
             if (!r.ok) throw new Error('api');
             aviso(`Relatório enviado para ${j.enviados} superior(es).`, { soConfirmar: true });
         } catch (e) { console.warn('relatorio manual:', e); aviso('Não consegui enviar agora. Verifique a internet e tente de novo.', { soConfirmar: true }); }
+    }
+    // lojas previstas de uma data: pelo dia da semana + as que foram adiadas para essa data
+    function previstasDoDia(iso) {
+        const dia = new Date(iso + 'T12:00:00').getDay();
+        const base = lojas.filter(l => diasDaLoja(l).includes(dia));
+        const extras = visitas.filter(v => v.extra && v.data === iso).map(v => lojas.find(l => l.id === v.lojaId)).filter(Boolean);
+        const ids = new Set(base.map(l => l.id));
+        return [...base, ...extras.filter(l => !ids.has(l.id))];
+    }
+    // Adiar visita: a loja fica sem visita hoje e aparece no dia escolhido (seg a sáb da mesma semana)
+    function adiarAbrir(lojaId) {
+        const l = lojas.find(x => x.id === lojaId); if (!l) return;
+        const hoje = new Date(), w = hoje.getDay(), offset = w === 0 ? -6 : 1 - w;
+        const dias = [];
+        const hojeISO = isoLocal(hoje);
+        for (let k = 0; k < 6; k++) { const d = new Date(hoje); d.setDate(hoje.getDate() + offset + k); const iso = isoLocal(d); dias.push({ iso, nome: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][k], passou: iso <= hojeISO }); }
+        const ov = document.createElement('div');
+        ov.id = 'adiar-ov'; ov.dataset.id = lojaId;
+        ov.className = 'fixed inset-0 z-[95] bg-black/90 flex items-center justify-center p-4';
+        ov.innerHTML = `<div class="w-full max-w-sm card-app p-5">
+            <div class="text-[9px] text-gray-500 font-black uppercase mb-1">Adiar visita</div>
+            <div class="text-white font-black italic uppercase text-lg mb-3">${esc(l.nome)}</div>
+            <p class="text-[12px] text-gray-300 mb-3">Escolha o dia desta semana para transferir o atendimento.</p>
+            <div class="grid grid-cols-3 gap-2">${dias.map(d => d.passou ? `<button disabled class="py-3 rounded-xl border border-gray-800 text-gray-600 text-[11px] font-black uppercase cursor-not-allowed">${d.nome} ${fmtBR(d.iso).slice(0, 5)}</button>` : `<button data-act="adiarEscolher" data-dia="${d.iso}" class="py-3 rounded-xl border border-amber-500/60 text-amber-500 text-[11px] font-black uppercase">${d.nome} ${fmtBR(d.iso).slice(0, 5)}</button>`).join('')}</div>
+            <button data-act="adiarFechar" class="w-full py-3 mt-3 text-[10px] font-black uppercase text-gray-500">Cancelar</button>
+        </div>`;
+        document.body.appendChild(ov);
+    }
+    function adiarFechar() { const ov = document.getElementById('adiar-ov'); if (ov) ov.remove(); }
+    async function adiarEscolher(dia) {
+        const ov = document.getElementById('adiar-ov'); if (!ov || !uid) return;
+        const l = lojas.find(x => x.id === ov.dataset.id); if (!l) return;
+        const hoje = isoLocal(new Date()), agora = new Date();
+        const hora = `${String(agora.getHours()).padStart(2, '0')}:${String(agora.getMinutes()).padStart(2, '0')}`;
+        try {
+            await addDoc(collection(db, 'users', uid, 'visitas'), { lojaId: l.id, lojaNome: l.nome, data: hoje, hora, semVisita: true, motivo: 'Visita adiada para ' + fmtBR(dia), adiadaPara: dia, criadoEm: serverTimestamp() });
+            await addDoc(collection(db, 'users', uid, 'visitas'), { lojaId: l.id, lojaNome: l.nome, data: dia, hora: '', semVisita: false, extra: true, adiadaDe: hoje, criadoEm: serverTimestamp() });
+            adiarFechar();
+            toast('Visita adiada para ' + fmtBR(dia) + '.');
+        } catch (e) { erroDb(e); }
     }
     // ---- tamanho do texto (normal ou grande), escolhido nas Configurações ----
     function aplicarTamanhoTexto() { document.documentElement.style.fontSize = localStorage.getItem('texto_grande') === '1' ? '16px' : '14px'; }
@@ -1925,9 +1966,9 @@ document.addEventListener('error', (e) => {
     // ---- atalho de voz para a rota: "próxima loja" abre o endereço no Maps (ou no Waze) ----
     function proximaLojaDeHoje() {
         const hoje = isoLocal(new Date()), dia = new Date().getDay();
-        const previstas = lojas.filter(l => diasDaLoja(l).includes(dia)).sort((x, y) => x.nome.localeCompare(y.nome, 'pt-BR'));
+        const previstas = previstasDoDia(hoje).sort((x, y) => x.nome.localeCompare(y.nome, 'pt-BR'));
         const semHoje = new Set(visitas.filter(v => v.data === hoje && v.semVisita).map(v => v.lojaId));
-        const feitas = new Set(visitas.filter(v => v.data === hoje && !v.semVisita).map(v => v.lojaId));
+        const feitas = new Set(visitas.filter(v => v.data === hoje && !v.semVisita && !v.extra).map(v => v.lojaId));
         return previstas.find(l => !semHoje.has(l.id) && !feitas.has(l.id)) || null;
     }
     function vozRota() {
@@ -2080,14 +2121,14 @@ document.addEventListener('error', (e) => {
                 const i = infoDiaLoja(l);
                 const dd = diasDaLoja(l);
                 // só conta visita feita em dia de atendimento da loja
-                const validas = visitas.filter(v => v.lojaId === l.id && !v.semVisita && dd.includes(new Date(v.data + 'T12:00:00').getDay()))
+                const validas = visitas.filter(v => v.lojaId === l.id && !v.semVisita && !v.extra && dd.includes(new Date(v.data + 'T12:00:00').getDay()))
                     .sort((x, y) => (y.data + y.hora).localeCompare(x.data + x.hora));
                 const ult = validas[0];
                 const ultTxt = ult ? `Última visita: <b class="text-gray-200">${dataBR(ult.data)} às ${ult.hora}</b>` : 'Nenhuma visita registrada';
                 let acao = '';
                 if (i.semHoje) acao = `<span class="px-2 py-1 rounded-md border border-red-600/50 text-red-400 text-[9px] font-bold uppercase whitespace-nowrap">Sem visita hoje</span>`;
                 else if (i.visitouHoje) acao = `<span class="px-3 py-2 rounded-xl border border-green-500/60 text-green-400 text-[10px] font-black uppercase">✓ Visitada hoje às ${i.visitouHoje.hora}</span>`;
-                else if (i.atendeHoje) acao = `<div class="flex flex-row gap-1.5 flex-nowrap"><button data-act="visitaRegistrar" data-id="${esc(l.id)}" class="px-2 py-1 rounded-md border border-amber-500/60 text-amber-500 text-[9px] font-bold uppercase whitespace-nowrap">Registrar visita</button><button data-act="semVisitaAbrir" data-id="${esc(l.id)}" class="px-2 py-1 rounded-md border border-red-600/50 text-red-400 text-[9px] font-bold uppercase whitespace-nowrap">Sem visita hoje</button></div>`;
+                else if (i.atendeHoje) acao = `<div class="flex flex-row gap-1.5 flex-nowrap"><button data-act="visitaRegistrar" data-id="${esc(l.id)}" class="px-2 py-1 rounded-md border border-amber-500/60 text-amber-500 text-[9px] font-bold uppercase whitespace-nowrap">Registrar visita</button><button data-act="semVisitaAbrir" data-id="${esc(l.id)}" class="px-2 py-1 rounded-md border border-red-600/50 text-red-400 text-[9px] font-bold uppercase whitespace-nowrap">Sem visita hoje</button><button data-act="adiarAbrir" data-id="${esc(l.id)}" class="px-2 py-1 rounded-md border border-gray-600 text-gray-300 text-[9px] font-bold uppercase whitespace-nowrap">Adiar visita</button></div>`;
                 let aviso = '';
                 if (!i.dias.length) aviso = '<div class="text-[10px] text-gray-500 mt-2">Defina os dias de visita abaixo.</div>';
                 else if (!i.atendeHoje && i.proximo) {
@@ -2097,7 +2138,7 @@ document.addEventListener('error', (e) => {
                 const endTxt = l.endereco
                     ? `<div class="flex items-center gap-2 text-[10px] text-gray-400 mb-2"><span class="flex-1">${esc(l.endereco)}</span><button data-act="enderecoEditar" data-id="${esc(l.id)}" class="text-amber-500 p-1" aria-label="Editar endereço"><i data-lucide="pencil" class="w-3 h-3"></i></button></div>`
                     : '';
-                return `<div class="card-app p-3 mb-3">${endTxt}<div class="flex items-center justify-between gap-2"><div class="text-[10px] text-gray-400">${ultTxt}</div>${acao}</div>${aviso}</div>`;
+                return `<div class="card-app p-3 mb-2">${endTxt}<div class="text-[10px] text-gray-400">${ultTxt}</div>${aviso}</div><div class="flex flex-wrap justify-end gap-2 mb-3">${acao}</div>`;
             })()}
 ${(!l.endereco || enderecoEditando === l.id) ? `
             <div class="card-app p-3 mb-3"><label class="text-[9px] text-gray-500 font-black uppercase">Endereço da loja (para a rota)</label>
@@ -2360,7 +2401,7 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
         const n = notifEstado();
         return `
             <h2 class="text-amber-500 font-black italic uppercase text-lg mb-2">Minha Conta</h2>
-            <p class="text-[11px] font-bold text-white mb-4">Visitas hoje: ${(() => { const hoje = isoLocal(new Date()), dia = new Date().getDay(); const previstas = lojas.filter(l => diasDaLoja(l).includes(dia) && !visitas.some(v => v.lojaId === l.id && v.data === hoje && v.semVisita)); return new Set(visitas.filter(v => v.data === hoje && previstas.some(l => l.id === v.lojaId)).map(v => v.lojaId)).size; })()} de ${lojas.filter(l => diasDaLoja(l).includes(new Date().getDay())).length} previstas</p>
+            <p class="text-[11px] font-bold text-white mb-4">Visitas hoje: ${(() => { const hoje = isoLocal(new Date()), dia = new Date().getDay(); const previstas = previstasDoDia(hoje).filter(l => !visitas.some(v => v.lojaId === l.id && v.data === hoje && v.semVisita)); return new Set(visitas.filter(v => v.data === hoje && previstas.some(l => l.id === v.lojaId)).map(v => v.lojaId)).size; })()} de ${lojas.filter(l => diasDaLoja(l).includes(new Date().getDay())).length} previstas</p>
             ${htmlPlano()}
             ${jaInstalado() ? '' : `<button data-act="instalarApp" class="card-app p-4 mb-4 w-full text-left block"><div class="text-[9px] text-gray-500 font-black uppercase mb-1">Aplicativo</div><p class="text-[12px] text-gray-300">Instale o Promotor Ajudante na tela inicial do celular.</p></button>`}
             <button data-act="textoAlternar" class="card-app p-4 mb-4 w-full text-left block"><div class="text-[9px] text-gray-500 font-black uppercase mb-1">Tamanho do texto</div><p class="text-[12px] text-gray-300">${localStorage.getItem('texto_grande') === '1' ? 'Grande (toque para normal)' : 'Normal (toque para grande)'}</p></button>
@@ -2479,7 +2520,7 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
         novoVencido: () => ir('v', { de: view.tab === 'r' ? 'r' : 'h' }),
         novoProdutoTopo: () => ir('p', { preLoja: '', preMarca: '', origem: null, origemMarca: null }),
         filtroMarca: (d) => { filtroMarcaHome = d.marca || ''; desenhar(); },
-        vozRota: () => vozRota(), relatorioEnviarAgora: () => relatorioEnviarAgora(),
+        vozRota: () => vozRota(), adiarAbrir: (d) => adiarAbrir(d.id), adiarEscolher: (d) => adiarEscolher(d.dia), adiarFechar: () => adiarFechar(), relatorioEnviarAgora: () => relatorioEnviarAgora(),
         cadTipo: (d) => { const s = capturarFormCadastro(); scanPendente = s; marcaPendente = s.marcaNome || null; ir(d.tipo, { preLoja: s.lojaId || '' }); setTimeout(aplicarScanPendente, 0); },
         abrirRelVenc: () => ir('r'),
         voltarVenc: () => (view.venc || view.de === 'r') ? ir('r') : ir('h'),
