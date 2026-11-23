@@ -17,7 +17,7 @@ document.addEventListener('error', (e) => {
         from "https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging.js";
 
     /* ================= utilidades ================= */
-    const VERSAO_APP = 'v58';
+    const VERSAO_APP = 'v60';
     document.getElementById('versao-login').textContent = VERSAO_APP;
     const API_BASE = 'https://promotor-ajudante.vercel.app';
     const SETORES = ['Bebidas', 'Doces', 'Higiene', 'Laticínios', 'Leites', 'Limpeza', 'Massas congeladas', 'Molhos', 'Pães', 'Salgadinhos', 'Temperos'];
@@ -514,7 +514,18 @@ document.addEventListener('error', (e) => {
                     t.set(ref, { codigo: cod, nome: dados.nome, setor: dados.setor || null, marcaNome: dados.marcaNome || null, criadoPor: uid, criadoEm: serverTimestamp(), definidoPor: uid, definidoEm: serverTimestamp() });
                 }
             });
-        } catch (e) { console.error('registro do código falhou:', e); }
+        } catch (e) {
+            // sem internet a transação não roda: grava direto (o Firestore envia quando a conexão voltar)
+            console.warn('registro do código sem transação (offline):', e);
+            try {
+                const s = await getDoc(ref);
+                if (!s.exists() || !s.data().nome) {
+                    await setDoc(ref, { codigo: cod, nome: dados.nome, setor: dados.setor || null, marcaNome: dados.marcaNome || null, criadoPor: uid, criadoEm: serverTimestamp(), definidoPor: uid, definidoEm: serverTimestamp() }, { merge: true });
+                } else if (!s.data().marcaNome && dados.marcaNome) {
+                    await setDoc(ref, { marcaNome: dados.marcaNome }, { merge: true });
+                }
+            } catch (e2) { console.error('registro do código falhou:', e2); }
+        }
     }
 
     /* ---- termos, privacidade e reembolso ---- */
