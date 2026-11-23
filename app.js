@@ -1946,7 +1946,7 @@ document.addEventListener('error', (e) => {
         const chip = (nome, valor) => `<button data-act="filtroMarca" data-marca="${esc(valor)}" class="shrink-0 px-3 py-1.5 rounded-full border text-[10px] font-black uppercase ${filtroMarcaHome === valor ? 'bg-amber-500 border-amber-500 text-gray-950' : 'border-gray-700 text-gray-400'}">${esc(nome)}</button>`;
         return `<div class="flex gap-2 overflow-x-auto no-scrollbar pb-3 mb-2">${chip('Todas', '')}${marcas.map(m => chip(m, m)).join('')}</div>`;
     }
-    function htmlHome() { return `<div class="flex justify-end mb-2"><button data-act="vozRota" class="px-3 py-1.5 rounded-lg border border-amber-500/60 text-amber-500 text-[10px] font-black uppercase">Falar: próxima loja</button></div>` + htmlChipsMarca() + htmlHomeBase(); }
+    function htmlHome() { return htmlChipsMarca() + htmlHomeBase(); }
     function htmlHomeBase() {
         const alertas = produtos.filter(p => diasAte(p.data) <= 5 && (!filtroMarcaHome || marcaDoProduto(p) === filtroMarcaHome))
             .sort((a, b) => a.data.localeCompare(b.data) || a.nome.localeCompare(b.nome));
@@ -2008,7 +2008,7 @@ document.addEventListener('error', (e) => {
                     </div>
                     <div class="flex items-center gap-2 truncate cursor-pointer" data-act="verLoja" data-id="${esc(l.id)}">
                         <div class="truncate">
-                            <div class="font-black uppercase italic text-[13px] text-white truncate">${esc(l.nome)}</div>
+                            <div class="font-black uppercase italic text-[13px] text-white leading-tight break-words pr-2">${esc(l.nome)}</div>
                             <div class="text-[8px] text-amber-500 font-bold uppercase">${(l.marcas || []).length ? (l.marcas.length + ' ' + plural(l.marcas.length, 'MARCA', 'MARCAS') + ' · ') : ''}${qtd} ${plural(qtd, 'PRODUTO', 'PRODUTOS')}</div>
                         </div>
                         <button data-act="renomearLoja" data-id="${esc(l.id)}" class="p-1 text-blue-400 opacity-60" aria-label="Renomear"><i data-lucide="pen-line" class="w-3.5 h-3.5"></i></button>
