@@ -1886,6 +1886,7 @@ document.addEventListener('error', (e) => {
             <div class="text-white font-black italic uppercase text-lg mb-3">${esc(l.nome)}</div>
             <p class="text-[12px] text-gray-300 mb-3">Escolha o dia desta semana para transferir o atendimento.</p>
             <div class="grid grid-cols-3 gap-2">${dias.map(d => d.passou ? `<button disabled class="py-3 rounded-xl border border-gray-800 text-gray-600 text-[11px] font-black uppercase cursor-not-allowed">${d.nome} ${fmtBR(d.iso).slice(0, 5)}</button>` : `<button data-act="adiarEscolher" data-dia="${d.iso}" class="py-3 rounded-xl border border-amber-500/60 text-amber-500 text-[11px] font-black uppercase">${d.nome} ${fmtBR(d.iso).slice(0, 5)}</button>`).join('')}</div>
+            <p class="text-[12px] font-black text-red-500 mt-4 leading-snug">O adiamento dessa loja é válido somente para essa semana. Ela retornará à rota normal na semana seguinte.</p>
             <button data-act="adiarFechar" class="w-full py-3 mt-3 text-[10px] font-black uppercase text-gray-500">Cancelar</button>
         </div>`;
         document.body.appendChild(ov);
