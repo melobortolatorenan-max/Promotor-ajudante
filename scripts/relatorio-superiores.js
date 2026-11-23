@@ -40,6 +40,13 @@ function corpoHtml(promotor, porLoja, visitasPorLoja) {
   return h + '<p style="color:#666;font-size:12px">Melo Staff · Promotor Ajudante</p>';
 }
 
+
+function anexoHtml(promotor, porLoja, visitasPorLoja, inicio, hoje) {
+  const nomeArq = `relatorio-${String(promotor).replace(/[^a-zA-Z0-9]+/g, '-')}-${inicio}-a-${hoje}.html`;
+  const doc = '<!doctype html><html><head><meta charset="utf-8"><title>Relatório semanal de vencidos</title></head><body style="font-family:Arial,sans-serif;color:#222;margin:24px">' + corpoHtml(promotor, porLoja, visitasPorLoja) + '</body></html>';
+  return { filename: nomeArq, content: doc, contentType: 'text/html; charset=utf-8' };
+}
+
 (async () => {
   const users = await db.collection('users').get();
   let enviados = 0;
@@ -70,7 +77,7 @@ function corpoHtml(promotor, porLoja, visitasPorLoja) {
       // lojas visitadas na semana entram mesmo sem retirada desta marca
       const assunto = `Relatório semanal de vencidos · ${promotor} · ${fmtBR(inicio)} a ${fmtBR(hoje)}`;
       if (DRY) { console.log(`[simulação] ${u.id} -> ${sup.email}: ${itens.length} itens, ${Object.keys(visitasPorLoja).length} lojas visitadas`); continue; }
-      await mail.sendMail({ from: `Promotor Ajudante <${process.env.GMAIL_USER}>`, to: sup.email, subject: assunto, html: corpoHtml(promotor, porLoja, visitasPorLoja) });
+      await mail.sendMail({ from: `Promotor Ajudante <${process.env.GMAIL_USER}>`, to: sup.email, subject: assunto, html: corpoHtml(promotor, porLoja, visitasPorLoja), attachments: [anexoHtml(promotor, porLoja, visitasPorLoja, inicio, hoje)] });
       enviados++;
     }
     if (!DRY) await base.set({ relatorioEnviadoEm: hoje }, { merge: true });
