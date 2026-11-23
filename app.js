@@ -1944,7 +1944,8 @@ document.addEventListener('error', (e) => {
         const marcas = [...new Set(produtos.filter(p => diasAte(p.data) <= 5).map(marcaDoProduto).filter(Boolean))].sort((x, y) => x.localeCompare(y, 'pt-BR'));
         if (marcas.length < 2) return '';
         const chip = (nome, valor) => `<button data-act="filtroMarca" data-marca="${esc(valor)}" class="shrink-0 px-3 py-1.5 rounded-full border text-[10px] font-black uppercase ${filtroMarcaHome === valor ? 'bg-amber-500 border-amber-500 text-gray-950' : 'border-gray-700 text-gray-400'}">${esc(nome)}</button>`;
-        return `<div class="flex gap-2 overflow-x-auto no-scrollbar pb-3 mb-2">${chip('Todas', '')}${marcas.map(m => chip(m, m)).join('')}</div>`;
+        // centralizado quando cabe; quando há mais marcas, a faixa desliza para o lado
+        return `<div class="overflow-x-auto no-scrollbar pb-3 mb-2"><div class="flex gap-2 w-max mx-auto px-1">${chip('Todas', '')}${marcas.map(m => chip(m, m)).join('')}</div></div>`;
     }
     function htmlHome() { return htmlChipsMarca() + htmlHomeBase(); }
     function htmlHomeBase() {
