@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import { getFirestore, collection, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
 const $ = (s) => document.querySelector(s);
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -116,23 +116,32 @@ onAuthStateChanged(auth, async (user) => {
     }
     const semEndereco = hoje.filter(l => !(l.endereco || '').trim());
     const comEndereco = hoje.filter(l => (l.endereco || '').trim());
-    mostrar(`Localizando ${comEndereco.length} loja(s) no mapa...`);
+    // 1) mostra os cards NA HORA, com as coordenadas já guardadas (sem esperar GPS nem busca de endereço)
+    const paradasBase = comEndereco.map(l => ({ id: l.id, nome: l.nome, endereco: l.endereco.trim(), pt: (l.enderecoLat != null && l.enderecoLng != null) ? { lat: l.enderecoLat, lng: l.enderecoLng } : null }));
+    const desenhar = (origem) => {
+        const ordem = origem
+            ? [...paradasBase].sort((a, b) => (a.pt && b.pt) ? distancia(origem, a.pt) - distancia(origem, b.pt) : (a.pt ? -1 : b.pt ? 1 : a.nome.localeCompare(b.nome, 'pt-BR')))
+            : [...paradasBase].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+        let html = `<div class="text-[11px] text-gray-500 mb-1">${NOMES[DIA].toUpperCase()} · ${origem ? 'ordenado pela sua localização' : 'ordem alfabética (toque em Atualizar para ordenar pela sua posição)'}</div>`;
+        html += ordem.map((p, i) => cartao(p, i, origem)).join('');
+        if (semEndereco.length) html += `<p class="text-xs text-amber-500">Sem endereço cadastrado: ${semEndereco.map(l => esc(l.nome)).join(', ')}. Cadastre no app, na tela de cada loja.</p>`;
+        mostrar(html);
+    };
+    desenhar(null);
 
-    const paradas = [], naoEncontradas = [];
-    for (const l of comEndereco) {
-      // coordenadas escolhidas na lista do Google Maps são usadas direto; senão, procura pelo texto
-      const pt = (l.enderecoLat != null && l.enderecoLng != null) ? { lat: l.enderecoLat, lng: l.enderecoLng } : await coordenadas(l.endereco.trim());
-      if (pt) paradas.push({ nome: l.nome, endereco: l.endereco.trim(), pt });
-      else naoEncontradas.push(l.nome);
+    // 2) em segundo plano: pega a localização (até 3 s) e reordena
+    const origem = await Promise.race([localizacao(), new Promise(res => setTimeout(() => res(null), 3000))]);
+    if (origem) desenhar(origem);
+
+    // 3) em segundo plano: lojas sem coordenadas ganham o ponto no mapa e ficam guardadas para as próximas vezes
+    const faltam = paradasBase.filter(p => !p.pt);
+    for (const p of faltam) {
+        const pt = await coordenadas(p.endereco);
+        if (!pt) continue;
+        p.pt = pt;
+        try { await updateDoc(doc(db, 'users', user.uid, 'lojas', p.id), { enderecoLat: pt.lat, enderecoLng: pt.lng }); } catch (e) { console.warn('coordenadas:', e); }
     }
-    const origem = await localizacao();
-    const rota = ordenar(paradas, origem);
-
-    let html = `<div class="text-[11px] text-gray-500 mb-1">${NOMES[DIA].toUpperCase()} · ${origem ? 'ordenado pela sua localização' : 'localização indisponível: ordem alfabética'}</div>`;
-    html += rota.map((p, i) => cartao(p, i, origem)).join('');
-    if (!origem) html += '<p class="text-xs text-gray-500">Permita a localização no navegador para a rota sair da sua posição atual.</p>';
-    if (naoEncontradas.length) html += `<p class="text-xs text-red-400">Sem ponto no mapa para: ${naoEncontradas.map(esc).join(', ')}. Abra a loja no app, estando nela, e toque em <b>Usar minha localização aqui</b>.</p>`;
-    if (semEndereco.length) html += `<p class="text-xs text-amber-500">Sem endereço cadastrado: ${semEndereco.map(l => esc(l.nome)).join(', ')}. Cadastre no app, na tela de cada loja.</p>`;
+    if (faltam.length) desenhar(origem);
     mostrar(html);
   } catch (e) {
     console.error(e);
