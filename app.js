@@ -682,6 +682,7 @@ document.addEventListener('error', (e) => {
     }
     // ---- sem visita hoje: motivo obrigatório ----
     function semVisitaAbrir(lojaId) {
+        semVisitaEscolhaFechar();
         const l = lojas.find(x => x.id === lojaId); if (!l) return;
         const ov = document.createElement('div');
         ov.id = 'sv-ov';
@@ -1904,6 +1905,24 @@ document.addEventListener('error', (e) => {
             toast('Visita adiada para ' + fmtBR(dia) + '.');
         } catch (e) { erroDb(e); }
     }
+    // Sem visita hoje: escolha entre registrar com motivo ou adiar a visita
+    function semVisitaEscolha(lojaId) {
+        const l = lojas.find(x => x.id === lojaId); if (!l) return;
+        const antigo = document.getElementById('sv-escolha'); if (antigo) antigo.remove();
+        const ov = document.createElement('div');
+        ov.id = 'sv-escolha';
+        ov.className = 'fixed inset-0 z-[95] bg-black/90 flex items-center justify-center p-4';
+        ov.innerHTML = `<div class="w-full max-w-sm card-app p-5">
+            <div class="text-[9px] text-gray-500 font-black uppercase mb-1">${esc(l.nome)}</div>
+            <h2 class="text-white font-black italic uppercase text-lg mb-2">Esta loja não será visitada hoje</h2>
+            <p class="text-[12px] text-gray-300 mb-4">Escolha uma opção:</p>
+            <button data-act="semVisitaAbrir" data-id="${esc(l.id)}" class="w-full py-3 rounded-xl border border-red-600/60 text-red-400 text-[11px] font-black uppercase">Sem visita hoje (com motivo)</button>
+            <button data-act="adiarAbrir" data-id="${esc(l.id)}" class="w-full py-3 mt-2 rounded-xl border border-amber-500/60 text-amber-500 text-[11px] font-black uppercase">Adiar visita</button>
+            <button data-act="semVisitaEscolhaFechar" class="w-full py-3 mt-2 text-[10px] font-black uppercase text-gray-500">Cancelar</button>
+        </div>`;
+        document.body.appendChild(ov);
+    }
+    function semVisitaEscolhaFechar() { const ov = document.getElementById('sv-escolha'); if (ov) ov.remove(); }
     // ---- tamanho do texto (normal ou grande), escolhido nas Configurações ----
     function aplicarTamanhoTexto() { document.documentElement.style.fontSize = localStorage.getItem('texto_grande') === '1' ? '16px' : '14px'; }
     function textoAlternar() { localStorage.setItem('texto_grande', localStorage.getItem('texto_grande') === '1' ? '0' : '1'); aplicarTamanhoTexto(); desenhar(); }
@@ -2129,7 +2148,7 @@ document.addEventListener('error', (e) => {
                 let acao = '';
                 if (i.semHoje) acao = `<span class="px-2 py-1 rounded-md border border-red-600/50 text-red-400 text-[9px] font-bold uppercase whitespace-nowrap">Sem visita hoje</span>`;
                 else if (i.visitouHoje) acao = `<span class="px-3 py-2 rounded-xl border border-green-500/60 text-green-400 text-[10px] font-black uppercase">✓ Visitada hoje às ${i.visitouHoje.hora}</span>`;
-                else if (i.atendeHoje) acao = `<div class="flex flex-row gap-1.5 flex-nowrap"><button data-act="visitaRegistrar" data-id="${esc(l.id)}" class="px-2 py-1 rounded-md border border-amber-500/60 text-amber-500 text-[9px] font-bold uppercase whitespace-nowrap">Registrar visita</button><button data-act="semVisitaAbrir" data-id="${esc(l.id)}" class="px-2 py-1 rounded-md border border-red-600/50 text-red-400 text-[9px] font-bold uppercase whitespace-nowrap">Sem visita hoje</button><button data-act="adiarAbrir" data-id="${esc(l.id)}" class="px-2 py-1 rounded-md border border-gray-600 text-gray-300 text-[9px] font-bold uppercase whitespace-nowrap">Adiar visita</button></div>`;
+                else if (i.atendeHoje) acao = `<div class="flex flex-row gap-1.5 flex-nowrap"><button data-act="visitaRegistrar" data-id="${esc(l.id)}" class="px-2 py-1 rounded-md border border-amber-500/60 text-amber-500 text-[9px] font-bold uppercase whitespace-nowrap">Registrar visita</button><button data-act="semVisitaEscolha" data-id="${esc(l.id)}" class="px-2 py-1 rounded-md border border-red-600/50 text-red-400 text-[9px] font-bold uppercase whitespace-nowrap">Sem visita hoje</button></div>`;
                 let aviso = '';
                 if (!i.dias.length) aviso = '<div class="text-[10px] text-gray-500 mt-2">Defina os dias de visita abaixo.</div>';
                 else if (!i.atendeHoje && i.proximo) {
@@ -2521,7 +2540,7 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
         novoVencido: () => ir('v', { de: view.tab === 'r' ? 'r' : 'h' }),
         novoProdutoTopo: () => ir('p', { preLoja: '', preMarca: '', origem: null, origemMarca: null }),
         filtroMarca: (d) => { filtroMarcaHome = d.marca || ''; desenhar(); },
-        vozRota: () => vozRota(), adiarAbrir: (d) => adiarAbrir(d.id), adiarEscolher: (d) => adiarEscolher(d.dia), adiarFechar: () => adiarFechar(), relatorioEnviarAgora: () => relatorioEnviarAgora(),
+        vozRota: () => vozRota(), semVisitaEscolha: (d) => semVisitaEscolha(d.id), semVisitaEscolhaFechar: () => semVisitaEscolhaFechar(), adiarAbrir: (d) => { semVisitaEscolhaFechar(); adiarAbrir(d.id); }, adiarEscolher: (d) => adiarEscolher(d.dia), adiarFechar: () => adiarFechar(), relatorioEnviarAgora: () => relatorioEnviarAgora(),
         cadTipo: (d) => { const s = capturarFormCadastro(); scanPendente = s; marcaPendente = s.marcaNome || null; ir(d.tipo, { preLoja: s.lojaId || '' }); setTimeout(aplicarScanPendente, 0); },
         abrirRelVenc: () => ir('r'),
         voltarVenc: () => (view.venc || view.de === 'r') ? ir('r') : ir('h'),
