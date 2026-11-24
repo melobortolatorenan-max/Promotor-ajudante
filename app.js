@@ -277,7 +277,6 @@ document.addEventListener('error', (e) => {
         pdv.blob = null;
         $('#pdv-share').classList.add('invisible');
         logoParaMarca();
-        await pdvIniciarCamera();
     }
     // Câmera nativa do celular: a foto já sai na posição certa
     function pdvAbrirCameraNativa() {
@@ -295,7 +294,7 @@ document.addEventListener('error', (e) => {
         } catch (e) { console.warn('foto PDV:', e); aviso('Não consegui usar essa foto. Tente de novo.', { soConfirmar: true }); }
     }
     async function pdvAbrir() {
-        if (!pdvLojaValida()) return pdvListaLojas(() => pdvAbrirCamera());
+        if (!pdvLojaValida()) return pdvListaLojas(() => pdvAbrirCameraNativa());
         pdvAbrirCameraNativa();
         await pdvAbrirCamera();
     }
