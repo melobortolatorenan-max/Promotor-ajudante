@@ -301,14 +301,15 @@ document.addEventListener('error', (e) => {
         let fonte = v, FW = v.videoWidth, FH = v.videoHeight;
         try {
             const track = pdv.stream && pdv.stream.getVideoTracks()[0];
-            if (track && 'ImageCapture' in window) {
+            // desligado: a imagem bruta do sensor sai deitada; usa o quadro da câmera, que já aparece em pé
+            if (false && track && 'ImageCapture' in window) {
                 const bmp = await createImageBitmap(await new ImageCapture(track).takePhoto());
                 fonte = bmp; FW = bmp.width; FH = bmp.height;
             }
         } catch (e) { console.warn('ImageCapture indisponível, usando o quadro do vídeo:', e); }
         // a saída é sempre em pé: se o quadro vier na horizontal, gira para ficar vertical
         const vw = FW, vh = FH;
-        const girar = vw > vh;
+        const girar = false;   // o quadro do vídeo já vem na posição certa
         const W0 = girar ? vh : vw, H0 = girar ? vw : vh;
         const c = $('#pdv-canvas'); c.width = W0; c.height = H0;
         const ctx = c.getContext('2d');
