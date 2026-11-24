@@ -146,7 +146,7 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
     <section id="tela-carregando" class="secao ativa items-center justify-center p-6 text-center" style="background:#000000">
         <img src="robo.png" class="mb-4 object-contain" style="width:224px;max-width:70vw;height:auto" alt="Robô Ajudante">
         <div id="carregando-txt" class="text-[10px] font-black uppercase tracking-widest text-gray-500">Carregando...</div>
-        <div class="text-[9px] text-gray-700 mt-3 font-bold">v58</div>
+        <div class="text-[9px] text-gray-700 mt-3 font-bold">v60</div>
     </section>
 
     <!-- CÓDIGOS DE BARRAS CADASTRADOS -->
@@ -205,7 +205,7 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
         </div>
         <div class="w-full max-w-sm flex justify-end"><button id="pdv-trocar" data-act="pdvTrocarLoja" class="hidden w-9 h-9 rounded-full border border-amber-500 text-amber-500 flex items-center justify-center" aria-label="Trocar loja"><i data-lucide="store" class="w-4 h-4"></i></button></div>
         <div id="pdv-cam" class="hidden justify-center gap-2 mb-3"><button data-act="camZoom" data-box="pdv" data-z="1" class="px-3 py-1 rounded-lg border border-gray-600 text-white text-[11px] font-black">1x</button><button data-act="camZoom" data-box="pdv" data-z="2" class="px-3 py-1 rounded-lg border border-gray-600 text-white text-[11px] font-black">2x</button><button data-act="camFlash" data-box="pdv" data-flash="1" class="px-3 py-1 rounded-lg border border-gray-600 text-white flex items-center"><i data-lucide="zap" class="w-4 h-4"></i></button></div>
-<video id="pdv-video" playsinline muted autoplay class="w-full max-w-sm rounded-2xl bg-black" style="aspect-ratio:3/4;object-fit:cover"></video>
+<input id="pdv-arquivo" type="file" accept="image/*" capture="environment" class="hidden"><video id="pdv-video" playsinline muted autoplay class="w-full max-w-sm rounded-2xl bg-black" style="aspect-ratio:3/4;object-fit:cover"></video>
         <canvas id="pdv-canvas" class="hidden"></canvas>
         <div class="w-full max-w-sm flex items-center justify-between px-4">
             <button data-act="pdvFechar" class="w-12 h-12 rounded-full border border-gray-600 text-gray-300 flex items-center justify-center" aria-label="Fechar"><i data-lucide="x" class="w-5 h-5"></i></button>

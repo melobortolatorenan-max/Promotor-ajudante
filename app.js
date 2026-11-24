@@ -279,8 +279,24 @@ document.addEventListener('error', (e) => {
         logoParaMarca();
         await pdvIniciarCamera();
     }
+    // Câmera nativa do celular: a foto já sai na posição certa
+    function pdvAbrirCameraNativa() {
+        const inp = document.getElementById('pdv-arquivo');
+        if (!inp) return aviso('Não consegui abrir a câmera. Atualize o app.', { soConfirmar: true });
+        inp.value = '';
+        inp.click();
+    }
+    async function pdvArquivoEscolhido(ev) {
+        const f = ev.target.files && ev.target.files[0];
+        if (!f) return;
+        try {
+            const bmp = await createImageBitmap(f, { imageOrientation: 'from-image' });
+            await pdvCapturar(bmp);
+        } catch (e) { console.warn('foto PDV:', e); aviso('Não consegui usar essa foto. Tente de novo.', { soConfirmar: true }); }
+    }
     async function pdvAbrir() {
         if (!pdvLojaValida()) return pdvListaLojas(() => pdvAbrirCamera());
+        pdvAbrirCameraNativa();
         await pdvAbrirCamera();
     }
     function pdvFechar() {
@@ -289,16 +305,17 @@ document.addEventListener('error', (e) => {
         const v = $('#pdv-video'); if (v) v.srcObject = null;
         const box = $('#pdv'); box.classList.add('hidden'); box.classList.remove('flex');
     }
-    async function pdvCapturar() {
+    async function pdvCapturar(externa) {
+        const imgExt = (typeof ImageBitmap !== 'undefined' && externa instanceof ImageBitmap) ? externa : null;
         if (!pdvLojaValida()) { pdvListaLojas(null); return; }   // janela de 30 min terminou: pergunta a loja de novo
         const campoNome = $('#pdv-nome-box').classList.contains('hidden') ? '' : $('#pdv-nome').value.trim();
         const nome = (campoNome || (userInfo && userInfo.displayName) || '').slice(0, 40);
         if (!nome) return aviso('Informe seu nome para aparecer na foto.', { soConfirmar: true });
         const v = $('#pdv-video');
-        if (!v.videoWidth) return;
+        if (!imgExt && !v.videoWidth) return;
         const local = await obterLocalizacao();
         // foto em tamanho cheio do sensor (quando o navegador permite); senão, usa o quadro do vídeo
-        let fonte = v, FW = v.videoWidth, FH = v.videoHeight;
+        let fonte = imgExt || v, FW = imgExt ? imgExt.width : v.videoWidth, FH = imgExt ? imgExt.height : v.videoHeight;
         try {
             const track = pdv.stream && pdv.stream.getVideoTracks()[0];
             // desligado: a imagem bruta do sensor sai deitada; usa o quadro da câmera, que já aparece em pé
@@ -2811,7 +2828,7 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
         },
         fotoPdv: () => pdvAbrir(),
         camZoom: (d) => camZoom(d.box, Number(d.z)), camFlash: (d) => camFlash(d.box),
-        pdvCapturar: () => pdvCapturar(),
+        pdvCapturar: () => pdvAbrirCameraNativa(),
         pdvCompartilhar: () => pdvCompartilhar(),
         pdvSalvar: () => pdvSalvar(),
         pdvFechar: () => pdvFechar(),
@@ -3521,6 +3538,7 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
     }
 
     (window.lucide && lucide.createIcons());
+    document.getElementById('pdv-arquivo')?.addEventListener('change', pdvArquivoEscolhido);
     aplicarTamanhoTexto();
     configurarCabecalhoRolagem();
     // no Android, mostra o banner de instalação mesmo sem o aviso automático do Chrome
