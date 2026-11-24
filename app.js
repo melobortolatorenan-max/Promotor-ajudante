@@ -315,9 +315,8 @@ document.addEventListener('error', (e) => {
         ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
         ctx.save();
         if (girar) {
-            const ang = (screen.orientation && screen.orientation.angle) || 0;
-            if (ang === 270) { ctx.translate(W0, 0); ctx.rotate(Math.PI / 2); }      // gira no sentido horário
-            else { ctx.translate(0, H0); ctx.rotate(-Math.PI / 2); }                   // gira no sentido anti-horário
+            // sensor deitado + celular em pé: sempre gira no sentido horário (independe da posição informada pelo aparelho)
+            ctx.translate(W0, 0); ctx.rotate(Math.PI / 2);
         }
         ctx.drawImage(fonte, 0, 0, vw, vh);
         ctx.restore();
@@ -2158,7 +2157,7 @@ document.addEventListener('error', (e) => {
                 const endTxt = l.endereco
                     ? `<div class="flex items-center gap-2 text-[10px] text-gray-400 mb-2"><span class="flex-1">${esc(l.endereco)}</span><button data-act="enderecoEditar" data-id="${esc(l.id)}" class="text-amber-500 p-1" aria-label="Editar endereço"><i data-lucide="pencil" class="w-3 h-3"></i></button></div>`
                     : '';
-                return `<div class="card-app p-3 mb-2">${endTxt}<div class="text-[10px] text-gray-400">${ultTxt}</div>${aviso}</div><div class="flex flex-wrap justify-end gap-2 mb-3">${acao}</div>`;
+                return `<div class="card-app p-3 mb-2">${endTxt}<div class="text-[10px] text-gray-400">${ultTxt}</div>${aviso}</div><div class="flex flex-wrap justify-start gap-2 mb-3">${acao}</div>`;
             })()}
 ${(!l.endereco || enderecoEditando === l.id) ? `
             <div class="card-app p-3 mb-3"><label class="text-[9px] text-gray-500 font-black uppercase">Endereço da loja (para a rota)</label>
