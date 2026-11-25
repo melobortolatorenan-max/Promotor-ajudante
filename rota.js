@@ -121,9 +121,23 @@ onAuthStateChanged(auth, async (user) => {
         .map(l => ({ id: l.id, nome: l.nome, ordem: typeof l.ordem === 'number' ? l.ordem : 9999, endereco: l.endereco.trim(), pt: null }))
         .sort((a, b) => a.ordem - b.ordem || a.nome.localeCompare(b.nome, 'pt-BR'));
     let html = `<div class="text-[11px] text-gray-500 mb-1">${NOMES[DIA].toUpperCase()} · ordem definida no app (tela Lojas)</div>`;
-    html += paradas.map((p, i) => cartao(p, i, null)).join('');
+    html += paradas.map((p, i) => cartao(p, i, null) + `<div class="flex gap-2 justify-end -mt-2 mb-3"><button data-mover="${i}" data-dir="-1" class="px-3 py-1 rounded-lg border border-gray-700 text-gray-300 text-xs" aria-label="Subir">&#9650; subir</button><button data-mover="${i}" data-dir="1" class="px-3 py-1 rounded-lg border border-gray-700 text-gray-300 text-xs" aria-label="Descer">&#9660; descer</button></div>`).join('');
     if (semEndereco.length) html += `<p class="text-xs text-amber-500">Sem endereço cadastrado: ${semEndereco.map(l => esc(l.nome)).join(', ')}. Cadastre no app, na tela de cada loja.</p>`;
     mostrar(html);
+    document.querySelectorAll('[data-mover]').forEach(b => b.addEventListener('click', async () => {
+      const i = Number(b.dataset.mover), j = i + Number(b.dataset.dir);
+      if (j < 0 || j >= paradas.length) return;
+      const A = paradas[i], C = paradas[j];
+      const diferentes = C.ordem !== A.ordem;
+      const novoA = diferentes ? C.ordem : j, novoC = diferentes ? A.ordem : i;
+      try {
+        await Promise.all([
+          updateDoc(doc(db, 'users', user.uid, 'lojas', A.id), { ordem: novoA }),
+          updateDoc(doc(db, 'users', user.uid, 'lojas', C.id), { ordem: novoC }),
+        ]);
+        location.reload();
+      } catch (e) { console.warn('ordem:', e); alert('Não consegui mudar a ordem agora. Verifique a internet.'); }
+    }));
   } catch (e) {
     console.error(e);
     mostrar('<p class="text-red-400">Não consegui carregar a rota agora. Verifique a conexão e toque em Atualizar.</p>');

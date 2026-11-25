@@ -294,6 +294,25 @@ document.addEventListener('error', (e) => {
             await pdvCapturar(bmp);
         } catch (e) { console.warn('foto PDV:', e); aviso('Não consegui usar essa foto. Tente de novo.', { soConfirmar: true }); }
     }
+    // Relatório em PDF: abre a versão para imprimir; no celular, escolha "Salvar como PDF"
+    function exportarPdf() {
+        const mes = isoLocal(new Date()).slice(0, 7);
+        const itens = vencidos.filter(v => (v.dataRetirada || '').startsWith(mes));
+        const nomeLoja = id => (lojas.find(l => l.id === id) || {}).nome || 'Loja';
+        const total = itens.reduce((s, v) => s + (Number(v.qtd) || 0), 0);
+        const linhas = itens.map(v => `<tr><td>${esc(v.nome || '')}</td><td>${esc(nomeLoja(v.lojaId))}</td><td>${esc(v.marcaNome || '')}</td><td>${dataBR(v.dataRetirada || '')}</td><td style="text-align:right">${Number(v.qtd) || 0}</td></tr>`).join('');
+        const html = `<!doctype html><html><head><meta charset="utf-8"><title>Relatório de vencidos</title>
+            <style>body{font-family:Arial,sans-serif;color:#111;padding:20px}h1{font-size:18px;margin:0 0 4px}p{font-size:12px;color:#555}
+            table{width:100%;border-collapse:collapse;margin-top:12px;font-size:12px}th,td{border-bottom:1px solid #ddd;padding:6px;text-align:left}th{background:#f3f4f6}
+            .total{margin-top:12px;font-weight:bold}</style></head><body>
+            <h1>Relatório de vencidos: ${esc(mes)}</h1><p>Promotor Ajudante · ${esc(userInfo && userInfo.displayName ? userInfo.displayName : '')}</p>
+            <table><thead><tr><th>Produto</th><th>Loja</th><th>Marca</th><th>Data</th><th style="text-align:right">Qtd</th></tr></thead><tbody>${linhas || '<tr><td colspan="5">Nenhum vencido neste mês.</td></tr>'}</tbody></table>
+            <p class="total">Total: ${total} unidades</p></body></html>`;
+        const janela = window.open('', '_blank');
+        if (!janela) return aviso('Permita abrir janelas para gerar o PDF.', { soConfirmar: true });
+        janela.document.write(html); janela.document.close();
+        janela.focus(); setTimeout(() => janela.print(), 300);
+    }
     async function pdvAbrir() {
         if (!pdvLojaValida()) return pdvListaLojas(() => pdvAbrirCameraNativa());
         pdvAbrirCameraNativa();
@@ -2490,6 +2509,7 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
             </button>
             ${htmlAcaoCard('Produtos', 'Código de barras cadastrados', produtos.filter(p => p.codigo).length + ' códigos', 'codigosAbrir')}
             ${htmlAcaoCard('Dados', 'Exportar planilha', 'Produtos e vencidos em CSV', 'exportarDados')}
+            ${htmlAcaoCard('Relatório', 'Relatório em PDF', 'Vencidos do mês para imprimir ou salvar', 'exportarPdf')}
             ${htmlAcaoCard('Lojas', 'Planograma lojas', lojas.length + ' lojas', 'planogramaAbrir')}
             ${htmlAcaoCard('Resumo', 'Resumo do dia', 'Retiradas e cadastros por dia', 'resumoAbrir')}
             ${htmlConvites()}
@@ -2588,7 +2608,7 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
         novoVencido: () => ir('v', { de: view.tab === 'r' ? 'r' : 'h' }),
         novoProdutoTopo: () => ir('p', { preLoja: '', preMarca: '', origem: null, origemMarca: null }),
         filtroMarca: (d) => { filtroMarcaHome = d.marca || ''; desenhar(); },
-        vozRota: () => vozRota(), compactoAlternar: () => compactoAlternar(), semVisitaEscolha: (d) => semVisitaEscolha(d.id), semVisitaEscolhaFechar: () => semVisitaEscolhaFechar(), adiarAbrir: (d) => { semVisitaEscolhaFechar(); adiarAbrir(d.id); }, adiarEscolher: (d) => adiarEscolher(d.dia), adiarFechar: () => adiarFechar(), relatorioEnviarAgora: () => relatorioEnviarAgora(),
+        vozRota: () => vozRota(), exportarPdf: () => exportarPdf(), compactoAlternar: () => compactoAlternar(), semVisitaEscolha: (d) => semVisitaEscolha(d.id), semVisitaEscolhaFechar: () => semVisitaEscolhaFechar(), adiarAbrir: (d) => { semVisitaEscolhaFechar(); adiarAbrir(d.id); }, adiarEscolher: (d) => adiarEscolher(d.dia), adiarFechar: () => adiarFechar(), relatorioEnviarAgora: () => relatorioEnviarAgora(),
         cadTipo: (d) => { const s = capturarFormCadastro(); scanPendente = s; marcaPendente = s.marcaNome || null; ir(d.tipo, { preLoja: s.lojaId || '' }); setTimeout(aplicarScanPendente, 0); },
         abrirRelVenc: () => ir('r'),
         voltarVenc: () => (view.venc || view.de === 'r') ? ir('r') : ir('h'),
