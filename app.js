@@ -1974,9 +1974,27 @@ document.addEventListener('error', (e) => {
             }).join('');
         } catch (e) { el.textContent = 'Não consegui carregar os recibos agora.'; console.warn('recibos:', e); }
     }
+    /* ---- caixa de confirmação no estilo do app (no lugar da janela do navegador) ---- */
+    function confirmarTema(msg) {
+        return new Promise(resolve => {
+            const ov = document.createElement('div');
+            ov.setAttribute('style', 'position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;padding:24px');
+            ov.innerHTML = `<div style="width:100%;max-width:360px;background:#111827;border:1px solid #1f2937;border-radius:20px;padding:22px;text-align:center">
+                <div style="color:#f59e0b;font-weight:900;font-style:italic;text-transform:uppercase;font-size:13px;margin-bottom:8px">Promotor Ajudante</div>
+                <p style="color:#e5e7eb;font-size:14px;line-height:1.4;margin:0 0 20px">${esc(msg)}</p>
+                <div style="display:flex;gap:8px">
+                    <button id="cx-nao" style="flex:1;padding:12px;border-radius:12px;border:1px solid #374151;background:transparent;color:#d1d5db;font-weight:900;font-size:11px;text-transform:uppercase">Cancelar</button>
+                    <button id="cx-sim" style="flex:1;padding:12px;border-radius:12px;border:none;background:#f59e0b;color:#000;font-weight:900;font-size:11px;text-transform:uppercase">OK</button>
+                </div></div>`;
+            document.body.appendChild(ov);
+            const fechar = (v) => { ov.remove(); resolve(v); };
+            ov.querySelector('#cx-sim').onclick = () => fechar(true);
+            ov.querySelector('#cx-nao').onclick = () => fechar(false);
+        });
+    }
     // ---- envio manual do relatório aos superiores ----
     async function relatorioEnviarAgora() {
-        if (!confirm('Enviar o relatório dos últimos 7 dias agora para todos os superiores com e-mail?')) return;
+        if (!(await confirmarTema('Enviar o relatório dos últimos 7 dias agora para todos os superiores com e-mail?'))) return;
         try {
             const token = await auth.currentUser.getIdToken();
             const r = await fetch(API_BASE + '/api/enviar-relatorio', { method: 'POST', headers: { Authorization: 'Bearer ' + token } });
@@ -3090,7 +3108,7 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
         redefinirAbrir: () => redefinirAbrir(), rsFechar: () => rsFechar(), rsEnviar: () => rsEnviar(), rsConfirmar: () => rsConfirmar(), rsSalvar: () => rsSalvar(),
         fecharPlanos: () => fecharPlanos(),
         cancelarAssinatura: async () => {
-            if (!confirm('Cancelar a assinatura mensal? O acesso continua até a data indicada.')) return;
+            if (!(await confirmarTema('Cancelar a assinatura mensal? O acesso continua até a data indicada.'))) return;
             try {
                 const token = await auth.currentUser.getIdToken();
                 const r = await fetch(API_BASE + '/api/cancelar-assinatura', { method: 'POST', headers: { Authorization: 'Bearer ' + token } });
