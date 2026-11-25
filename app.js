@@ -1475,13 +1475,20 @@ document.addEventListener('error', (e) => {
     const temAprovador = () => aprovadoresDoPromotor().length > 0;
     const solicitacaoPendente = (lojaId, tipo) => solicitacoes.some(s => s.status === 'pendente' && s.lojaId === lojaId && (!tipo || s.tipo === tipo));
     async function pedirAprovacao(tipo, lojaId, lojaNome, payload) {
-        await addDoc(collection(db, 'solicitacoes'), {
+        const ref = await addDoc(collection(db, 'solicitacoes'), {
             tipo, lojaId, lojaNome, payload,
             promotorUid: uid, promotorNome: (userInfo && userInfo.displayName) || '',
             aprovadores: aprovadoresDoPromotor(), status: 'pendente', applied: false,
             criadoEm: serverTimestamp(),
         });
         toast('Enviado para aprovação da agência.');
+        notificarAprovadores(ref.id);
+    }
+    async function notificarAprovadores(id) {
+        try {
+            const t = await auth.currentUser.getIdToken();
+            await fetch('/api/notificar-aprovador', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + t }, body: JSON.stringify({ id }) });
+        } catch (e) { console.warn('aviso ao aprovador:', e); }
     }
     // Aplica no promotor o que a agência aprovou (ou só marca como lido, se recusou)
     const solicitacoesAplicando = new Set();
