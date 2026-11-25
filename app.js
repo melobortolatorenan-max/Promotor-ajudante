@@ -282,6 +282,7 @@ document.addEventListener('error', (e) => {
     function pdvAbrirCameraNativa() {
         const inp = document.getElementById('pdv-arquivo');
         if (!inp) return aviso('Não consegui abrir a câmera. Atualize o app.', { soConfirmar: true });
+        const bx = $('#pdv'); bx.classList.add('hidden'); bx.classList.remove('flex');
         inp.value = '';
         inp.click();
     }
@@ -348,7 +349,8 @@ document.addEventListener('error', (e) => {
         const stamp = isoLocal(ag) + ' ' + String(ag.getHours()).padStart(2, '0') + '-' + String(ag.getMinutes()).padStart(2, '0') + '-' + String(ag.getSeconds()).padStart(2, '0');
         pdv.nomeArq = `Promotor Ajudante - foto pdv - ${stamp}.jpg`;
         pdvSalvar();                                   // salva em silêncio, sem aviso
-        $('#pdv-share').classList.remove('invisible');
+        const bx2 = $('#pdv'); bx2.classList.add('hidden'); bx2.classList.remove('flex');
+        toast('Foto salva.');
     }
     async function pdvCompartilhar() {
         if (!pdv.blob) return;
@@ -1349,6 +1351,15 @@ document.addEventListener('error', (e) => {
         gravar();
     }
     // Situação da loja no dia: se já foi visitada hoje e se hoje é dia de atendimento
+    function proximaVisitaTxt(l) {
+        const dias = diasDaLoja(l), nomes = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+        const hoje = new Date();
+        for (let k = 0; k < 8; k++) {
+            const d = new Date(hoje); d.setDate(hoje.getDate() + k);
+            if (dias.includes(d.getDay())) return `Próxima visita: <b class="text-gray-200">${k === 0 ? 'hoje' : nomes[d.getDay()]}</b>`;
+        }
+        return 'Sem dia de visita definido';
+    }
     function infoDiaLoja(l) {
         const hoje = isoLocal(new Date()), dias = diasDaLoja(l), diaSemana = new Date().getDay();
         const nomes = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
@@ -2035,7 +2046,18 @@ document.addEventListener('error', (e) => {
         // centralizado quando cabe; quando há mais marcas, a faixa desliza para o lado
         return `<div class="overflow-x-auto no-scrollbar pb-3 mb-2"><div class="flex gap-2 w-max mx-auto px-1">${chip('Todas', '')}${marcas.map(m => chip(m, m)).join('')}</div></div>`;
     }
-    function htmlHome() { return htmlChipsMarca() + htmlHomeBase(); }
+    function htmlHome() {
+        const mes = isoLocal(new Date()).slice(0, 7);
+        const n = vencidos.filter(v => (v.dataRetirada || '').startsWith(mes)).length;
+        const contador = `<div class="text-[10px] text-gray-500 mb-2">${n} ${n === 1 ? 'retirada' : 'retiradas'} neste mês</div>`;
+        let aviso = '';
+        const fim = fimTesteISO();
+        if (!contaAntiga && perfilAcesso.gratis !== true && !planoPago() && fim) {
+            const dias = diasAte(fim);
+            if (dias >= 0 && dias <= 7) aviso = `<div class="card-app p-3 mb-3 text-[11px] text-amber-500 font-bold">Seu teste grátis termina em ${dias} ${dias === 1 ? 'dia' : 'dias'}. Escolha seu plano em Configurações.</div>`;
+        }
+        return aviso + contador + htmlChipsMarca() + htmlHomeBase();
+    }
     function htmlHomeBase() {
         const alertas = produtos.filter(p => diasAte(p.data) <= 5 && (!filtroMarcaHome || marcaDoProduto(p) === filtroMarcaHome))
             .sort((a, b) => a.data.localeCompare(b.data) || a.nome.localeCompare(b.nome));
@@ -2174,7 +2196,7 @@ document.addEventListener('error', (e) => {
                 const endTxt = l.endereco
                     ? `<div class="flex items-center gap-2 text-[10px] text-gray-400 mb-2"><span class="flex-1">${esc(l.endereco)}</span><button data-act="enderecoEditar" data-id="${esc(l.id)}" class="text-amber-500 p-1" aria-label="Editar endereço"><i data-lucide="pencil" class="w-3 h-3"></i></button></div>`
                     : '';
-                return `<div class="card-app p-3 mb-2">${endTxt}<div class="text-[10px] text-gray-400">${ultTxt}</div>${aviso}</div><div class="flex flex-wrap justify-start gap-2 mb-3">${acao}</div>`;
+                return `<div class="card-app p-3 mb-2">${endTxt}<div class="text-[10px] text-gray-400">${ultTxt}</div><div class="text-[10px] text-gray-400 mt-1">${proximaVisitaTxt(l)}</div>${aviso}</div><div class="flex flex-wrap justify-start gap-2 mb-3">${acao}</div>`;
             })()}
 ${(!l.endereco || enderecoEditando === l.id) ? `
             <div class="card-app p-3 mb-3"><label class="text-[9px] text-gray-500 font-black uppercase">Endereço da loja (para a rota)</label>
@@ -2841,7 +2863,7 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
         pdvEscolherLoja: (d) => pdvEscolherLoja(d.id),
         pdvLojaFechar: () => pdvLojaCancelar(),
         pdvTrocarLoja: () => pdvListaLojas(null),
-        visitaRegistrar: (d) => visitaRegistrar(d.id),
+        visitaRegistrar: (d) => { if (navigator.vibrate) navigator.vibrate(30); visitaRegistrar(d.id); },
         notasAbrir: () => notasAbrir(), notasFechar: () => notasFechar(), notasSalvar: () => notasSalvar(),
         semVisitaAbrir: (d) => semVisitaAbrir(d.id), semVisitaSalvar: () => semVisitaSalvar(), svFechar: () => svFechar(),
         superioresAbrir: () => superioresAbrir(),
