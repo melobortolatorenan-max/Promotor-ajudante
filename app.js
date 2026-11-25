@@ -2077,7 +2077,7 @@ document.addEventListener('error', (e) => {
     function htmlHome() {
         const mes = isoLocal(new Date()).slice(0, 7);
         const n = vencidos.filter(v => (v.dataRetirada || '').startsWith(mes)).length;
-        const contador = `<div class="text-[10px] text-gray-500 mb-2">${n} ${n === 1 ? 'retirada' : 'retiradas'} neste mês</div>`;
+        const contador = '';
         let aviso = '';
         const fim = fimTesteISO();
         if (!contaAntiga && perfilAcesso.gratis !== true && !planoPago() && fim) {
@@ -2488,6 +2488,7 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
         return `
             <h2 class="text-amber-500 font-black italic uppercase text-lg mb-2">Minha Conta</h2>
             <p class="text-[11px] font-bold text-white mb-4">Visitas hoje: ${(() => { const hoje = isoLocal(new Date()), dia = new Date().getDay(); const previstas = previstasDoDia(hoje).filter(l => !visitas.some(v => v.lojaId === l.id && v.data === hoje && v.semVisita)); return new Set(visitas.filter(v => v.data === hoje && previstas.some(l => l.id === v.lojaId)).map(v => v.lojaId)).size; })()} de ${lojas.filter(l => diasDaLoja(l).includes(new Date().getDay())).length} previstas</p>
+            <p class="text-[11px] text-gray-400 mb-4">${(() => { const mes = isoLocal(new Date()).slice(0, 7); const n = vencidos.filter(v => (v.dataRetirada || '').startsWith(mes)).length; return `${n} ${n === 1 ? 'retirada' : 'retiradas'} neste mês`; })()}</p>
             ${htmlPlano()}
             ${jaInstalado() ? '' : `<button data-act="instalarApp" class="card-app p-4 mb-4 w-full text-left block"><div class="text-[9px] text-gray-500 font-black uppercase mb-1">Aplicativo</div><p class="text-[12px] text-gray-300">Instale o Promotor Ajudante na tela inicial do celular.</p></button>`}
             <button data-act="compactoAlternar" class="card-app p-4 mb-4 w-full text-left block"><div class="text-[9px] text-gray-500 font-black uppercase mb-1">Lista compacta</div><p class="text-[12px] text-gray-300">${localStorage.getItem('lista_compacta') === '1' ? 'Ativada (toque para desativar)' : 'Desativada (toque para ativar)'}</p></button>
