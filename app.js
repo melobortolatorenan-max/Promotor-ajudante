@@ -417,6 +417,7 @@ document.addEventListener('error', (e) => {
     let planoLoja = null;
     let ultimoRegistro = null;
     let superiores = [];
+    let solicitacoes = [];       // solicitações de aprovação deste promotor
     let convitesRecebidos = [];   // convites de agências para este promotor         // superiores cadastrados (recebem o relatório semanal)
     let supEdit = null;          // null = lista; 'novo' ou id = formulário
     let visitas = [];            // visitas registradas (loja, data e hora)   // último cadastro de produto feito nesta sessão (para desfazer)        // loja aberta no planograma      // 'busca' quando a leitura serve para a busca        // 'imprimir' ou 'compartilhar' (vale para o próximo relatório)
@@ -754,6 +755,11 @@ document.addEventListener('error', (e) => {
         const l = lojas.find(x => x.id === ov.dataset.id);
         if (!l || !uid) return;
         const ag = new Date();
+        if (temAprovador()) {
+            await pedirAprovacao('sem_visita', l.id, l.nome, { motivo, data: isoLocal(ag), hora: `${String(ag.getHours()).padStart(2, '0')}:${String(ag.getMinutes()).padStart(2, '0')}` });
+            svFechar();
+            return;
+        }
         try {
             await addDoc(collection(db, 'users', uid, 'visitas'), {
                 lojaId: l.id, lojaNome: l.nome, data: isoLocal(ag),
@@ -987,6 +993,7 @@ document.addEventListener('error', (e) => {
         const l = lojas.find(x => x.id === d.loja); if (!l) return;
         const dia = Number(d.dia), atual = diasDaLoja(l);
         const novo = atual.includes(dia) ? atual.filter(x => x !== dia) : [...atual, dia].sort((a, b) => a - b);
+        if (temAprovador()) { pedirAprovacao('dias', l.id, l.nome, { dias: novo }).catch(erroDb); return; }
         updateDoc(doc(colLojas(), l.id), { diasVisita: novo, diaVisita: null }).catch(erroDb);
     }
     // Tabela de códigos cadastrados: produto, marca, imagem do código e número (ordem alfabética)
@@ -1458,6 +1465,52 @@ document.addEventListener('error', (e) => {
             aviso('Não consegui pegar esse endereço. Tente de novo.', { soConfirmar: true });
         }
     }
+    /* ---- aprovação da agência/superior ---- */
+    const aprovadoresDoPromotor = () => {
+        const e = new Set();
+        convitesRecebidos.filter(c => c.status === 'aceito' && c.agenciaEmail).forEach(c => e.add(c.agenciaEmail.toLowerCase()));
+        superiores.forEach(s => s.email && e.add(s.email.toLowerCase()));
+        return [...e];
+    };
+    const temAprovador = () => aprovadoresDoPromotor().length > 0;
+    const solicitacaoPendente = (lojaId, tipo) => solicitacoes.some(s => s.status === 'pendente' && s.lojaId === lojaId && (!tipo || s.tipo === tipo));
+    async function pedirAprovacao(tipo, lojaId, lojaNome, payload) {
+        await addDoc(collection(db, 'solicitacoes'), {
+            tipo, lojaId, lojaNome, payload,
+            promotorUid: uid, promotorNome: (userInfo && userInfo.displayName) || '',
+            aprovadores: aprovadoresDoPromotor(), status: 'pendente', applied: false,
+            criadoEm: serverTimestamp(),
+        });
+        toast('Enviado para aprovação da agência.');
+    }
+    // Aplica no promotor o que a agência aprovou (ou só marca como lido, se recusou)
+    const solicitacoesAplicando = new Set();
+    async function aplicarSolicitacoes() {
+        for (const s of solicitacoes) {
+            if (s.applied || s.status === 'pendente' || solicitacoesAplicando.has(s.id)) continue;
+            solicitacoesAplicando.add(s.id);
+            try {
+                const pl = s.payload || {};
+                if (s.status === 'aprovada') {
+                    if (s.tipo === 'sem_visita') {
+                        await addDoc(collection(db, 'users', uid, 'visitas'), { lojaId: s.lojaId, lojaNome: s.lojaNome, data: pl.data, hora: pl.hora, semVisita: true, motivo: pl.motivo, criadoEm: serverTimestamp() });
+                    } else if (s.tipo === 'adiar') {
+                        await addDoc(collection(db, 'users', uid, 'visitas'), { lojaId: s.lojaId, lojaNome: s.lojaNome, data: pl.de, hora: '', semVisita: true, motivo: 'Visita adiada para ' + fmtBR(pl.para), adiadaPara: pl.para, criadoEm: serverTimestamp() });
+                        await addDoc(collection(db, 'users', uid, 'visitas'), { lojaId: s.lojaId, lojaNome: s.lojaNome, data: pl.para, hora: '', semVisita: false, extra: true, adiadaDe: pl.de, criadoEm: serverTimestamp() });
+                    } else if (s.tipo === 'dias') {
+                        const l = lojas.find(x => x.id === s.lojaId);
+                        if (l) await updateDoc(doc(colLojas(), l.id), { diasVisita: pl.dias, diaVisita: null });
+                    }
+                    toast('Aprovado pela agência: ' + (s.lojaNome || ''));
+                } else if (s.status === 'recusada') {
+                    toast('Recusado pela agência: ' + (s.lojaNome || ''));
+                }
+                await updateDoc(doc(db, 'solicitacoes', s.id), { applied: true });
+            } catch (e) { console.error('solicitação:', e); }
+            finally { solicitacoesAplicando.delete(s.id); }
+        }
+    }
+
     /* ---- convites de agência ---- */
     function convitePendente(c) {
         if (c.status !== 'pendente') return false;
@@ -1959,6 +2012,11 @@ document.addEventListener('error', (e) => {
     async function adiarEscolher(dia) {
         const ov = document.getElementById('adiar-ov'); if (!ov || !uid) return;
         const l = lojas.find(x => x.id === ov.dataset.id); if (!l) return;
+        if (temAprovador()) {
+            await pedirAprovacao('adiar', l.id, l.nome, { de: isoLocal(new Date()), para: dia });
+            adiarFechar();
+            return;
+        }
         const hoje = isoLocal(new Date()), agora = new Date();
         const hora = `${String(agora.getHours()).padStart(2, '0')}:${String(agora.getMinutes()).padStart(2, '0')}`;
         try {
@@ -2226,7 +2284,7 @@ document.addEventListener('error', (e) => {
                 let acao = '';
                 if (i.semHoje) acao = `<span class="px-2 py-1 rounded-md border border-red-600/50 text-red-400 text-[9px] font-bold uppercase whitespace-nowrap">Sem visita hoje</span>`;
                 else if (i.visitouHoje) acao = `<span class="px-3 py-2 rounded-xl border border-green-500/60 text-green-400 text-[10px] font-black uppercase">✓ Visitada hoje às ${i.visitouHoje.hora}</span>`;
-                else if (i.atendeHoje) acao = `<div class="flex flex-row gap-1.5 flex-nowrap"><button data-act="visitaRegistrar" data-id="${esc(l.id)}" class="px-2 py-1 rounded-md border border-amber-500/60 text-amber-500 text-[9px] font-bold uppercase whitespace-nowrap">Registrar visita</button><button data-act="semVisitaEscolha" data-id="${esc(l.id)}" class="px-2 py-1 rounded-md border border-red-600/50 text-red-400 text-[9px] font-bold uppercase whitespace-nowrap">Sem visita hoje</button><button data-act="adiarAbrir" data-id="${esc(l.id)}" class="px-2 py-1 rounded-md border border-gray-600 text-gray-300 text-[9px] font-bold uppercase whitespace-nowrap">Adiar visita</button></div>`;
+                else if (i.atendeHoje) acao = `<div class="flex flex-row gap-1.5 flex-nowrap"><button data-act="visitaRegistrar" data-id="${esc(l.id)}" class="px-2 py-1 rounded-md border border-amber-500/60 text-amber-500 text-[9px] font-bold uppercase whitespace-nowrap">Registrar visita</button>${solicitacaoPendente(l.id) ? `<span class="px-2 py-1 rounded-md border border-amber-500/60 text-amber-500 text-[9px] font-bold uppercase whitespace-nowrap">Aguardando aprovação</span>` : `<button data-act="semVisitaEscolha" data-id="${esc(l.id)}" class="px-2 py-1 rounded-md border border-red-600/50 text-red-400 text-[9px] font-bold uppercase whitespace-nowrap">Sem visita hoje</button><button data-act="adiarAbrir" data-id="${esc(l.id)}" class="px-2 py-1 rounded-md border border-gray-600 text-gray-300 text-[9px] font-bold uppercase whitespace-nowrap">Adiar visita</button>`}</div>`;
                 let aviso = '';
                 if (!i.dias.length) aviso = '<div class="text-[10px] text-gray-500 mt-2">Defina os dias de visita abaixo.</div>';
                 else if (!i.atendeHoje && i.proximo) {
@@ -2248,6 +2306,7 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
                 <button data-act="enderecoAqui" data-id="${esc(l.id)}" class="w-full py-3 mt-2 rounded-xl border border-amber-500 text-amber-500 text-[10px] font-black uppercase">Usar minha localização aqui (estando na loja)</button></div>
             ` : ''}
             <div class="card-app p-3 mb-3"><label class="text-[9px] text-gray-500 font-black uppercase">Dias de visita</label>
+                ${solicitacaoPendente(l.id, 'dias') ? '<p class="text-amber-500 text-[11px] font-bold mt-1">Aguardando aprovação da agência</p>' : ''}
                 <div class="flex gap-1 mt-2">${DIAS_SEMANA.map((d, i) => `<button data-act="diaLoja" data-loja="${esc(l.id)}" data-dia="${i}" class="flex-1 py-2 rounded-xl border text-[10px] font-black ${diasDaLoja(l).includes(i) ? 'bg-amber-500 border-amber-500 text-gray-950' : 'border-gray-700 text-gray-400'}">${d.slice(0, 3)}</button>`).join('')}</div></div>
             ${cartoes}${cartaoSem}
             ${(!cartoes && !cartaoSem) ? '<div class="text-center opacity-20 py-10 font-black text-xs uppercase">Cadastre uma marca</div>' : ''}`;
@@ -3576,6 +3635,11 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
             visitas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
             if (view.tab === 'l' || view.tab === 'c' || view.tab === 'h') desenhar(false);
         }));
+        unsubs.push(onSnapshot(query(collection(db, 'solicitacoes'), where('promotorUid', '==', uid)), (snap) => {
+            solicitacoes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            aplicarSolicitacoes();
+            if (view.tab === 'l' || view.tab === 'c') desenhar(false);
+        }, (e) => console.warn('solicitacoes:', e)));
         if (userInfo && userInfo.email) {
             unsubs.push(onSnapshot(collection(db, 'convites', userInfo.email.toLowerCase(), 'pedidos'), (snap) => {
                 convitesRecebidos = snap.docs.map(d => ({ agenciaUid: d.id, ...d.data() }));
