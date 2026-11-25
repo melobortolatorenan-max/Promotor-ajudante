@@ -46,7 +46,7 @@ function resumoSemana(f) {
   let previstas = 0, feitas = 0;
   for (let i = 6; i >= 0; i--) {
     const iso = addDias(hojeISO, -i), w = weekday(iso);
-    const p = new Set([...f.lojas.filter(l => diasDaLoja(l).includes(w)).map(l => l.id), ...f.visitas.filter(v => v.extra && v.data === iso).map(v => v.lojaId)]).size;
+    const p = new Set([...f.lojas.filter(l => diasDaLoja(l).includes(w) && !f.visitas.some(v => v.lojaId === l.id && v.data === iso && v.adiadaPara)).map(l => l.id), ...f.visitas.filter(v => v.extra && v.data === iso).map(v => v.lojaId)]).size;
     const r = new Set(f.visitas.filter(v => v.data === iso && !v.semVisita && !v.extra).map(v => v.lojaId)).size;
     previstas += p; feitas += r;
   }
@@ -59,18 +59,25 @@ async function blocosDaAgencia(ag, vincs) {
     const sel = (v.marcas || []).map(norm).filter(Boolean);
     const f = filtrar(await dadosPromotor(v.uid), sel);
     const { previstas, feitas } = resumoSemana(f);
-    const semVisita = f.visitas.filter(x => x.data >= inicioSemana && x.data <= hojeISO && x.semVisita).length;
+    const semVisita = f.visitas.filter(x => x.data >= inicioSemana && x.data <= hojeISO && x.semVisita && !x.adiadaPara).length;
+    const adiadas = f.visitas.filter(x => x.data >= inicioSemana && x.data <= hojeISO && x.adiadaPara).length;
     const porMarca = {};
     f.vencidos.filter(x => x.dataRetirada >= inicioSemana && x.dataRetirada <= hojeISO).forEach(x => {
       const m = String(x.marcaNome || x.marca || 'Sem marca').trim();
       porMarca[m] = (porMarca[m] || 0) + (Number(x.qtd) || 0);
     });
-    blocos.push({ nome: v.apelido || v.nome || 'Promotor', previstas, feitas, semVisita, porMarca, semFiltro: f.semFiltro });
+    const motivos = f.visitas.filter(x => x.data >= inicioSemana && x.data <= hojeISO && x.semVisita && !x.adiadaPara)
+      .sort((x, y) => y.data.localeCompare(x.data)).map(x => ({ data: x.data, loja: x.lojaNome || '', motivo: x.motivo || '' }));
+    blocos.push({ nome: v.apelido || v.nome || 'Promotor', previstas, feitas, semVisita, adiadas, motivos, porMarca, semFiltro: f.semFiltro });
   }
   return blocos;
 }
 
 function htmlRelatorio(ag, blocos) {
+  const motivosHtml = blocos.filter(b => b.motivos.length).map(b =>
+    `<h3 style="font-size:13px;color:#b45309;margin:14px 0 4px">${esc(b.nome)}</h3>` +
+    b.motivos.map(m => `<div style="font-size:12px;padding:4px 0;border-bottom:1px solid #eee">${dataBR(m.data)} · <b>${esc(m.loja || 'Loja')}</b>: ${esc(m.motivo || 'sem motivo informado')}</div>`).join('')
+  ).join('');
   const linhas = blocos.map(b => {
     const pct = b.previstas ? Math.round(b.feitas / b.previstas * 100) : 0;
     const marcas = Object.entries(b.porMarca).map(([m, q]) => `${esc(m)}: ${q} un.`).join('<br>') || '—';
@@ -78,15 +85,17 @@ function htmlRelatorio(ag, blocos) {
       <td style="padding:8px;border-bottom:1px solid #ddd"><b>${esc(b.nome)}</b>${b.semFiltro ? '<br><span style="color:#b45309;font-size:11px">sem marcas escolhidas</span>' : ''}</td>
       <td style="padding:8px;border-bottom:1px solid #ddd;text-align:center">${b.feitas} / ${b.previstas} (${pct}%)</td>
       <td style="padding:8px;border-bottom:1px solid #ddd;text-align:center;color:${b.semVisita ? '#b91c1c' : '#555'}">${b.semVisita}</td>
+      <td style="padding:8px;border-bottom:1px solid #ddd;text-align:center;color:#b45309">${b.adiadas}</td>
       <td style="padding:8px;border-bottom:1px solid #ddd;font-size:12px">${marcas}</td></tr>`;
   }).join('');
   return `<div style="font-family:Arial,sans-serif;color:#111">
     <h2 style="color:#b45309;margin:0 0 4px">Relatório semanal da equipe</h2>
     <p style="color:#555;margin:0 0 12px">${esc(ag.nome || 'Agência')} · ${dataBR(inicioSemana)} a ${dataBR(hojeISO)}</p>
     <table style="width:100%;border-collapse:collapse;font-size:13px">
-      <thead><tr style="background:#f59e0b;color:#111"><th style="padding:8px;text-align:left">Promotor</th><th style="padding:8px">Visitas</th><th style="padding:8px">Sem visita</th><th style="padding:8px;text-align:left">Retirado por marca</th></tr></thead>
-      <tbody>${linhas || '<tr><td colspan="4" style="padding:8px">Nenhum promotor vinculado.</td></tr>'}</tbody>
+      <thead><tr style="background:#f59e0b;color:#111"><th style="padding:8px;text-align:left">Promotor</th><th style="padding:8px">Visitas</th><th style="padding:8px">Sem visita</th><th style="padding:8px">Adiadas</th><th style="padding:8px;text-align:left">Retirado por marca</th></tr></thead>
+      <tbody>${linhas || '<tr><td colspan="5" style="padding:8px">Nenhum promotor vinculado.</td></tr>'}</tbody>
     </table>
+    ${motivosHtml ? `<h2 style="color:#b45309;font-size:14px;margin:18px 0 0">Motivos das lojas sem visita</h2>${motivosHtml}` : ''}
     <p style="color:#777;font-size:11px;margin-top:14px">Promotor Ajudante · Melo Staff</p></div>`;
 }
 
@@ -101,7 +110,7 @@ async function csvDaAgencia(vincs) {
     linhas.push([`PROMOTOR: ${nome}`]);
     linhas.push(['VISITAS'], ['Data', 'Hora', 'Loja', 'Situação']);
     f.visitas.slice().sort((a, b) => (a.data + a.hora).localeCompare(b.data + b.hora))
-      .forEach(x => linhas.push([dataBR(x.data), x.hora, x.lojaNome || nomeLoja(x.lojaId), x.semVisita ? 'Sem visita: ' + (x.motivo || '') : (x.extra ? 'Adiada' : 'Visitada')]));
+      .forEach(x => linhas.push([dataBR(x.data), x.hora, x.lojaNome || nomeLoja(x.lojaId), x.adiadaPara ? 'Adiada para ' + dataBR(x.adiadaPara) : (x.semVisita ? 'Sem visita: ' + (x.motivo || '') : (x.extra ? 'Adiada de ' + dataBR(x.adiadaDe) : 'Visitada'))]));
     linhas.push([], ['ENTRADAS'], ['Data', 'Produto', 'Loja', 'Marca']);
     f.produtos.forEach(x => linhas.push([dataBR(x.dia), x.nome, nomeLoja(x.lojaId), x.marcaNome || x.marca || '']));
     linhas.push([], ['SAÍDAS (vencidos retirados)'], ['Data retirada', 'Produto', 'Loja', 'Marca', 'Quantidade', 'Validade', 'Motivo']);
