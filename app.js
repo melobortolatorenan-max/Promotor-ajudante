@@ -3588,6 +3588,25 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
                 onMessage(messaging, (p) => { const n = p.notification || {}; aviso(esc(n.body || ''), { titulo: n.title || 'PROMOTOR AJUDANTE', soConfirmar: true }); });
             }
         } catch (e) { msgOk = false; console.warn(e); }
+    /* ---- escolha de perfil: promotor ou agência (antes do login) ---- */
+    const URL_PERFIL = { promotor: 'https://promotor-ajudante.vercel.app', agencia: 'https://agencia-ajudante.vercel.app' };
+    function fecharEscolhaPerfil() { const o = document.getElementById('escolha-perfil'); if (o) { o.classList.add('hidden'); o.classList.remove('flex'); } }
+    function mostrarEscolhaPerfil() { const o = document.getElementById('escolha-perfil'); if (o) { o.classList.remove('hidden'); o.classList.add('flex'); } }
+    function escolherPerfil(perfil) {
+        if (perfil === 'promotor') { localStorage.setItem('perfil_escolhido', 'promotor'); fecharEscolhaPerfil(); }
+        else location.href = URL_PERFIL.agencia + '/?perfil=agencia';
+    }
+    function iniciarEscolhaPerfil() {
+        if (new URLSearchParams(location.search).get('perfil') === 'promotor') {
+            localStorage.setItem('perfil_escolhido', 'promotor');
+            history.replaceState(null, '', location.pathname);
+        }
+        document.querySelectorAll('[data-escolha]').forEach(b => b.addEventListener('click', () => escolherPerfil(b.dataset.escolha)));
+        document.querySelectorAll('[data-escolha-trocar]').forEach(b => b.addEventListener('click', mostrarEscolhaPerfil));
+        if (!localStorage.getItem('perfil_escolhido')) mostrarEscolhaPerfil();
+    }
+    iniciarEscolhaPerfil();
+
         onAuthStateChanged(auth, (user) => user ? entrar(user) : aoSair());
     }
 

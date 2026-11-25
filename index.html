@@ -132,6 +132,15 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
     </style>
 </head>
 <body>
+<!-- ESCOLHA DE PERFIL (promotor ou agência) -->
+<div id="escolha-perfil" class="hidden fixed inset-0 z-[300] bg-black flex-col items-center justify-center p-6">
+  <div class="text-[10px] text-gray-500 font-black uppercase tracking-[0.3em] mb-2">Bem-vindo</div>
+  <div class="text-2xl font-black italic uppercase text-amber-500 mb-2">Quem é você?</div>
+  <p class="text-gray-400 text-sm text-center mb-8 max-w-xs">Escolha para abrir o aplicativo certo.</p>
+  <button data-escolha="promotor" class="w-full max-w-sm py-5 rounded-2xl bg-amber-500 text-black font-black uppercase mb-3">Sou promotor</button>
+  <button data-escolha="agencia" class="w-full max-w-sm py-5 rounded-2xl border border-amber-500 text-amber-500 font-black uppercase">Sou agência</button>
+</div>
+
 
     <!-- MODAL -->
     <div id="modal-container" role="dialog" aria-modal="true">
@@ -245,13 +254,13 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
     <!-- LOGIN / CRIAR CONTA -->
     <section id="tela-auth" class="secao overflow-y-auto no-scrollbar">
         <div class="m-auto w-full max-w-sm p-6">
-            <div class="flex flex-col items-center gap-1 mb-6 text-center">
-                <img src="robo.png" class="object-contain" style="width:176px;max-width:60vw;height:auto" alt="Robô Ajudante">
-                <div>
-                    <h1 class="text-[10px] font-bold text-gray-500 uppercase tracking-[0.3em] leading-none">Promotor</h1>
-                    <span class="text-3xl font-black text-amber-500 uppercase italic leading-none">Ajudante</span>
-                    <p class="text-xs text-gray-500 mt-2">Organize seu dia de trabalho</p>
+            <div class="flex flex-col items-center text-center mb-6">
+                <div style="width:112px;height:112px;border-radius:9999px;padding:12px;background:#000;border:2px solid rgba(245,158,11,0.5);box-shadow:0 0 40px rgba(245,158,11,0.35);display:flex;align-items:center;justify-content:center">
+                    <img src="robo.png" alt="Robô Ajudante" style="width:100%;height:100%;object-fit:contain">
                 </div>
+                <div class="mt-6 text-[10px] font-bold text-gray-500 uppercase tracking-[0.3em]">Promotor</div>
+                <div class="text-3xl font-black text-amber-500 italic uppercase">Ajudante</div>
+                <p class="text-xs text-gray-500 mt-2">Organize seu dia de trabalho</p>
             </div>
             <h2 class="text-2xl font-black text-white text-center mb-4">Bem-vindo de volta</h2>
             <button data-act="fotoPdv" class="btn-amarelo flex items-center justify-center gap-2 mb-6"><i data-lucide="camera" class="w-5 h-5"></i> Foto PDV</button>
@@ -272,6 +281,7 @@ html.alto-contraste .text-\[9px\], html.alto-contraste .text-\[8px\] { font-size
                     ENTRAR COM O GOOGLE
                 </button>
                 <button id="a-troca" data-act="authModo" class="w-full py-3 text-[11px] font-black text-amber-500 uppercase">CRIAR CONTA NOVA</button>
+                <button data-escolha-trocar="1" class="w-full py-2 text-[10px] font-black text-gray-500 uppercase">Sou agência? Trocar perfil</button>
                 <button data-act="authReset" class="w-full py-2 text-[10px] font-black text-gray-600 uppercase">ESQUECI A SENHA</button>
                 <p class="text-center text-[10px] text-gray-600 leading-snug">Ao continuar, você concorda com os <button type="button" data-act="legal" data-aba="termos" class="underline">Termos de uso</button> e a <button type="button" data-act="legal" data-aba="privacidade" class="underline">Política de privacidade</button>.</p>
             <div class="mt-10 flex flex-col items-center gap-2 text-center">
