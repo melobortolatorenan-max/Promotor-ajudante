@@ -1557,9 +1557,14 @@ document.addEventListener('error', (e) => {
     }
     function erroDb(e) {
         console.error(e);
-        const msg = e && e.code === 'permission-denied'
-            ? 'Sem permissão. Saia e entre novamente.'
-            : 'Não foi possível salvar. Verifique a conexão e tente de novo.';
+        const cod = e && e.code ? String(e.code) : '';
+        const msg = cod === 'permission-denied' ? 'Sem permissão para salvar. Saia e entre novamente.'
+            : cod === 'unauthenticated' ? 'Sua sessão expirou. Entre novamente.'
+            : cod === 'resource-exhausted' ? 'Limite de uso atingido por hoje. Tente amanhã.'
+            : cod === 'unavailable' || cod === 'deadline-exceeded' ? 'Sem conexão no momento. Os dados ficam no celular e são enviados quando a internet voltar.'
+            : cod === 'not-found' ? 'Este item não existe mais. Atualize a tela.'
+            : cod === 'already-exists' ? 'Este item já existe.'
+            : 'Não foi possível salvar. Tente de novo em instantes.';
         aviso(msg, { soConfirmar: true });
     }
 
@@ -1951,7 +1956,11 @@ document.addEventListener('error', (e) => {
     }
     function semVisitaEscolhaFechar() { const ov = document.getElementById('sv-escolha'); if (ov) ov.remove(); }
     // ---- tamanho do texto (normal ou grande), escolhido nas Configurações ----
-    function aplicarTamanhoTexto() { document.documentElement.style.fontSize = localStorage.getItem('texto_grande') === '1' ? '16px' : '14px'; }
+    function aplicarTamanhoTexto() {
+        document.documentElement.style.fontSize = localStorage.getItem('texto_grande') === '1' ? '16px' : '14px';
+        document.body.classList.toggle('compacto', localStorage.getItem('lista_compacta') === '1');
+    }
+    function compactoAlternar() { localStorage.setItem('lista_compacta', localStorage.getItem('lista_compacta') === '1' ? '0' : '1'); aplicarTamanhoTexto(); desenhar(); }
     function textoAlternar() { localStorage.setItem('texto_grande', localStorage.getItem('texto_grande') === '1' ? '0' : '1'); aplicarTamanhoTexto(); desenhar(); }
     // ---- instalar como app (Android): banner na parte de baixo, com botão Instalar e X ----
     let eventoInstalar = null;
@@ -2462,6 +2471,7 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
             <p class="text-[11px] font-bold text-white mb-4">Visitas hoje: ${(() => { const hoje = isoLocal(new Date()), dia = new Date().getDay(); const previstas = previstasDoDia(hoje).filter(l => !visitas.some(v => v.lojaId === l.id && v.data === hoje && v.semVisita)); return new Set(visitas.filter(v => v.data === hoje && previstas.some(l => l.id === v.lojaId)).map(v => v.lojaId)).size; })()} de ${lojas.filter(l => diasDaLoja(l).includes(new Date().getDay())).length} previstas</p>
             ${htmlPlano()}
             ${jaInstalado() ? '' : `<button data-act="instalarApp" class="card-app p-4 mb-4 w-full text-left block"><div class="text-[9px] text-gray-500 font-black uppercase mb-1">Aplicativo</div><p class="text-[12px] text-gray-300">Instale o Promotor Ajudante na tela inicial do celular.</p></button>`}
+            <button data-act="compactoAlternar" class="card-app p-4 mb-4 w-full text-left block"><div class="text-[9px] text-gray-500 font-black uppercase mb-1">Lista compacta</div><p class="text-[12px] text-gray-300">${localStorage.getItem('lista_compacta') === '1' ? 'Ativada (toque para desativar)' : 'Desativada (toque para ativar)'}</p></button>
             <button data-act="textoAlternar" class="card-app p-4 mb-4 w-full text-left block"><div class="text-[9px] text-gray-500 font-black uppercase mb-1">Tamanho do texto</div><p class="text-[12px] text-gray-300">${localStorage.getItem('texto_grande') === '1' ? 'Grande (toque para normal)' : 'Normal (toque para grande)'}</p></button>
             <button data-act="compartilharResumo" class="card-app p-4 mb-4 w-full text-left block"><div class="text-[9px] text-gray-500 font-black uppercase mb-1">Resumo do dia</div><p class="text-[12px] text-gray-300">Enviar visitas e vencimentos de hoje pelo WhatsApp ou e-mail.</p></button>
             <button data-act="notasAbrir" class="card-app p-4 mb-4 w-full text-left block"><div class="text-[9px] text-gray-500 font-black uppercase mb-1">Bloco de notas</div><p class="text-[12px] text-gray-300">Anote suas ideias. Ficam salvas por <b class="text-red-500">12 horas</b>.</p></button>
@@ -2578,7 +2588,7 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
         novoVencido: () => ir('v', { de: view.tab === 'r' ? 'r' : 'h' }),
         novoProdutoTopo: () => ir('p', { preLoja: '', preMarca: '', origem: null, origemMarca: null }),
         filtroMarca: (d) => { filtroMarcaHome = d.marca || ''; desenhar(); },
-        vozRota: () => vozRota(), semVisitaEscolha: (d) => semVisitaEscolha(d.id), semVisitaEscolhaFechar: () => semVisitaEscolhaFechar(), adiarAbrir: (d) => { semVisitaEscolhaFechar(); adiarAbrir(d.id); }, adiarEscolher: (d) => adiarEscolher(d.dia), adiarFechar: () => adiarFechar(), relatorioEnviarAgora: () => relatorioEnviarAgora(),
+        vozRota: () => vozRota(), compactoAlternar: () => compactoAlternar(), semVisitaEscolha: (d) => semVisitaEscolha(d.id), semVisitaEscolhaFechar: () => semVisitaEscolhaFechar(), adiarAbrir: (d) => { semVisitaEscolhaFechar(); adiarAbrir(d.id); }, adiarEscolher: (d) => adiarEscolher(d.dia), adiarFechar: () => adiarFechar(), relatorioEnviarAgora: () => relatorioEnviarAgora(),
         cadTipo: (d) => { const s = capturarFormCadastro(); scanPendente = s; marcaPendente = s.marcaNome || null; ir(d.tipo, { preLoja: s.lojaId || '' }); setTimeout(aplicarScanPendente, 0); },
         abrirRelVenc: () => ir('r'),
         voltarVenc: () => (view.venc || view.de === 'r') ? ir('r') : ir('h'),
