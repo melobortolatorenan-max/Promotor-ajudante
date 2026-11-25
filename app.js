@@ -938,7 +938,7 @@ document.addEventListener('error', (e) => {
     function toast(msg) {
         const t = document.createElement('div');
         t.innerHTML = msg;
-        t.className = 'fixed left-4 right-4 bottom-6 mx-auto max-w-sm z-[120] rounded-2xl px-4 py-3 text-[12px] font-bold text-gray-950 shadow-lg';
+        t.className = 'fixed left-4 right-4 top-4 mx-auto max-w-sm z-[120] rounded-2xl px-4 py-3 text-[12px] font-bold text-gray-950 shadow-lg';
         t.style.background = '#22c55e';
         document.body.appendChild(t);
         setTimeout(() => t.remove(), 3200);
@@ -1372,8 +1372,10 @@ document.addEventListener('error', (e) => {
     // Situação da loja no dia: se já foi visitada hoje e se hoje é dia de atendimento
     function proximaVisitaTxt(l) {
         const dias = diasDaLoja(l), nomes = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
-        const hoje = new Date();
+        const hoje = new Date(), hojeISO = isoLocal(hoje);
+        const jaTratadaHoje = visitas.some(v => v.lojaId === l.id && v.data === hojeISO && !v.extra);
         for (let k = 0; k < 8; k++) {
+            if (k === 0 && jaTratadaHoje) continue;
             const d = new Date(hoje); d.setDate(hoje.getDate() + k);
             if (dias.includes(d.getDay())) return `Próxima visita: <b class="text-gray-200">${k === 0 ? 'hoje' : nomes[d.getDay()]}</b>`;
         }
