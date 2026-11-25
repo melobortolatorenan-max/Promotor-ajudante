@@ -1,0 +1,23 @@
+name: Avisos de vencidos
+on:
+  schedule:
+    - cron: '0 13 * * *'   # todo dia 10h (Brasília)
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Só simular (true) ou enviar de verdade (false)'
+        default: 'true'
+jobs:
+  avisos:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - run: npm install firebase-admin nodemailer
+      - run: node scripts/avisos-vencidos.js
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          GMAIL_USER: melobortolato.renan@gmail.com
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'true' }}
