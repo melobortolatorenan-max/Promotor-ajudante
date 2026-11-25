@@ -1318,8 +1318,7 @@ document.addEventListener('error', (e) => {
                     <select id="rel-hora" class="input-custom w-24">${Array.from({ length: 24 }, (_, h) => `<option value="${h}" ${rel.hora === h ? 'selected' : ''}>${String(h).padStart(2, '0')}:00</option>`).join('')}</select>
                 </div>
                 <button data-act="relatorioSalvar" class="btn-amarelo mt-2">Salvar horário</button>
-                <button data-act="relatorioEnviarAgora" class="w-full py-3 mt-2 rounded-xl border border-amber-500 text-[10px] font-black uppercase text-amber-500">Enviar relatório agora</button>
-                <p class="text-[10px] text-gray-500 mt-2">O relatório dos últimos 7 dias vai por e-mail para cada superior cadastrado.</p>
+                <p class="text-[10px] text-gray-500 mt-2">Os relatórios e informativos ficam disponíveis para baixar no app da agência. Nada é enviado por e-mail.</p>
             </div>
             <button data-act="superiorNovo" class="btn-amarelo mb-3">+ Novo superior</button>
             ${superiores.length ? superiores.map(s => `<div class="card-app p-4 mb-3 flex items-center justify-between gap-2">
