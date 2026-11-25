@@ -32,13 +32,15 @@ const nomeMes = new Date(Date.UTC(anoAnt, mesAnt - 1, 1)).toLocaleDateString('pt
 
     const lojas = {};
     (await db.collection('users').doc(u.id).collection('lojas').get()).docs.forEach(d => { lojas[d.id] = d.data().nome || 'Loja'; });
-    const porLoja = {}, porMotivo = {};
+    const porLoja = {}, porMotivo = {}, porMarca = {};
     let total = 0;
     for (const v of vencidos) {
       const q = Number(v.qtd) || 0;
       total += q;
       const loja = lojas[v.lojaId] || 'Loja';
       porLoja[loja] = (porLoja[loja] || 0) + q;
+      const marca = (v.marcaNome || '').trim() || 'Sem marca';
+      porMarca[marca] = (porMarca[marca] || 0) + q;
       const motivo = (v.motivo || '').trim() || 'Sem motivo informado';
       porMotivo[motivo] = (porMotivo[motivo] || 0) + q;
     }
@@ -48,6 +50,7 @@ const nomeMes = new Date(Date.UTC(anoAnt, mesAnt - 1, 1)).toLocaleDateString('pt
       `Resumo de vencidos de ${nomeMes}.\n\n` +
       `Total retirado: ${total} unidades em ${vencidos.length} registros.\n\n` +
       `Por loja:\n${linhas(porLoja)}\n\n` +
+      `Por marca:\n${linhas(porMarca)}\n\n` +
       `Por motivo:\n${linhas(porMotivo)}\n\n` +
       `Melo Staff`;
 
