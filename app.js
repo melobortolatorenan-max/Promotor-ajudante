@@ -82,22 +82,31 @@ document.addEventListener('error', (e) => {
     let pdvLoja = null, pdvDepois = null;
     const PDV_JANELA = 30 * 60 * 1000;
     const pdvLojaValida = () => !!pdvLoja && (Date.now() - pdvLoja.ts) < PDV_JANELA;
+    let pdvSelecionada = null;
     function pdvListaLojas(depois) {
         pdvDepois = depois;
         const box = $('#pdv-loja'); box.classList.remove('hidden'); box.classList.add('flex');
         const lista = [...lojas].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
-        $('#pdv-loja-lista').innerHTML = lista.length
-            ? lista.map(l => `<button data-act="pdvEscolherLoja" data-id="${esc(l.id)}" class="card-app w-full p-4 mb-3 text-left text-white font-black italic uppercase text-sm">${esc(l.nome)}</button>`).join('')
+        const sel = lista.find(l => l.id === pdvSelecionada);
+        const cards = lista.length
+            ? lista.map(l => `<button data-act="pdvEscolherLoja" data-id="${esc(l.id)}" class="card-app w-full p-4 mb-3 text-left text-white font-black italic uppercase text-sm ${l.id === pdvSelecionada ? 'border border-amber-500' : ''}">${esc(l.nome)}</button>`).join('')
             : '<p class="text-gray-500 text-[11px]">Cadastre uma loja antes de tirar a foto.</p>';
+        const rodape = sel
+            ? `<button data-act="pdvLojaConfirmar" class="w-full py-4 rounded-xl bg-amber-500 text-black text-[11px] font-black uppercase mt-2">Tirar foto em ${esc(sel.nome)}</button>`
+            : '<p class="text-gray-500 text-[11px] mt-2">Escolha a loja para tirar a foto.</p>';
+        $('#pdv-loja-lista').innerHTML = cards + rodape + `<button data-act="pdvLojaCancelar" class="w-full py-3 text-[10px] font-black uppercase text-gray-500 mt-2">Cancelar</button>`;
     }
     function pdvListaFechar() { const box = $('#pdv-loja'); box.classList.add('hidden'); box.classList.remove('flex'); }
-    function pdvLojaCancelar() { pdvListaFechar(); pdvDepois = null; }
+    function pdvLojaCancelar() { pdvListaFechar(); pdvDepois = null; pdvSelecionada = null; }
     function pdvEscolherLoja(id) {
-        const l = lojas.find(x => x.id === id); if (!l) return;
+        pdvSelecionada = id;
+        pdvListaLojas(pdvDepois);
+    }
+    function pdvLojaConfirmar() {
+        const l = lojas.find(x => x.id === pdvSelecionada); if (!l) return;
         pdvLoja = { lojaId: l.id, nome: l.nome, ts: Date.now() };
-        registrarVisitaAuto(l.id);
         const depois = pdvDepois;
-        pdvDepois = null;
+        pdvDepois = null; pdvSelecionada = null;
         pdvListaFechar();
         if (depois) depois();
     }
@@ -370,6 +379,7 @@ document.addEventListener('error', (e) => {
         pdvSalvar();                                   // salva em silêncio, sem aviso
         const bx2 = $('#pdv'); bx2.classList.add('hidden'); bx2.classList.remove('flex');
         toast('Foto salva.');
+        if (pdvLoja) registrarVisitaAuto(pdvLoja.lojaId);
     }
     async function pdvCompartilhar() {
         if (!pdv.blob) return;
@@ -2645,7 +2655,7 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
         novoVencido: () => ir('v', { de: view.tab === 'r' ? 'r' : 'h' }),
         novoProdutoTopo: () => ir('p', { preLoja: '', preMarca: '', origem: null, origemMarca: null }),
         filtroMarca: (d) => { filtroMarcaHome = d.marca || ''; desenhar(); },
-        vozRota: () => vozRota(), exportarPdf: () => exportarPdf(), contaSub: (d) => { contaSub = d.sub || null; desenhar(); }, compactoAlternar: () => compactoAlternar(), semVisitaEscolha: (d) => semVisitaEscolha(d.id), semVisitaEscolhaFechar: () => semVisitaEscolhaFechar(), adiarAbrir: (d) => { semVisitaEscolhaFechar(); adiarAbrir(d.id); }, adiarEscolher: (d) => adiarEscolher(d.dia), adiarFechar: () => adiarFechar(), relatorioEnviarAgora: () => relatorioEnviarAgora(),
+        vozRota: () => vozRota(), exportarPdf: () => exportarPdf(), pdvLojaConfirmar: () => pdvLojaConfirmar(), pdvLojaCancelar: () => pdvLojaCancelar(), contaSub: (d) => { contaSub = d.sub || null; desenhar(); }, compactoAlternar: () => compactoAlternar(), semVisitaEscolha: (d) => semVisitaEscolha(d.id), semVisitaEscolhaFechar: () => semVisitaEscolhaFechar(), adiarAbrir: (d) => { semVisitaEscolhaFechar(); adiarAbrir(d.id); }, adiarEscolher: (d) => adiarEscolher(d.dia), adiarFechar: () => adiarFechar(), relatorioEnviarAgora: () => relatorioEnviarAgora(),
         cadTipo: (d) => { const s = capturarFormCadastro(); scanPendente = s; marcaPendente = s.marcaNome || null; ir(d.tipo, { preLoja: s.lojaId || '' }); setTimeout(aplicarScanPendente, 0); },
         abrirRelVenc: () => ir('r'),
         voltarVenc: () => (view.venc || view.de === 'r') ? ir('r') : ir('h'),
@@ -3646,6 +3656,7 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
 
     (window.lucide && lucide.createIcons());
     document.getElementById('pdv-arquivo')?.addEventListener('change', pdvArquivoEscolhido);
+    document.getElementById('pdv-arquivo')?.addEventListener('cancel', () => pdvListaLojas(() => pdvAbrirCameraNativa()));
     aplicarTamanhoTexto();
     configurarCabecalhoRolagem();
     // no Android, mostra o banner de instalação mesmo sem o aviso automático do Chrome
