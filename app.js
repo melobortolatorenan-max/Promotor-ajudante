@@ -2485,7 +2485,41 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
             ${blocos || '<div class="opacity-20 text-center py-10 uppercase font-black text-xs">Nenhum vencido registrado</div>'}`;
     }
 
+    /* ---- Configurações em grupos: Minha conta, Informativos e lojas, Superiores, Preferências ---- */
+    let contaSub = null;
     function htmlConta() {
+        const voltar = `<button data-act="contaSub" data-sub="" class="text-amber-500 text-[11px] font-black uppercase mb-3">← Configurações</button>`;
+        const menu = (sub, titulo, desc) => `<button data-act="contaSub" data-sub="${sub}" class="card-app w-full p-4 mb-3 flex items-center justify-between text-left"><div><div class="text-white font-black italic uppercase text-sm">${titulo}</div><div class="text-gray-500 text-[11px] mt-1">${desc}</div></div><i data-lucide="chevron-right" class="w-5 h-5 text-amber-500"></i></button>`;
+        if (contaSub === 'conta') return `${voltar}
+            <h2 class="text-amber-500 font-black italic uppercase text-lg mb-3">Minha conta</h2>
+            <div class="card-app p-4 mb-3">
+                <div class="text-[9px] text-gray-500 font-black uppercase mb-1">Promotor</div>
+                <div class="text-white font-black italic uppercase text-sm truncate">${esc((userInfo && userInfo.displayName) || 'Sem nome')}</div>
+                <div class="text-gray-400 text-xs truncate">${esc(userInfo && userInfo.email)}</div>
+            </div>
+            ${htmlPlano()}
+            ${htmlAcaoCard('Resumo', 'Resumo do dia', 'Retiradas e cadastros por dia', 'resumoAbrir')}
+            ${htmlAcaoCard('Rota', 'Rota do dia', 'Ordem das lojas de hoje, pela distância', 'abrirRota')}`;
+        if (contaSub === 'info') return `${voltar}
+            <h2 class="text-amber-500 font-black italic uppercase text-lg mb-3">Informativos e lojas</h2>
+            ${htmlAcaoCard('Registros', 'Relatório de vencidos', `${vencMes().length} ${plural(vencMes().length, 'item retirado', 'itens retirados')} neste mês`, 'abrirRelVenc')}
+            ${htmlAcaoCard('Dados', 'Exportar planilha', 'Produtos e vencidos em CSV', 'exportarDados')}
+            ${htmlAcaoCard('Relatório', 'Relatório em PDF', 'Vencidos do mês para imprimir ou salvar', 'exportarPdf')}
+            ${htmlAcaoCard('Lojas', 'Planograma lojas', lojas.length + ' lojas', 'planogramaAbrir')}`;
+        if (contaSub === 'sup') return `${voltar}
+            <h2 class="text-amber-500 font-black italic uppercase text-lg mb-3">Superiores e relatório</h2>
+            ${superiores.length ? superiores.map(s => `<div class="card-app p-4 mb-3"><div class="text-white font-black italic uppercase text-sm truncate">${esc(s.nome || s.email || 'Superior')}</div><div class="text-gray-400 text-xs truncate">${esc(s.email || '')}</div></div>`).join('') : '<p class="text-gray-500 text-sm mb-3">Nenhum superior cadastrado.</p>'}
+            ${htmlAcaoCard('Relatório', 'Relatório semanal', 'Enviar e configurar os superiores', 'superioresAbrir')}`;
+        if (contaSub === 'pref') return `${voltar}${htmlContaCompleta()}`;
+        return `
+            <h2 class="text-amber-500 font-black italic uppercase text-lg mb-4">Configurações</h2>
+            ${menu('conta', 'Minha conta', 'Nome, plano, resumo do dia e rota')}
+            ${menu('info', 'Informativos e lojas', 'Vencidos, planilha, PDF e planograma')}
+            ${menu('sup', 'Superiores e relatório', 'Quem recebe o relatório semanal')}
+            ${menu('pref', 'Preferências e ajuda', 'Notificações, texto, avaliação e conta')}`;
+    }
+
+    function htmlContaCompleta() {
         const n = notifEstado();
         return `
             <h2 class="text-amber-500 font-black italic uppercase text-lg mb-2">Minha Conta</h2>
@@ -2611,7 +2645,7 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
         novoVencido: () => ir('v', { de: view.tab === 'r' ? 'r' : 'h' }),
         novoProdutoTopo: () => ir('p', { preLoja: '', preMarca: '', origem: null, origemMarca: null }),
         filtroMarca: (d) => { filtroMarcaHome = d.marca || ''; desenhar(); },
-        vozRota: () => vozRota(), exportarPdf: () => exportarPdf(), compactoAlternar: () => compactoAlternar(), semVisitaEscolha: (d) => semVisitaEscolha(d.id), semVisitaEscolhaFechar: () => semVisitaEscolhaFechar(), adiarAbrir: (d) => { semVisitaEscolhaFechar(); adiarAbrir(d.id); }, adiarEscolher: (d) => adiarEscolher(d.dia), adiarFechar: () => adiarFechar(), relatorioEnviarAgora: () => relatorioEnviarAgora(),
+        vozRota: () => vozRota(), exportarPdf: () => exportarPdf(), contaSub: (d) => { contaSub = d.sub || null; desenhar(); }, compactoAlternar: () => compactoAlternar(), semVisitaEscolha: (d) => semVisitaEscolha(d.id), semVisitaEscolhaFechar: () => semVisitaEscolhaFechar(), adiarAbrir: (d) => { semVisitaEscolhaFechar(); adiarAbrir(d.id); }, adiarEscolher: (d) => adiarEscolher(d.dia), adiarFechar: () => adiarFechar(), relatorioEnviarAgora: () => relatorioEnviarAgora(),
         cadTipo: (d) => { const s = capturarFormCadastro(); scanPendente = s; marcaPendente = s.marcaNome || null; ir(d.tipo, { preLoja: s.lojaId || '' }); setTimeout(aplicarScanPendente, 0); },
         abrirRelVenc: () => ir('r'),
         voltarVenc: () => (view.venc || view.de === 'r') ? ir('r') : ir('h'),
