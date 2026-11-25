@@ -1,0 +1,28 @@
+name: Relatórios da agência
+on:
+  schedule:
+    - cron: '0 11 * * 1'   # segunda 8h (Brasília): relatório semanal da equipe
+    - cron: '0 12 * * 0'   # domingo 9h (Brasília): backup semanal (planilha)
+  workflow_dispatch:
+    inputs:
+      modo:
+        description: 'relatorio ou backup'
+        default: 'relatorio'
+      dry_run:
+        description: 'true = só simular, false = enviar de verdade'
+        default: 'true'
+jobs:
+  agencia:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - run: npm install firebase-admin nodemailer
+      - run: node scripts/agencia-relatorios.js
+        env:
+          MODO: ${{ (github.event.schedule == '0 12 * * 0' && 'backup') || github.event.inputs.modo || 'relatorio' }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          GMAIL_USER: melobortolato.renan@gmail.com
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'true' }}
