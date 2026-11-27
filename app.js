@@ -2606,6 +2606,8 @@ ${(!l.endereco || enderecoEditando === l.id) ? `
         if (contaSub === 'pref') return `${voltar}${htmlContaCompleta()}`;
         return `
             <h2 class="text-amber-500 font-black italic uppercase text-lg mb-4">Configurações</h2>
+            <button data-act="notasAbrir" class="card-app p-4 mb-3 w-full text-left block"><div class="text-[9px] text-gray-500 font-black uppercase mb-1">Bloco de notas</div><p class="text-[12px] text-gray-300">Anote suas ideias. Ficam salvas por 12 horas.</p></button>
+            ${htmlAcaoCard('Produtos', 'Código de barras cadastrados', produtos.filter(p => p.codigo).length + ' códigos', 'codigosAbrir')}
             ${menu('conta', 'Minha conta', 'Nome, plano, resumo do dia e rota')}
             ${menu('info', 'Informativos e lojas', 'Vencidos, planilha, PDF e planograma')}
             ${menu('sup', 'Superiores e relatório', 'Quem recebe o relatório semanal')}
